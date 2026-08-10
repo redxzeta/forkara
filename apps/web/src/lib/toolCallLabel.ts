@@ -288,9 +288,7 @@ const SYNARA_BROWSER_TOOL_NAME_BY_PRESENTATION = new Map<string, SynaraBrowserTo
 );
 
 const SYNARA_TOOL_NAME_STEMS = new Set<string>(
-  Object.keys(SYNARA_MCP_TOOL_PRESENTATIONS).map((toolName) =>
-    toolName.replace(/^synara_/, ""),
-  ),
+  Object.keys(SYNARA_MCP_TOOL_PRESENTATIONS).map((toolName) => toolName.replace(/^synara_/, "")),
 );
 
 const SYNARA_MCP_TOOL_PRESENTATION_ENTRIES = Object.entries(SYNARA_MCP_TOOL_PRESENTATIONS).map(
