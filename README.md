@@ -165,6 +165,14 @@ git clone
 
 Because Cloneara sounded too honest.
 
+### How long does a fresh fork lifecycle usually take?
+
+Enough time for exactly one coffee and one suspiciously calm compile.
+
+### Why does that long-running timer mention 42 minutes?
+
+It is only a metaphor for persistence.
+
 ---
 
 ## Origins
