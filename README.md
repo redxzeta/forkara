@@ -196,7 +196,7 @@ Not yet. Sporks are in the roadmap, and we keep promises in the issue tracker be
 
 Forkara began as a fork of Synara.
 
-Synara began as a clone of [T3 Code](https://github.com/pingdotgg/T3Code), but it has since become a substantially different product with its own branding, packaging, release system, provider orchestration, desktop app behavior, and product direction.
+Synara began as an early clone of a public template, but it has since become a substantially different product with its own branding, packaging, release system, provider orchestration, desktop app behavior, and product direction.
 
 Forkara began as a fork of a clone that wasn't a fork because it was a clone.
 
