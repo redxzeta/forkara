@@ -109,19 +109,12 @@ export const ComposerPendingApprovalPanel = function ComposerPendingApprovalPane
   onRespond,
 }: ComposerPendingApprovalPanelProps) {
   const parsed = parseApprovalDetail(approval.detail);
-  const profileHintInput: {
-    detail?: string;
-    permissionProfile?: Record<string, unknown>;
-  } = {};
-  if (approval.detail) {
-    profileHintInput.detail = approval.detail;
-  }
-  if (approval.permissionProfile) {
-    profileHintInput.permissionProfile = approval.permissionProfile;
-  }
   const licenseProfileHint =
     approval.requestKind === "permissions" &&
-    hasLicenseSignals(profileHintInput);
+    hasLicenseSignals({
+      ...(approval.detail ? { detail: approval.detail } : {}),
+      ...(approval.permissionProfile ? { permissionProfile: approval.permissionProfile } : {}),
+    });
   const requestId = approval.requestId;
   const actions =
     approval.sessionApprovalAvailable === false
