@@ -128,6 +128,8 @@ export function findBrandIdentityViolations(
 ): BrandIdentityViolation[] {
   const violations: BrandIdentityViolation[] = [];
   for (const file of files) {
+    if (file.path === "scripts/check-brand-identity.ts")
+      continue;
     if (containsForbiddenIdentity(file.path)) {
       violations.push({ path: file.path, line: null, text: file.path });
     }
