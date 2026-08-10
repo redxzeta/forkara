@@ -87,6 +87,7 @@ They're surprisingly lightweight.
 ## Contributing
 
 Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening an issue or PR.
+For downstream forks, start with [docs/rebrand-checklist.md](./docs/rebrand-checklist.md).
 
 Need support?
 
