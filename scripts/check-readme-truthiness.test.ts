@@ -20,7 +20,12 @@ describe("readme truthiness checker", () => {
     expect(findings[0]).toMatchObject({
       id: "technically-ambitious",
       title: "Technically Ambitious",
-      readmeClaims: [{ line: 1, text: "Forkara was built from the ground up and is a masterpiece." }],
+      readmeClaims: [
+        {
+          line: 1,
+          text: "Forkara was built from the ground up and is a masterpiece.",
+        },
+      ],
     });
     expect(findings[0]!.evidence[0]).toContain("upstream ref: origin/main");
   });
@@ -46,7 +51,9 @@ describe("readme truthiness checker", () => {
       title: "Factual Fork Relationship",
       readmeClaims: [{ line: 1 }],
     });
-    expect(findingsWithFakeUpstream[0]!.evidence[1]).toContain("upstream: https://github.com/original/forkara.git");
+    expect(findingsWithFakeUpstream[0]!.evidence[1]).toContain(
+      "upstream: https://github.com/original/forkara.git",
+    );
   });
 
   it("returns no findings when no upstream signal exists", () => {
