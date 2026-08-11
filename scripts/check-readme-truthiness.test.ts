@@ -37,7 +37,10 @@ describe("readme truthiness checker", () => {
       hasUpstreamRemote: false,
       remotes: [{ name: "origin", fetchUrl: "https://github.com/example/forkara.git" }],
     };
-    const upstreamRemote = { name: "upstream", fetchUrl: "https://github.com/original/forkara.git" };
+    const upstreamRemote = {
+      name: "upstream",
+      fetchUrl: "https://github.com/original/forkara.git",
+    };
 
     const findingsWithFakeUpstream = detectReadmeTruthiness(readme, {
       ...evidence,

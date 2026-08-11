@@ -80,7 +80,9 @@ export function collectGitEvidence(cwd = process.cwd()): ReadmeTruthinessEvidenc
   const upstreamRef = runGit(["rev-parse", "--abbrev-ref", "@{upstream}"], cwd);
   const remoteLines = runGit(["remote", "-v"], cwd);
   const remotes =
-    remoteLines === null || remoteLines.length === 0 ? [] : parseUpstreamRemoteSignals(remoteLines.split("\n"));
+    remoteLines === null || remoteLines.length === 0
+      ? []
+      : parseUpstreamRemoteSignals(remoteLines.split("\n"));
   const hasUpstreamRemote = remotes.some((remote) => remote.name === "upstream");
 
   return {
@@ -128,9 +130,7 @@ function hasUpstreamFact(evidence: ReadmeTruthinessEvidence): boolean {
 }
 
 function formatEvidence(evidence: ReadmeTruthinessEvidence): readonly string[] {
-  const remoteLines = evidence.remotes.map(
-    (remote) => `${remote.name}: ${remote.fetchUrl}`,
-  );
+  const remoteLines = evidence.remotes.map((remote) => `${remote.name}: ${remote.fetchUrl}`);
   return [
     evidence.upstreamRef !== null ? `upstream ref: ${evidence.upstreamRef}` : "upstream ref: none",
     remoteLines.length > 0 ? `remotes: ${remoteLines.join(", ")}` : "remotes: none",
