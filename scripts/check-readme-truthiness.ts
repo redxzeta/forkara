@@ -51,7 +51,7 @@ function runGit(args: readonly string[], cwd: string): string | null {
   const options: ExecSyncOptions = {
     cwd,
     encoding: "utf8",
-    stdio: [\"ignore\", \"pipe\", \"pipe\"],
+    stdio: ["ignore", "pipe", "pipe"],
   };
   try {
     return execFileSync("git", [...args], options).trim();
