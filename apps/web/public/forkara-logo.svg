@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" role="img" aria-labelledby="title desc">
+  <title id="title">Forkara logo</title>
+  <desc id="desc">Forkara branching network mark with cyan-to-violet gradient and dark wordmark.</desc>
+  <style>
+    .forkara-stem-mid { stop-color: #252B58; }
+    .forkara-stem-end { stop-color: #171A2C; }
+    .forkara-node-dark { fill: #171A2C; }
+    .forkara-node-dark-dot { fill: #ffffff; }
+    .forkara-wordmark { fill: #171A2C; }
+    @media (prefers-color-scheme: dark) {
+      .forkara-stem-mid { stop-color: #4A5378; }
+      .forkara-stem-end { stop-color: #C3C9DE; }
+      .forkara-node-dark { fill: #E8EAF2; }
+      .forkara-node-dark-dot { fill: #171A2C; }
+      .forkara-wordmark { fill: #F5F5F5; }
+    }
+  </style>
+
+  <defs>
+    <linearGradient id="branchGradient" x1="320" y1="0" x2="680" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#10A8F4"/>
+      <stop offset="0.50" stop-color="#3764E8"/>
+      <stop offset="1" stop-color="#6943DF"/>
+    </linearGradient>
+    <linearGradient id="stemGradient" x1="500" y1="370" x2="500" y2="615" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4656D7"/>
+      <stop offset="0.55" class="forkara-stem-mid" stop-color="#252B58"/>
+      <stop offset="1" class="forkara-stem-end" stop-color="#171A2C"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Forkara mark -->
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <!-- flowing upper connection / subtle Synara network reference -->
+    <path
+      d="M360 270
+         C360 345 390 366 443 391
+         C473 405 525 438 558 438
+         C591 438 643 405 673 391
+         C726 366 756 345 756 270"
+      stroke="url(#branchGradient)"
+      stroke-width="48"/>
+
+    <!-- fork / triadic T3 reference -->
+    <path
+      d="M404 384
+         C458 413 500 435 523 466
+         C544 494 556 527 556 565
+         L556 612"
+      stroke="url(#stemGradient)"
+      stroke-width="44"/>
+    <path
+      d="M712 384
+         C658 413 616 435 593 466
+         C572 494 560 527 560 565"
+      stroke="url(#stemGradient)"
+      stroke-width="44"/>
+  </g>
+
+  <!-- three terminal nodes -->
+  <g>
+    <circle cx="360" cy="270" r="34" fill="#10A8F4"/>
+    <circle cx="360" cy="270" r="13" fill="#ffffff"/>
+
+    <circle cx="756" cy="270" r="34" fill="#6943DF"/>
+    <circle cx="756" cy="270" r="13" fill="#ffffff"/>
+
+    <circle cx="556" cy="624" r="34" class="forkara-node-dark" fill="#171A2C"/>
+    <circle cx="556" cy="624" r="13" class="forkara-node-dark-dot" fill="#ffffff"/>
+  </g>
+
+  <!-- Wordmark -->
+  <text
+    x="500"
+    y="790"
+    text-anchor="middle"
+    class="forkara-wordmark"
+    fill="#171A2C"
+    font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+    font-size="145"
+    font-weight="500"
+    letter-spacing="-7">Forkara</text>
+</svg>

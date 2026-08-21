@@ -5,7 +5,7 @@
 import { type ProviderKind, type ThreadId } from "@synara/contracts";
 import { memo, type ReactNode } from "react";
 
-import { SynaraLogo } from "../SynaraLogo";
+import { ForkaraLogo } from "../ForkaraLogo";
 import { cn } from "~/lib/utils";
 
 export interface CrossTaskOrigin {
@@ -20,7 +20,7 @@ function OriginContent(): ReactNode {
   return (
     <>
       <span className="flex size-4 shrink-0 items-center justify-center text-muted-foreground/70">
-        <SynaraLogo className="h-4 w-auto" aria-label="Forkara" />
+        <ForkaraLogo className="h-4 w-auto" aria-label="Forkara" />
       </span>
       <span className="truncate">Sent by Forkara from another thread</span>
     </>
