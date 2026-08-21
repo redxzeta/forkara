@@ -288,6 +288,13 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     keywords: "Show token-by-token output while a response is in progress. streaming",
   },
   {
+    id: "behavior:bully-mode",
+    section: "behavior",
+    title: "Bully Mode",
+    keywords:
+      "Changes response tone only. Does not change tools, permissions, confirmations, or model capabilities. tone persona",
+  },
+  {
     id: "behavior:diff-line-wrapping",
     section: "behavior",
     title: "Diff line wrapping",
