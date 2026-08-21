@@ -1,5 +1,5 @@
 {
-  "name": "@synara/monorepo",
+  "name": "@forkara/the-forkening",
   "private": true,
   "workspaces": {
     "packages": [
