@@ -30,6 +30,7 @@ describe("ServerSettingsService", () => {
     expect(settings.providers.grok.binaryPath).toBe("grok");
     expect(settings.defaultThreadEnvMode).toBe("local");
     expect(settings.enableProviderUpdateChecks).toBe(true);
+    expect(settings.bullyModeEnabled).toBe(false);
   });
 
   it("persists updates and reloads them", async () => {
@@ -72,6 +73,39 @@ describe("ServerSettingsService", () => {
         },
       },
     });
+  });
+
+  it("hydrates bully mode as disabled from legacy settings and persists enabling it", async () => {
+    const result = await runWithSettings(
+      Effect.gen(function* () {
+        const service = yield* ServerSettingsService;
+        const { settingsPath } = yield* ServerConfig;
+        const fs = yield* FileSystem.FileSystem;
+        yield* fs.makeDirectory(dirname(settingsPath), { recursive: true });
+        yield* fs.writeFileString(
+          settingsPath,
+          JSON.stringify({
+            revision: 3,
+            migrationVersion: 2,
+            settings: {
+              enableAssistantStreaming: true,
+            },
+          }),
+        );
+
+        yield* service.start;
+        const before = yield* service.getSettings;
+        const updated = yield* service.updateSettings({ bullyModeEnabled: true });
+        const persisted = JSON.parse(yield* fs.readFileString(settingsPath)) as {
+          settings: { bullyModeEnabled?: boolean };
+        };
+        return { before, updated, persisted };
+      }),
+    );
+
+    expect(result.before.bullyModeEnabled).toBe(false);
+    expect(result.updated.bullyModeEnabled).toBe(true);
+    expect(result.persisted.settings.bullyModeEnabled).toBe(true);
   });
 
   it("migrates the previous Git writing default to GPT-5.6 Luna", async () => {
