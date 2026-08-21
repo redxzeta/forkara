@@ -336,6 +336,7 @@ function SettingsRouteView() {
     ...(settings.enableAssistantStreaming !== defaults.enableAssistantStreaming
       ? ["Assistant output"]
       : []),
+    ...(settings.bullyModeEnabled !== defaults.bullyModeEnabled ? ["Bully Mode"] : []),
     ...(settings.followUpBehavior !== defaults.followUpBehavior ? ["Follow-up behavior"] : []),
     ...(settings.enableAppSnap !== defaults.enableAppSnap ? ["AppSnap"] : []),
     ...(!sameAppSnapShortcut(settings.appSnapShortcut, defaults.appSnapShortcut)
@@ -1157,6 +1158,15 @@ function SettingsRouteView() {
           description: "Show token-by-token output while a response is in progress.",
           resetLabel: "assistant output",
           ariaLabel: "Stream assistant messages",
+        })}
+
+        {renderBooleanSettingRow({
+          settingKey: "bullyModeEnabled",
+          title: "Bully Mode",
+          description:
+            "Changes response tone only. Does not change tools, permissions, confirmations, or model capabilities.",
+          resetLabel: "Bully Mode",
+          ariaLabel: "Enable Bully Mode",
         })}
       </SettingsSection>
 
