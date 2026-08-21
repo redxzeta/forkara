@@ -34,7 +34,7 @@ Forkara connects to the coding-agent runtimes installed and authenticated on you
 provider still owns its account, models, tools, permissions, and service; Forkara owns the durable
 task, working environment, transcript, and review surfaces around that session.
 
-| Provider                                                                | What Forkara connects to                                      |
+| Provider                                                                | What Forkara connects to                                     |
 | ----------------------------------------------------------------------- | ------------------------------------------------------------ |
 | [Claude Code](https://www.trysynara.com/docs/providers/claude-code)     | Your installed Claude Code runtime and authenticated account |
 | [Codex](https://www.trysynara.com/docs/providers/codex)                 | Your installed and authenticated Codex CLI                   |
