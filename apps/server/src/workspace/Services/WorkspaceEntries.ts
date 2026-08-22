@@ -15,7 +15,7 @@ import type {
   ProjectSearchEntriesResult,
   ProjectSearchLocalEntriesInput,
   ProjectSearchLocalEntriesResult,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 
 export interface WorkspaceEntriesShape {
   readonly browse: (

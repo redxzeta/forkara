@@ -14,8 +14,8 @@ import {
   ProviderStartOptions,
   ProjectId,
   TurnId,
-} from "@synara/contracts";
-import { automationRequiresTargetThread } from "@synara/shared/automationMode";
+} from "@forkara/contracts";
+import { automationRequiresTargetThread } from "@forkara/shared/automationMode";
 import { Effect, Layer, Option, Schema } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 import * as SqlSchema from "effect/unstable/sql/SqlSchema";

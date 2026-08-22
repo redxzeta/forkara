@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 import {
   SYNARA_DESKTOP_UPDATE_CHANNEL,
   SYNARA_PRODUCTION_BUNDLE_ID,
-} from "@synara/shared/desktopIdentity";
+} from "@forkara/shared/desktopIdentity";
 
 import {
   readReleaseUpdatePolicyConfig,
@@ -91,8 +91,8 @@ function verifyCanonicalIdentity(): void {
   const serverPackage = JSON.parse(
     readFileSync(resolve(repoRoot, "apps/server/package.json"), "utf8"),
   ) as { name?: string; bin?: Record<string, string> };
-  if (serverPackage.name !== "@synara/cli") {
-    throw new Error(`Expected CLI package @synara/cli, got ${serverPackage.name ?? "<missing>"}.`);
+  if (serverPackage.name !== "@forkara/cli") {
+    throw new Error(`Expected CLI package @forkara/cli, got ${serverPackage.name ?? "<missing>"}.`);
   }
   const expectedBinaries = {
     synara: "dist/index.mjs",
@@ -360,7 +360,7 @@ function verifyDesktopStageLockAuthority(): void {
   );
   assertNotContains(
     buildScript,
-    "--filter @synara/",
+    "--filter @forkara/",
     "Desktop staging must not use Bun workspace filters because filtered hoisted installs can diverge from bun.lock.",
   );
   assertContains(

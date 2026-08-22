@@ -6,8 +6,8 @@
 
 import "../index.css";
 
-import type { NativeApi } from "@synara/contracts";
-import { PROJECT_SEARCH_CONTENT_MIN_QUERY_LENGTH } from "@synara/contracts";
+import type { NativeApi } from "@forkara/contracts";
+import { PROJECT_SEARCH_CONTENT_MIN_QUERY_LENGTH } from "@forkara/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { page, userEvent } from "vitest/browser";
 import { expect, it, vi } from "vitest";

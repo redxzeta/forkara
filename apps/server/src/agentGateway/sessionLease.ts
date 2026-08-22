@@ -1,4 +1,4 @@
-import type { ProviderKind, ThreadId } from "@synara/contracts";
+import type { ProviderKind, ThreadId } from "@forkara/contracts";
 import { Effect, Exit } from "effect";
 
 import type {

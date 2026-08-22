@@ -14,11 +14,11 @@ import {
   type ProviderKind,
   type SynaraCreateThreadsInput,
   type SynaraCreateThreadsResult,
-} from "@synara/contracts";
-import { buildPromptThreadTitleFallback } from "@synara/shared/chatThreads";
-import { WORKTREE_BRANCH_PREFIX } from "@synara/shared/git";
-import { parseGitHubRepositoryNameWithOwnerFromPullRequestUrl } from "@synara/shared/githubRepository";
-import { runtimeModeEscalatesPrivilege } from "@synara/shared/runtimeMode";
+} from "@forkara/contracts";
+import { buildPromptThreadTitleFallback } from "@forkara/shared/chatThreads";
+import { WORKTREE_BRANCH_PREFIX } from "@forkara/shared/git";
+import { parseGitHubRepositoryNameWithOwnerFromPullRequestUrl } from "@forkara/shared/githubRepository";
+import { runtimeModeEscalatesPrivilege } from "@forkara/shared/runtimeMode";
 import { Cause, Effect, Option, Semaphore } from "effect";
 
 import type { ServerConfigShape } from "../config.ts";

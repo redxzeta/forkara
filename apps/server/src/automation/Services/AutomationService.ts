@@ -19,7 +19,7 @@ import {
   AutomationUpdateInput,
   ThreadId,
   TurnId,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import { ServiceMap } from "effect";
 import type { Effect, Option, Stream } from "effect";
 

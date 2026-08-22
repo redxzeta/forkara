@@ -14,11 +14,11 @@ import {
   type AutomationSchedule as AutomationScheduleType,
   type AutomationWorktreeMode,
   type OrchestrationThreadShell,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import {
   automationContinuesThread,
   automationRequiresTargetThread,
-} from "@synara/shared/automationMode";
+} from "@forkara/shared/automationMode";
 import { Effect, Option, Schema } from "effect";
 
 import type { AutomationServiceShape } from "../automation/Services/AutomationService.ts";

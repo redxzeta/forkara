@@ -5,7 +5,7 @@
 
 import { randomUUID } from "node:crypto";
 import type * as Acp from "@agentclientprotocol/sdk";
-import { parseWindowsWslUncPath, prepareWindowsSafeProcess } from "@synara/shared/windowsProcess";
+import { parseWindowsWslUncPath, prepareWindowsSafeProcess } from "@forkara/shared/windowsProcess";
 import {
   Cause,
   Deferred,

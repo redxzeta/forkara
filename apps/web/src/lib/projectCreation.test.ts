@@ -8,7 +8,7 @@ import {
   type OrchestrationShellSnapshot,
   type ProjectId,
   SpaceId,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { useSpacesUiStore } from "../spacesUiStore";

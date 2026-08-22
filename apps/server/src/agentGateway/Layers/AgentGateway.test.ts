@@ -11,7 +11,7 @@ import type {
   ProviderKind,
   ServerProviderStatus,
   ThreadId as ThreadIdType,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import {
   AutomationId,
   DEFAULT_AUTOMATION_STOP_CONFIDENCE_THRESHOLD,
@@ -23,8 +23,8 @@ import {
   THREAD_GOAL_MAX_CHARS,
   ThreadId,
   TurnId,
-} from "@synara/contracts";
-import { isTemporaryWorktreeBranch } from "@synara/shared/git";
+} from "@forkara/contracts";
+import { isTemporaryWorktreeBranch } from "@forkara/shared/git";
 import { realpathSync } from "node:fs";
 import { homedir } from "node:os";
 

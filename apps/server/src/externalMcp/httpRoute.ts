@@ -3,7 +3,7 @@ import {
   ExternalMcpPairInput,
   ExternalMcpRefreshPairingInput,
   ExternalMcpRevokeIntegrationInput,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import { Effect, Layer, Option, Schema, Semaphore } from "effect";
 import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
 

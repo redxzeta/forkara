@@ -13,7 +13,7 @@
 
 import nodePath from "node:path";
 
-import type { ServerProviderUsageLimit, ServerProviderUsageLine } from "@synara/contracts";
+import type { ServerProviderUsageLimit, ServerProviderUsageLine } from "@forkara/contracts";
 
 import { createLogger } from "../../logger";
 import {

@@ -25,16 +25,16 @@ import {
   type ProviderStartOptions,
   type ThreadEnvironmentMode,
   type TurnId,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import {
   automationContinuationThreadId,
   automationContinuesThread,
   automationOwnsItsThread,
   automationRequiresTargetThread,
-} from "@synara/shared/automationMode";
-import { buildTemporaryWorktreeBranchName } from "@synara/shared/git";
-import { providerStartOptionsFromServerSettings } from "@synara/shared/serverSettings";
-import { autoRuntimeModeSelectionIssue } from "@synara/shared/runtimeMode";
+} from "@forkara/shared/automationMode";
+import { buildTemporaryWorktreeBranchName } from "@forkara/shared/git";
+import { providerStartOptionsFromServerSettings } from "@forkara/shared/serverSettings";
+import { autoRuntimeModeSelectionIssue } from "@forkara/shared/runtimeMode";
 import { Cause, Effect, Layer, Option, PubSub, Queue, Stream } from "effect";
 
 import { GitCore } from "../../git/Services/GitCore.ts";

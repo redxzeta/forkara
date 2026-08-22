@@ -10,8 +10,8 @@ import {
   type ThreadGoalAchievement,
   type ThreadMarker,
   type TurnId,
-} from "@synara/contracts";
-import { pluralize } from "@synara/shared/text";
+} from "@forkara/contracts";
+import { pluralize } from "@forkara/shared/text";
 import { LegendList, type LegendListRef } from "@legendapp/list/react";
 import {
   memo,

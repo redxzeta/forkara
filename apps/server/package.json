@@ -1,5 +1,5 @@
 {
-  "name": "@synara/cli",
+  "name": "@forkara/cli",
   "version": "0.7.2",
   "license": "MIT",
   "repository": {
@@ -44,9 +44,9 @@
   "devDependencies": {
     "@effect/language-service": "catalog:",
     "@effect/vitest": "catalog:",
-    "@synara/contracts": "workspace:*",
-    "@synara/shared": "workspace:*",
-    "@synara/web": "workspace:*",
+    "@forkara/contracts": "workspace:*",
+    "@forkara/shared": "workspace:*",
+    "@forkara/web": "workspace:*",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "@types/ws": "^8.5.13",

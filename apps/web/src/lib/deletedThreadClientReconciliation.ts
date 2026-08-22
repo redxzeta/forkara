@@ -3,7 +3,7 @@
 // Layer: Web orchestration helper
 // Exports: reconcileDeletedThreadFromClient, reconcileDeletedThreadsFromClient
 
-import type { ThreadId } from "@synara/contracts";
+import type { ThreadId } from "@forkara/contracts";
 
 interface DeletedThreadClientReconciliationInput {
   threadIds: ReadonlyArray<ThreadId>;

@@ -7,7 +7,7 @@ import {
   type OrchestrationSession,
   type OrchestrationThreadShell,
   type ProviderSession,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
 

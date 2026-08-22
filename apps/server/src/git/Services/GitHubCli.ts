@@ -21,7 +21,7 @@ import type {
   PullRequestStack,
   PullRequestStackSummary,
   PullRequestState,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 
 import type { ProcessRunResult } from "../../processRunner";
 import type { GitHubCliError } from "../Errors.ts";

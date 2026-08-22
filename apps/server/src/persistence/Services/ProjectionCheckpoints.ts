@@ -15,7 +15,7 @@ import {
   OrchestrationCheckpointStatus,
   ThreadId,
   TurnId,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import { Option, ServiceMap, Schema } from "effect";
 import type { Effect } from "effect";
 

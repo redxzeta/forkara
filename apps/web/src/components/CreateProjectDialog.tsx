@@ -4,9 +4,9 @@
 // Layer: Web UI dialog
 // Exports: CreateProjectDialog, CreateProjectSubmitValue
 
-import { type GitHubProjectProvisionProgressEvent, type SpaceId } from "@synara/contracts";
-import { parseGitHubRepositoryInput } from "@synara/shared/githubRepository";
-import { normalizeProjectDirectoryName } from "@synara/shared/projectDirectoryName";
+import { type GitHubProjectProvisionProgressEvent, type SpaceId } from "@forkara/contracts";
+import { parseGitHubRepositoryInput } from "@forkara/shared/githubRepository";
+import { normalizeProjectDirectoryName } from "@forkara/shared/projectDirectoryName";
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 
 import { isElectron } from "../env";

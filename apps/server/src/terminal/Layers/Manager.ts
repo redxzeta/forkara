@@ -17,8 +17,8 @@ import {
   TerminalWriteInput,
   type TerminalEvent,
   type TerminalSessionSnapshot,
-} from "@synara/contracts";
-import { describeErrorMessage } from "@synara/shared/errorMessages";
+} from "@forkara/contracts";
+import { describeErrorMessage } from "@forkara/shared/errorMessages";
 import {
   consumeTerminalIdentityInput,
   terminalCliKindFromValue,
@@ -27,7 +27,7 @@ import {
   type TerminalActivityState,
   type TerminalAgentHookEventType,
   type TerminalCliKind,
-} from "@synara/shared/terminalThreads";
+} from "@forkara/shared/terminalThreads";
 import { Effect, Encoding, Layer, Schema } from "effect";
 
 import { createLogger } from "../../logger";

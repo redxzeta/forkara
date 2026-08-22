@@ -1,4 +1,4 @@
-import { MessageId } from "@synara/contracts";
+import { MessageId } from "@forkara/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

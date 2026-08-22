@@ -26,7 +26,7 @@ import {
   type ProviderSession,
   type RuntimeMode,
   TurnId,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import {
   Cache,
   Cause,
@@ -45,20 +45,20 @@ import {
 import {
   buildPromptThreadTitleFallback,
   isGenericChatThreadTitle,
-} from "@synara/shared/chatThreads";
+} from "@forkara/shared/chatThreads";
 import {
   collectTailTurnIds,
   resolveTailUserMessageEditTarget,
-} from "@synara/shared/conversationEdit";
-import { isTemporaryWorktreeBranch, WORKTREE_BRANCH_PREFIX } from "@synara/shared/git";
-import { claudeSelectionRequiresRestart } from "@synara/shared/model";
-import { providerSupportsNativeTurnSteering } from "@synara/shared/providerMetadata";
+} from "@forkara/shared/conversationEdit";
+import { isTemporaryWorktreeBranch, WORKTREE_BRANCH_PREFIX } from "@forkara/shared/git";
+import { claudeSelectionRequiresRestart } from "@forkara/shared/model";
+import { providerSupportsNativeTurnSteering } from "@forkara/shared/providerMetadata";
 import {
   formatProviderDeliveryBlockDetail,
   PROVIDER_DELIVERY_BLOCK_SUMMARY,
-} from "@synara/shared/providerDeliveryBlock";
-import { buildStalePendingRequestFailureDetail } from "@synara/shared/threadSummary";
-import { resolveThreadWorkspaceState } from "@synara/shared/threadEnvironment";
+} from "@forkara/shared/providerDeliveryBlock";
+import { buildStalePendingRequestFailureDetail } from "@forkara/shared/threadSummary";
+import { resolveThreadWorkspaceState } from "@forkara/shared/threadEnvironment";
 
 import {
   checkpointRefForThreadMessageStart,
@@ -109,7 +109,7 @@ import { QueuedTurnPromotionRepository } from "../../persistence/Services/Queued
 import { ManagedAttachmentRepository } from "../../persistence/Services/ManagedAttachments.ts";
 import { ServerConfig } from "../../config.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
-import { providerStartOptionsFromServerSettings } from "@synara/shared/serverSettings";
+import { providerStartOptionsFromServerSettings } from "@forkara/shared/serverSettings";
 import { clearWorkspaceIndexCache } from "../../workspaceEntries.ts";
 import {
   buildPriorTranscriptBootstrapText,

@@ -7,7 +7,7 @@ import {
   ThreadId,
   type OrchestrationEvent,
   type OrchestrationThread,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import {
   Effect,
   Exit,

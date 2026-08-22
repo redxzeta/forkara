@@ -1,4 +1,4 @@
-import type { GitBranch } from "@synara/contracts";
+import type { GitBranch } from "@forkara/contracts";
 import { describe, expect, it } from "vitest";
 import {
   dedupeRemoteBranchesWithLocalMatches,

@@ -23,7 +23,7 @@ import type {
   ThreadId,
   ThreadEnvironmentMode,
   TurnId,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import { ServiceMap } from "effect";
 import type { Effect, Option } from "effect";
 

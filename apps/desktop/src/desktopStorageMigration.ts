@@ -5,7 +5,7 @@
 import * as FS from "node:fs";
 import * as Path from "node:path";
 
-import type { SynaraStorageSnapshot } from "@synara/contracts";
+import type { SynaraStorageSnapshot } from "@forkara/contracts";
 
 export const SYNARA_STORAGE_SNAPSHOT_FILE_NAME = "synara-storage-origin-v1.json";
 export const SYNARA_STORAGE_SNAPSHOT_MAX_BYTES = 16 * 1024 * 1024;

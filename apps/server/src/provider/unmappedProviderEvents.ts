@@ -1,4 +1,4 @@
-import type { ProviderEvent } from "@synara/contracts";
+import type { ProviderEvent } from "@forkara/contracts";
 
 import { isProviderCredentialKey } from "../providerChildEnvironment.ts";
 

@@ -15,9 +15,9 @@ import {
   normalizeComposerLinkUrl,
   trimTrailingLinkPunctuation,
 } from "./lib/linkChips";
-import { resolveAgentAlias } from "@synara/contracts";
-import type { ProviderMentionReference } from "@synara/contracts";
-import { threadIdFromThreadMentionPath } from "@synara/shared/threadMentions";
+import { resolveAgentAlias } from "@forkara/contracts";
+import type { ProviderMentionReference } from "@forkara/contracts";
+import { threadIdFromThreadMentionPath } from "@forkara/shared/threadMentions";
 
 export type ComposerPromptSegment =
   | {

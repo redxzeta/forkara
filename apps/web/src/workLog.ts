@@ -6,20 +6,20 @@ import {
   type ProviderKind,
   type ToolLifecycleItemType,
   type TurnId,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import {
   decodeSubagentAgentStates,
   extractSubagentIdentityHints,
   decodeSubagentReceiverAgents,
   decodeSubagentReceiverThreadIds,
-} from "@synara/shared/subagents";
+} from "@forkara/shared/subagents";
 import {
   approvalRequestKindFromRequestType,
   type ApprovalRequestKind,
-} from "@synara/shared/threadSummary";
-import { summarizeToolRawOutput } from "@synara/shared/toolOutputSummary";
-import { pluralize } from "@synara/shared/text";
-import { PROVIDER_DESCRIPTORS } from "@synara/shared/providerMetadata";
+} from "@forkara/shared/threadSummary";
+import { summarizeToolRawOutput } from "@forkara/shared/toolOutputSummary";
+import { pluralize } from "@forkara/shared/text";
+import { PROVIDER_DESCRIPTORS } from "@forkara/shared/providerMetadata";
 import {
   deriveReadableToolTitle,
   deriveSynaraMcpToolTitle,

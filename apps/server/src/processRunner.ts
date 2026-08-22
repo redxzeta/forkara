@@ -1,6 +1,6 @@
 import { type ChildProcess as ChildProcessHandle, spawn, spawnSync } from "node:child_process";
 import { StringDecoder } from "node:string_decoder";
-import { prepareWindowsSafeProcess } from "@synara/shared/windowsProcess";
+import { prepareWindowsSafeProcess } from "@forkara/shared/windowsProcess";
 
 export interface ProcessRunOptions {
   cwd?: string | undefined;

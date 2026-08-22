@@ -7,7 +7,7 @@ import {
   type TerminalEvent,
   type TerminalOpenInput,
   type TerminalRestartInput,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {

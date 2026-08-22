@@ -7,7 +7,7 @@ import nodePath from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { outboundHttp } from "@synara/shared/outboundHttp";
+import { outboundHttp } from "@forkara/shared/outboundHttp";
 
 import { opencodeUsageFetcher, parseOpenCodeGoUsage } from "./opencode";
 

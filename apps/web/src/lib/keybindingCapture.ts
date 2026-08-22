@@ -1,4 +1,4 @@
-import type { KeybindingShortcut } from "@synara/contracts";
+import type { KeybindingShortcut } from "@forkara/contracts";
 
 import { getNavigatorPlatform, isMacPlatform } from "~/lib/utils";
 

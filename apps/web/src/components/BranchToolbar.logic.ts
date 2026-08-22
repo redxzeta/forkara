@@ -1,8 +1,8 @@
-import type { GitBranch } from "@synara/contracts";
+import type { GitBranch } from "@forkara/contracts";
 import {
   deriveAssociatedWorktreeMetadata,
   type AssociatedWorktreeMetadata,
-} from "@synara/shared/threadWorkspace";
+} from "@forkara/shared/threadWorkspace";
 import { Schema } from "effect";
 import type { ThreadWorkspacePatch } from "../types";
 

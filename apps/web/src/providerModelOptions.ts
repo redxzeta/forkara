@@ -2,7 +2,7 @@ import {
   formatModelDisplayName,
   humanizeModelSlug,
   normalizeModelSlug,
-} from "@synara/shared/model";
+} from "@forkara/shared/model";
 import {
   MODEL_OPTIONS_BY_PROVIDER,
   PROVIDER_DISPLAY_NAMES,
@@ -26,7 +26,7 @@ import {
   type PiModelSelection,
   type ProviderKind,
   type ProviderModelOptions,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import { normalizeCursorModelVariantBaseId } from "./cursorModelVariants";
 
 export type ProviderOptions = ProviderModelOptions[ProviderKind];

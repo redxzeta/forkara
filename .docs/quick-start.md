@@ -37,10 +37,10 @@ bun run dist:desktop:win
 
 ## Published CLI package
 
-The server package is published as `@synara/cli` and exposes the `synara` executable. To run an npm-published version without installing it globally:
+The server package is published as `@forkara/cli` and exposes the `synara` executable. To run an npm-published version without installing it globally:
 
 ```bash
-npx --yes --package=@synara/cli synara --help
+npx --yes --package=@forkara/cli synara --help
 ```
 
 For repository scripts, release packaging, and multi-instance development details, see [scripts.md](./scripts.md).

@@ -10,12 +10,12 @@
 //          string or uncompressed buffer — peak memory is bounded by the
 //          compressed bytes of one entry.
 // Exports: threadArchiveChunks, buildThreadArchiveBytes, threadArchiveFileName.
-// The export-eligibility guard lives in @synara/shared/threadExport so the
+// The export-eligibility guard lives in @forkara/shared/threadExport so the
 // web composer and the HTTP route share one predicate.
 
 import zlib from "node:zlib";
 
-import type { OrchestrationMessage, OrchestrationThread } from "@synara/contracts";
+import type { OrchestrationMessage, OrchestrationThread } from "@forkara/contracts";
 
 export interface ThreadArchiveEntry {
   readonly name: string;

@@ -11,7 +11,7 @@ import type {
   PullRequestSetPinnedResult,
   PullRequestsListInput,
   PullRequestsListResult,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import { ServiceMap } from "effect";
 import type { Effect } from "effect";
 

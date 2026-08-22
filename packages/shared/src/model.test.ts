@@ -13,7 +13,7 @@ import {
   GROK_4_5_REASONING_EFFORTS,
   GROK_4_6_REASONING_EFFORTS,
   GROK_BUILD_REASONING_EFFORTS,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 
 import {
   applyClaudePromptEffortPrefix,

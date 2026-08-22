@@ -6,7 +6,7 @@ import {
   type OrchestrationCommand,
   type OrchestrationThreadPullRequest,
   type ProviderRuntimeEvent,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import { Effect, Exit, Layer, ManagedRuntime, Option, PubSub, Scope, Stream } from "effect";
 import { afterEach, describe, expect, it } from "vitest";
 

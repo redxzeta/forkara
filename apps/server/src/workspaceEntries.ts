@@ -27,9 +27,9 @@ import {
   PROJECT_SEARCH_CONTENT_MAX_LIMIT,
   PROJECT_SEARCH_CONTENT_MAX_LINE_LENGTH,
   PROJECT_SEARCH_CONTENT_MIN_QUERY_LENGTH,
-} from "@synara/contracts";
-import { isExplicitRelativePath, isWindowsAbsolutePath } from "@synara/shared/path";
-import { normalizeWorkspaceEntrySearchQuery } from "@synara/shared/searchQuery";
+} from "@forkara/contracts";
+import { isExplicitRelativePath, isWindowsAbsolutePath } from "@forkara/shared/path";
+import { normalizeWorkspaceEntrySearchQuery } from "@forkara/shared/searchQuery";
 import { resolveRealPathWithinRoot } from "./workspace/realPathContainment";
 
 const WORKSPACE_CACHE_TTL_MS = 15_000;

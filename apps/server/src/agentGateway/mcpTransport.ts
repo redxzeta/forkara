@@ -1,4 +1,4 @@
-import { ThreadId, type OrchestrationThreadShell } from "@synara/contracts";
+import { ThreadId, type OrchestrationThreadShell } from "@forkara/contracts";
 import { Cause, Deferred, Effect, Exit, Fiber, Option } from "effect";
 
 import type { ProjectionSnapshotQueryShape } from "../orchestration/Services/ProjectionSnapshotQuery.ts";

@@ -1,4 +1,4 @@
-import type { OrchestrationMessage, OrchestrationThread } from "@synara/contracts";
+import type { OrchestrationMessage, OrchestrationThread } from "@forkara/contracts";
 
 const RECENT_MESSAGE_COUNT = 6;
 const EARLIER_MESSAGE_CHAR_LIMIT = 320;

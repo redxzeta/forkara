@@ -4,7 +4,7 @@ import {
   SynaraWaitForThreadsInput,
   type ModelSelection,
   type ProviderKind,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import { Schema } from "effect";
 
 import { AGENT_GATEWAY_TARGET_OPTIONS_DESCRIPTION } from "./targetResolver.ts";

@@ -87,11 +87,11 @@ import {
   ThreadId,
   type ResolvedKeybindingsConfig,
   WS_GITHUB_PROJECT_PROVISIONING_CAPABILITY,
-} from "@synara/contracts";
-import { isGenericChatThreadTitle } from "@synara/shared/chatThreads";
-import { getDefaultModel } from "@synara/shared/model";
-import { pluralize } from "@synara/shared/text";
-import { resolveThreadWorkspaceCwd } from "@synara/shared/threadEnvironment";
+} from "@forkara/contracts";
+import { isGenericChatThreadTitle } from "@forkara/shared/chatThreads";
+import { getDefaultModel } from "@forkara/shared/model";
+import { pluralize } from "@forkara/shared/text";
+import { resolveThreadWorkspaceCwd } from "@forkara/shared/threadEnvironment";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import {

@@ -4,7 +4,11 @@
 
 import { describe, expect, it } from "vitest";
 
-import { ProjectId, type ProjectDevServer, type ServerLocalServerProcess } from "@synara/contracts";
+import {
+  ProjectId,
+  type ProjectDevServer,
+  type ServerLocalServerProcess,
+} from "@forkara/contracts";
 
 import { findProjectDevServerForLocalServer } from "./devServerManager";
 

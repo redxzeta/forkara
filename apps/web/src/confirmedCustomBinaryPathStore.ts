@@ -5,8 +5,8 @@
 // Layer: Web UI state utilities
 // Exports: load/save helpers for the confirmed-path record.
 
-import type { ProviderKind } from "@synara/contracts";
-import { PROVIDER_DESCRIPTORS } from "@synara/shared/providerMetadata";
+import type { ProviderKind } from "@forkara/contracts";
+import { PROVIDER_DESCRIPTORS } from "@forkara/shared/providerMetadata";
 import { isPlainObject } from "./persistedRecord";
 
 const STORAGE_KEY = "synara:confirmed-custom-binary-paths:v1";
