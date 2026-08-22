@@ -8,7 +8,7 @@ import {
   TurnId,
   type OrchestrationCommand,
   type OrchestrationEvent,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import { Effect, Layer, ManagedRuntime, Option, Queue, Stream } from "effect";
 import { describe, expect, it, vi } from "vitest";
 

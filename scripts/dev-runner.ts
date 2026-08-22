@@ -5,14 +5,14 @@ import { delimiter as pathDelimiter, join as pathJoin } from "node:path";
 
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { NetService } from "@synara/shared/Net";
+import { NetService } from "@forkara/shared/Net";
 import {
   getBooleanFlagValue,
   optionalBooleanEnvironmentConfig,
   optionalBooleanFlag,
   type BooleanFlagInput,
-} from "@synara/shared/cli";
-import { applyShellEnvironmentHydrationMarker } from "@synara/shared/shell";
+} from "@forkara/shared/cli";
+import { applyShellEnvironmentHydrationMarker } from "@forkara/shared/shell";
 import { Config, Data, Effect, Hash, Layer, Logger, Option, Path, Schema } from "effect";
 import * as ConfigProvider from "effect/ConfigProvider";
 import { Argument, Command, Flag } from "effect/unstable/cli";
@@ -32,14 +32,14 @@ const MODE_ARGS = {
     "run",
     "dev",
     "--ui=tui",
-    "--filter=@synara/contracts",
-    "--filter=@synara/web",
-    "--filter=@synara/cli",
+    "--filter=@forkara/contracts",
+    "--filter=@forkara/web",
+    "--filter=@forkara/cli",
     "--parallel",
   ],
-  "dev:server": ["run", "dev", "--filter=@synara/cli"],
-  "dev:web": ["run", "dev", "--filter=@synara/web"],
-  "dev:desktop": ["run", "dev", "--filter=@synara/desktop", "--filter=@synara/web", "--parallel"],
+  "dev:server": ["run", "dev", "--filter=@forkara/cli"],
+  "dev:web": ["run", "dev", "--filter=@forkara/web"],
+  "dev:desktop": ["run", "dev", "--filter=@forkara/desktop", "--filter=@forkara/web", "--parallel"],
 } as const satisfies Record<string, ReadonlyArray<string>>;
 
 type DevMode = keyof typeof MODE_ARGS;

@@ -5,15 +5,15 @@ import {
   ThreadId,
   type BrowserAutomationError,
   type BrowserToolName,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import {
   BROWSER_TOOL_CATALOGUE,
   BROWSER_TOOL_DEFINITIONS_BY_NAME,
   stableJsonStringify,
   type BrowserToolDefinition,
-} from "@synara/shared/browserAutomationCatalogue";
-import { makeBrowserAutomationError } from "@synara/shared/browserAutomationErrors";
-import { encodeBrowserMcpToolError } from "@synara/shared/browserAutomationMcpError";
+} from "@forkara/shared/browserAutomationCatalogue";
+import { makeBrowserAutomationError } from "@forkara/shared/browserAutomationErrors";
+import { encodeBrowserMcpToolError } from "@forkara/shared/browserAutomationMcpError";
 import { Effect, Schema } from "effect";
 
 import type { BrowserAutomationHostShape } from "../browserAutomation/Services/BrowserAutomationHost.ts";

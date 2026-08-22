@@ -25,7 +25,7 @@ Use this checklist when adapting Forkara for another fork name, logo, or distrib
 ## 3) Package metadata
 
 - [ ] Update package names/scopes and homepage/repository fields in package manifests if your fork wants a distinct namespace.
-- [ ] Review `@synara/*` references in package manifests and CLI scripts for rename impact.
+- [ ] Review `@forkara/*` references in package manifests and CLI scripts for rename impact.
 - [ ] Keep `apps/server/package.json` binary names (`synara`, `synara-restore-migration-backup`) intentional; if changing them, update launch and smoke assumptions in code.
 
 ## 4) Repo/runtime configuration

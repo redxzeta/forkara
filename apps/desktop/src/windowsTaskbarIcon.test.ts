@@ -2,7 +2,7 @@ import Path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { SYNARA_PRODUCTION_BUNDLE_ID } from "@synara/shared/desktopIdentity";
+import { SYNARA_PRODUCTION_BUNDLE_ID } from "@forkara/shared/desktopIdentity";
 import type { BrowserWindow } from "electron";
 
 import {

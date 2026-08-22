@@ -6,7 +6,7 @@
  *
  * @module OrchestrationProjectionPipeline
  */
-import type { OrchestrationEvent } from "@synara/contracts";
+import type { OrchestrationEvent } from "@forkara/contracts";
 import { ServiceMap } from "effect";
 import type { Effect } from "effect";
 

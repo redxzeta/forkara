@@ -17,7 +17,7 @@ import {
   WS_PROTOCOL_MIN_REVISION,
   WsCompatibilityError,
   type WsBootstrapNegotiateResult,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 
 import {
   shouldKeepServerLifecycleStream,

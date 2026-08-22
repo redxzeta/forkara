@@ -2,7 +2,7 @@
 // Purpose: Applies Synara's provider-independent evidence-first Debug instructions.
 // Layer: Provider prompt policy
 
-import type { ProviderInteractionMode } from "@synara/contracts";
+import type { ProviderInteractionMode } from "@forkara/contracts";
 
 export const PROVIDER_DEBUG_MODE_PROMPT_PREFIX = `<synara_debug_mode>
 You are operating in Synara Debug mode. Diagnose the reported defect using this evidence-first loop: observe -> reproduce -> investigate -> fix -> verify.

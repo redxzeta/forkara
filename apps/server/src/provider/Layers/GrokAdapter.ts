@@ -19,14 +19,14 @@ import {
   RuntimeRequestId,
   type ThreadId,
   TurnId,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import {
   getDefaultEffort,
   getModelCapabilities,
   normalizeGrokModelOptions,
-} from "@synara/shared/model";
-import { decodeOutboundJson, decodeOutboundText, outboundHttp } from "@synara/shared/outboundHttp";
-import { prepareWindowsSafeProcess } from "@synara/shared/windowsProcess";
+} from "@forkara/shared/model";
+import { decodeOutboundJson, decodeOutboundText, outboundHttp } from "@forkara/shared/outboundHttp";
+import { prepareWindowsSafeProcess } from "@forkara/shared/windowsProcess";
 import {
   Cause,
   DateTime,

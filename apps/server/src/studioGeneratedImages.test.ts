@@ -8,7 +8,7 @@ import {
   ThreadId,
   TurnId,
   type OrchestrationCommand,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import { Effect } from "effect";
 import { afterEach, describe, expect, it } from "vitest";
 

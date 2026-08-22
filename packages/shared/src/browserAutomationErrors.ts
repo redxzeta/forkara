@@ -4,7 +4,7 @@ import {
   BrowserFixedAutomationErrorInvariants,
   type BrowserAutomationErrorInput,
   type BrowserMcpToolErrorEnvelope,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import { Schema } from "effect";
 
 type BrowserFixedAutomationErrorCode = keyof typeof BrowserFixedAutomationErrorInvariants;

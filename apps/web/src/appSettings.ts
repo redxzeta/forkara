@@ -17,18 +17,18 @@ import {
   type ProviderStartOptions,
   type ServerSettingsView,
   type ServerSettingsPatch,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import {
   getDefaultModel,
   getModelOptions,
   normalizeModelSlug,
   resolveSelectableModel,
-} from "@synara/shared/model";
+} from "@forkara/shared/model";
 import {
   APP_SNAP_SHORTCUT_KEYS,
   APP_SNAP_SHORTCUT_MODIFIERS,
   DEFAULT_APP_SNAP_SHORTCUT,
-} from "@synara/shared/appSnapShortcut";
+} from "@forkara/shared/appSnapShortcut";
 import { useLocalStorage } from "./hooks/useLocalStorage";
 import { EnvMode } from "./components/BranchToolbar.logic";
 import { normalizeCursorModelVariantBaseId } from "./cursorModelVariants";

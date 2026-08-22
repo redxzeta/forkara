@@ -3,8 +3,8 @@ import type {
   RuntimeContentStreamKind,
   ThreadTokenUsageSnapshot,
   ToolLifecycleItemType,
-} from "@synara/contracts";
-import { summarizeToolRawOutput } from "@synara/shared/toolOutputSummary";
+} from "@forkara/contracts";
+import { summarizeToolRawOutput } from "@forkara/shared/toolOutputSummary";
 
 import { computeUsagePercent, nonNegativeInteger, positiveInteger } from "../tokenUsage.ts";
 import { canonicalItemTypeFromAcpToolKind } from "./AcpAdapterSupport.ts";

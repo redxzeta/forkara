@@ -12,7 +12,7 @@ import {
   SYNARA_TERMINAL_CLI_KIND_ENV_KEY,
   type TerminalAgentHookEventType,
   type ManagedTerminalCliKind,
-} from "@synara/shared/terminalThreads";
+} from "@forkara/shared/terminalThreads";
 
 import { envPathKeyFor, resolveExecutable } from "../executableLookup.ts";
 import {

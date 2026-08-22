@@ -14,7 +14,7 @@ import {
   useState,
   type ReactElement,
 } from "react";
-import { type ProjectDirectoryEntry, type ProjectId, type SpaceId } from "@synara/contracts";
+import { type ProjectDirectoryEntry, type ProjectId, type SpaceId } from "@forkara/contracts";
 import { useAppSettings } from "../../appSettings";
 import { readNativeApi } from "../../nativeApi";
 import { useStore } from "../../store";

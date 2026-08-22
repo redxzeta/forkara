@@ -11,7 +11,7 @@ import type {
   AuthWebSocketTokenResult,
   ServerAuthDescriptor,
   ServerAuthSessionMethod,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import { Data, DateTime, ServiceMap } from "effect";
 import type { Effect } from "effect";
 

@@ -8,9 +8,9 @@ import {
   type ServerConfig,
   type ServerProviderStatus,
   type WsCompatibilityError,
-} from "@synara/contracts";
-import { defaultTerminalTitleForCliKind } from "@synara/shared/terminalThreads";
-import { isThreadDetailEventFor } from "@synara/shared/threadDetailEvents";
+} from "@forkara/contracts";
+import { defaultTerminalTitleForCliKind } from "@forkara/shared/terminalThreads";
+import { isThreadDetailEventFor } from "@forkara/shared/threadDetailEvents";
 import {
   Outlet,
   createRootRouteWithContext,

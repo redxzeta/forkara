@@ -7,12 +7,12 @@
 import * as fs from "node:fs/promises";
 import path from "node:path";
 
-import { readActiveCodexProviderEnvKey } from "@synara/shared/codexConfig";
+import { readActiveCodexProviderEnvKey } from "@forkara/shared/codexConfig";
 import {
   readEnvironmentFromLoginShell,
   resolveLoginShell,
   type ShellEnvironmentReader,
-} from "@synara/shared/shell";
+} from "@forkara/shared/shell";
 
 import { resolveBaseCodexHomePath, resolveSynaraCodexHomeOverlayPath } from "./codexHomePaths.ts";
 import {

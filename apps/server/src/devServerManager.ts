@@ -21,8 +21,8 @@ import {
   type ProjectStopDevServerInput,
   type ProjectStopDevServerResult,
   type ServerLocalServerProcess,
-} from "@synara/contracts";
-import { localServerMatchesRun } from "@synara/shared/localServers";
+} from "@forkara/contracts";
+import { localServerMatchesRun } from "@forkara/shared/localServers";
 import { Effect, Layer, PubSub, Ref, ServiceMap, Stream } from "effect";
 
 import { TerminalManager, type TerminalError } from "./terminal/Services/Manager";

@@ -13,7 +13,7 @@ import {
   OrchestrationThreadActivityTone,
   ThreadId,
   TurnId,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import { Schema, ServiceMap } from "effect";
 import type { Effect } from "effect";
 

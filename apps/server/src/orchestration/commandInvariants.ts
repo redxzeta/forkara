@@ -12,13 +12,13 @@ import type {
   ProjectId,
   SpaceId,
   ThreadId,
-} from "@synara/contracts";
-import { THREAD_NOT_ARCHIVED_INVARIANT_MARKER } from "@synara/shared/errorMessages";
+} from "@forkara/contracts";
+import { THREAD_NOT_ARCHIVED_INVARIANT_MARKER } from "@forkara/shared/errorMessages";
 import {
   isLegacyHomeChatContainerRow as isSharedLegacyHomeChatContainerRow,
   isOrdinaryProjectRow as isSharedOrdinaryProjectRow,
-} from "@synara/shared/projectContainers";
-import { normalizeWorkspaceRootForComparison } from "@synara/shared/threadWorkspace";
+} from "@forkara/shared/projectContainers";
+import { normalizeWorkspaceRootForComparison } from "@forkara/shared/threadWorkspace";
 import { Effect } from "effect";
 
 import { OrchestrationCommandInvariantError } from "./Errors.ts";

@@ -13,7 +13,7 @@ import type {
   GitPullRequestComment,
   PullRequestMergeCapabilities,
   PullRequestStack,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 
 import { GitHubCliError } from "../Errors.ts";
 import {

@@ -7,7 +7,7 @@
 
 import { useEffect, useState } from "react";
 
-import type { ThreadId } from "@synara/contracts";
+import type { ThreadId } from "@forkara/contracts";
 
 import { directoryChain, useExplorerRevealRequestStore } from "~/explorerRevealRequestStore";
 import type { ChatFileReference } from "~/lib/chatReferences";

@@ -45,7 +45,7 @@ import {
   type DeviceStopRecordingResult,
   type DeviceUiNode,
   type ThreadDeviceState,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 
 import {
   DeviceBackendError,

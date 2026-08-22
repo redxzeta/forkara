@@ -13,7 +13,7 @@ import type {
   ServerLocalServerProcess,
   ServerStopLocalServerInput,
   ServerStopLocalServerResult,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 
 import { redactSensitiveProcessArgs } from "./processArgumentRedaction";
 

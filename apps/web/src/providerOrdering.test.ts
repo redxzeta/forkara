@@ -3,8 +3,8 @@
 // Layer: Web settings tests
 // Depends on: provider display metadata from contracts and providerOrdering helpers.
 
-import { PROVIDER_DISPLAY_NAMES, type ProviderKind } from "@synara/contracts";
-import { PROVIDER_DESCRIPTORS } from "@synara/shared/providerMetadata";
+import { PROVIDER_DISPLAY_NAMES, type ProviderKind } from "@forkara/contracts";
+import { PROVIDER_DESCRIPTORS } from "@forkara/shared/providerMetadata";
 import { describe, expect, it } from "vitest";
 
 import {

@@ -6,7 +6,7 @@ import type {
   ProjectKind,
   ThreadGoalAchievement,
   ThreadMarker,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import {
   EventId,
   MAX_PINNED_PROJECTS,
@@ -16,20 +16,20 @@ import {
   THREAD_GOAL_ACHIEVEMENTS_MAX_COUNT,
   THREAD_MARKERS_MAX_COUNT,
   TurnId,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import {
   deriveAssociatedWorktreeMetadata,
   deriveAssociatedWorktreeMetadataPatch,
   workspaceRootsEqual,
-} from "@synara/shared/threadWorkspace";
-import { doThreadMarkerRangesOverlap } from "@synara/shared/threadMarkers";
-import { collectSubagentDescendants } from "@synara/shared/threadHierarchy";
-import { autoRuntimeModeSelectionIssue } from "@synara/shared/runtimeMode";
-import { providerSupportsNativeTurnSteering } from "@synara/shared/providerMetadata";
+} from "@forkara/shared/threadWorkspace";
+import { doThreadMarkerRangesOverlap } from "@forkara/shared/threadMarkers";
+import { collectSubagentDescendants } from "@forkara/shared/threadHierarchy";
+import { autoRuntimeModeSelectionIssue } from "@forkara/shared/runtimeMode";
+import { providerSupportsNativeTurnSteering } from "@forkara/shared/providerMetadata";
 import {
   collectTailTurnIds,
   resolveTailUserMessageEditTarget,
-} from "@synara/shared/conversationEdit";
+} from "@forkara/shared/conversationEdit";
 import { Effect } from "effect";
 
 import { OrchestrationCommandInvariantError } from "./Errors.ts";

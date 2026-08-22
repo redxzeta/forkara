@@ -1,9 +1,9 @@
 import { Effect, Layer, Option, Ref, Schema } from "effect";
 import { ChildProcessSpawner } from "effect/unstable/process";
 
-import type { CursorModelSelection, ProviderStartOptions } from "@synara/contracts";
-import { sanitizeGeneratedThreadTitle } from "@synara/shared/chatThreads";
-import { sanitizeBranchFragment, sanitizeFeatureBranchName } from "@synara/shared/git";
+import type { CursorModelSelection, ProviderStartOptions } from "@forkara/contracts";
+import { sanitizeGeneratedThreadTitle } from "@forkara/shared/chatThreads";
+import { sanitizeBranchFragment, sanitizeFeatureBranchName } from "@forkara/shared/git";
 
 import {
   applyCursorAcpModelSelection,

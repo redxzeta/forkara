@@ -7,9 +7,9 @@ import {
   type ProviderKind,
   type ServerProviderStatus,
   type ServerSettings,
-} from "@synara/contracts";
-import { PROVIDER_DESCRIPTORS } from "@synara/shared/providerMetadata";
-import { pluralize } from "@synara/shared/text";
+} from "@forkara/contracts";
+import { PROVIDER_DESCRIPTORS } from "@forkara/shared/providerMetadata";
+import { pluralize } from "@forkara/shared/text";
 import {
   closestCenter,
   DndContext,

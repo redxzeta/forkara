@@ -418,7 +418,7 @@ jobs:
         run: bun install --frozen-lockfile --ignore-scripts
 
       - name: Build CLI package
-        run: bun run build --filter=@synara/web --filter=@synara/cli
+        run: bun run build --filter=@forkara/web --filter=@forkara/cli
 
       - name: Publish CLI package
         run: node apps/server/scripts/cli.ts publish --tag latest --app-version "${{ needs.preflight.outputs.version }}" --verbose
@@ -453,7 +453,7 @@ jobs:
         run: bun install --frozen-lockfile --ignore-scripts
 
       - name: Build server package
-        run: bun run build --filter=@synara/web --filter=@synara/cli
+        run: bun run build --filter=@forkara/web --filter=@forkara/cli
 
       - name: Pack server tarball
         run: node apps/server/scripts/cli.ts pack --out release-server --app-version "${{ needs.preflight.outputs.version }}"

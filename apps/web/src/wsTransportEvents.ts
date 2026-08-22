@@ -3,7 +3,7 @@
 // Layer: Web transport utility
 // Exports: event helpers used by wsNativeApi and terminal runtime recovery.
 
-import type { WsCompatibilityError } from "@synara/contracts";
+import type { WsCompatibilityError } from "@forkara/contracts";
 
 export type WsTransportState = "connecting" | "open" | "closed" | "incompatible" | "disposed";
 

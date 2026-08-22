@@ -8,8 +8,8 @@ import {
   type OrchestrationShellSnapshot,
   type ProjectId,
   type SpaceId,
-} from "@synara/contracts";
-import { getDefaultModel } from "@synara/shared/model";
+} from "@forkara/contracts";
+import { getDefaultModel } from "@forkara/shared/model";
 
 import { readActiveSpaceId } from "../spacesUiStore";
 import {

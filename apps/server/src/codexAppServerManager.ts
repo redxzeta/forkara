@@ -33,11 +33,11 @@ import {
   type ServerVoiceTranscriptionInput,
   type ServerVoiceTranscriptionResult,
   type UserInputQuestion,
-} from "@synara/contracts";
-import { prewarmChatGptVoiceTranscriptionConnection } from "@synara/shared/chatGptVoiceTranscription";
-import { getModelSelectionBooleanOptionValue, normalizeModelSlug } from "@synara/shared/model";
-import { decodeSubagentReceiverThreadIds } from "@synara/shared/subagents";
-import { prepareWindowsSafeProcess } from "@synara/shared/windowsProcess";
+} from "@forkara/contracts";
+import { prewarmChatGptVoiceTranscriptionConnection } from "@forkara/shared/chatGptVoiceTranscription";
+import { getModelSelectionBooleanOptionValue, normalizeModelSlug } from "@forkara/shared/model";
+import { decodeSubagentReceiverThreadIds } from "@forkara/shared/subagents";
+import { prepareWindowsSafeProcess } from "@forkara/shared/windowsProcess";
 import { Effect, ServiceMap } from "effect";
 
 import {

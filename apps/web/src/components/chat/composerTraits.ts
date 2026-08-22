@@ -7,13 +7,13 @@ import {
   type ProviderOptionDescriptor,
   type ProviderKind,
   type ProviderModelDescriptor,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import {
   getProviderOptionCurrentValue,
   getProviderOptionDescriptors,
   isClaudeUltrathinkPrompt,
   trimOrNull,
-} from "@synara/shared/model";
+} from "@forkara/shared/model";
 
 import type { ProviderOptions } from "../../providerModelOptions";
 import { getRuntimeAwareModelCapabilities } from "./runtimeModelCapabilities";

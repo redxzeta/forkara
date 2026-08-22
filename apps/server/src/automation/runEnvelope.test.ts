@@ -4,7 +4,7 @@ import {
   ProjectId,
   type AutomationDefinition,
   type AutomationRun,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

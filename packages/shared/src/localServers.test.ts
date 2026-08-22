@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { ServerLocalServerProcess } from "@synara/contracts";
+import type { ServerLocalServerProcess } from "@forkara/contracts";
 
 import {
   localServerAddressLabel,

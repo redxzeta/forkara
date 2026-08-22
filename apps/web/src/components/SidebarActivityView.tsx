@@ -14,8 +14,8 @@ import {
   type ReactNode,
 } from "react";
 
-import type { OrchestrationThreadPullRequest, ProjectId, ThreadId } from "@synara/contracts";
-import { resolveThreadEnvironmentMode } from "@synara/shared/threadEnvironment";
+import type { OrchestrationThreadPullRequest, ProjectId, ThreadId } from "@forkara/contracts";
+import { resolveThreadEnvironmentMode } from "@forkara/shared/threadEnvironment";
 
 import {
   AddPlusIcon,

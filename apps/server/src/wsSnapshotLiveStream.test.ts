@@ -1,4 +1,4 @@
-import type { OrchestrationEvent } from "@synara/contracts";
+import type { OrchestrationEvent } from "@forkara/contracts";
 import { Duration, Effect, PubSub, Stream } from "effect";
 import { describe, expect, it } from "vitest";
 

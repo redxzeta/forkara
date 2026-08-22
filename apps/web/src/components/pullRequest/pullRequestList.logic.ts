@@ -11,11 +11,11 @@ import type {
   PullRequestInvolvement,
   PullRequestListEntry,
   PullRequestSetPinnedInput,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import {
   pullRequestListProjectContexts,
   pullRequestListRepositoryIdentity,
-} from "@synara/shared/githubRepository";
+} from "@forkara/shared/githubRepository";
 
 export type PullRequestListGroupKey = "pinned" | "reviewRequested" | "authored" | "others";
 

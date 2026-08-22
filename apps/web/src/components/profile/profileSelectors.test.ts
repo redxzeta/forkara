@@ -3,7 +3,7 @@
 // token telemetry.
 // Layer: web profile feature tests.
 
-import type { ProfileStats, ProfileTokenStats } from "@synara/contracts";
+import type { ProfileStats, ProfileTokenStats } from "@forkara/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

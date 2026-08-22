@@ -46,7 +46,7 @@ import {
   type WsPushChannel,
   type WsPushMessage,
   ThreadId,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import {
   Cause,
   Data,

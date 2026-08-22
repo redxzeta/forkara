@@ -3,15 +3,15 @@
 // Layer: Web domain helpers
 // Exports: thread env resolution + `/fork` target planning
 
-import type { ThreadEnvironmentMode } from "@synara/contracts";
+import type { ThreadEnvironmentMode } from "@forkara/contracts";
 import {
   isPendingThreadWorktree,
   resolveThreadEnvironmentMode,
   resolveThreadWorkspaceCwd,
   resolveThreadWorkspaceState,
   type ResolvedThreadWorkspaceState,
-} from "@synara/shared/threadEnvironment";
-import { deriveAssociatedWorktreeMetadata } from "@synara/shared/threadWorkspace";
+} from "@forkara/shared/threadEnvironment";
+import { deriveAssociatedWorktreeMetadata } from "@forkara/shared/threadWorkspace";
 import type { Thread } from "../types";
 
 export type ForkThreadTarget = "local" | "worktree";
@@ -30,7 +30,7 @@ export {
   isPendingThreadWorktree,
   resolveThreadEnvironmentMode,
   resolveThreadWorkspaceState,
-} from "@synara/shared/threadEnvironment";
+} from "@forkara/shared/threadEnvironment";
 
 export interface ThreadEnvironmentPresentation {
   mode: ThreadEnvironmentMode;

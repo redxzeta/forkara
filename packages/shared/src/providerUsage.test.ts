@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import type { ServerProviderUsageSnapshot } from "@synara/contracts";
+import type { ServerProviderUsageSnapshot } from "@forkara/contracts";
 
 import { PROVIDER_USAGE_PROVIDERS, selectVisibleProviderUsageSnapshots } from "./providerUsage";
 

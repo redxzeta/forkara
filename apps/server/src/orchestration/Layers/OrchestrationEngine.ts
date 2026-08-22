@@ -5,8 +5,8 @@ import type {
   ProjectId,
   SpaceId,
   ThreadId,
-} from "@synara/contracts";
-import { OrchestrationCommand, ORCHESTRATION_WS_METHODS } from "@synara/contracts";
+} from "@forkara/contracts";
+import { OrchestrationCommand, ORCHESTRATION_WS_METHODS } from "@forkara/contracts";
 import {
   Cause,
   Deferred,

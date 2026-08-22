@@ -9,18 +9,18 @@ import type {
   ProjectFileEncoding,
   ProjectFileLineEnding,
   ProjectReadFileResult,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import {
   isSupportedLocalImagePath,
   isSupportedLocalPdfPath,
   lowerCaseExtensionOf,
-} from "@synara/shared/localPreviewFiles";
+} from "@forkara/shared/localPreviewFiles";
 import {
   isLocalAbsolutePath,
   isWorkspaceRelativePathSafe,
   joinWorkspaceRelativePath,
-} from "@synara/shared/path";
-import { isScratchWorkspacePath } from "@synara/shared/threadWorkspace";
+} from "@forkara/shared/path";
+import { isScratchWorkspacePath } from "@forkara/shared/threadWorkspace";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Component,

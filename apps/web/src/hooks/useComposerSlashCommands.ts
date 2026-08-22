@@ -10,8 +10,8 @@ import {
   type ProviderModelOptions,
   type RuntimeMode,
   type ThreadId,
-} from "@synara/contracts";
-import { deriveAssociatedWorktreeMetadata } from "@synara/shared/threadWorkspace";
+} from "@forkara/contracts";
+import { deriveAssociatedWorktreeMetadata } from "@forkara/shared/threadWorkspace";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { newCommandId, newMessageId, newThreadId } from "../lib/utils";
 import { readNativeApi } from "../nativeApi";

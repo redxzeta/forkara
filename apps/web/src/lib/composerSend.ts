@@ -13,12 +13,12 @@ import {
   type ClaudeCodeEffort,
   type ProviderKind,
   type UploadChatAttachment,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import {
   ATTACHMENT_CANCEL_ROUTE_PATH,
   ATTACHMENT_UPLOAD_ROUTE_PATH,
-} from "@synara/shared/binaryTransfer";
-import { applyClaudePromptEffortPrefix, getModelCapabilities } from "@synara/shared/model";
+} from "@forkara/shared/binaryTransfer";
+import { applyClaudePromptEffortPrefix, getModelCapabilities } from "@forkara/shared/model";
 
 import {
   cloneComposerImageAttachment,

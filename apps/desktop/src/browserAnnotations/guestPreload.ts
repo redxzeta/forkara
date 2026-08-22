@@ -4,11 +4,11 @@ import type {
   BrowserAnnotationMarker,
   BrowserAnnotationSource,
   BrowserAnnotationTheme,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import {
   browserAnnotationDocumentIdentityUrl,
   sanitizeBrowserAnnotationUrl,
-} from "@synara/shared/browserAnnotations";
+} from "@forkara/shared/browserAnnotations";
 
 import { BROWSER_ANNOTATION_GUEST_COMMAND_CHANNEL, BROWSER_IPC_CHANNELS } from "../ipcChannels";
 import {

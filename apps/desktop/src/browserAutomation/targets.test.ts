@@ -1,6 +1,6 @@
 import { runInNewContext } from "node:vm";
 
-import type { BrowserNodeTarget } from "@synara/contracts";
+import type { BrowserNodeTarget } from "@forkara/contracts";
 import { describe, expect, it } from "vitest";
 
 import { browserTargetLocatorBody } from "./targets";

@@ -9,10 +9,10 @@ import { Buffer } from "node:buffer";
 import type {
   ServerVoiceTranscriptionInput,
   ServerVoiceTranscriptionResult,
-} from "@synara/contracts";
-import { SERVER_VOICE_TRANSCRIPTION_MAX_AUDIO_BYTES } from "@synara/contracts";
-import { requestChatGptVoiceTranscription } from "@synara/shared/chatGptVoiceTranscription";
-import { decodeOutboundJson, type OutboundHttpResponse } from "@synara/shared/outboundHttp";
+} from "@forkara/contracts";
+import { SERVER_VOICE_TRANSCRIPTION_MAX_AUDIO_BYTES } from "@forkara/contracts";
+import { requestChatGptVoiceTranscription } from "@forkara/shared/chatGptVoiceTranscription";
+import { decodeOutboundJson, type OutboundHttpResponse } from "@forkara/shared/outboundHttp";
 
 const MAX_DURATION_MS = 120_000;
 

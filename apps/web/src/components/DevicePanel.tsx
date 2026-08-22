@@ -11,7 +11,7 @@ import type {
   DeviceHardwareButton,
   DeviceUdid,
   ThreadId,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ensureNativeApi } from "~/nativeApi";

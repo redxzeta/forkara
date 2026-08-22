@@ -3,9 +3,9 @@
 // Layer: Route screen
 // Exports: Settings route component for `/settings`
 
-import { PROVIDER_DISPLAY_NAMES, type ProviderKind } from "@synara/contracts";
-import { PROVIDER_DESCRIPTORS } from "@synara/shared/providerMetadata";
-import { sameAppSnapShortcut } from "@synara/shared/appSnapShortcut";
+import { PROVIDER_DISPLAY_NAMES, type ProviderKind } from "@forkara/contracts";
+import { PROVIDER_DESCRIPTORS } from "@forkara/shared/providerMetadata";
+import { sameAppSnapShortcut } from "@forkara/shared/appSnapShortcut";
 import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 

@@ -8,7 +8,7 @@
  *
  * @module StudioOutputReactor
  */
-import type { ThreadId } from "@synara/contracts";
+import type { ThreadId } from "@forkara/contracts";
 import { ServiceMap } from "effect";
 import type { Effect, Scope } from "effect";
 

@@ -16,8 +16,8 @@ import {
   type OrchestrationCommand,
   type OrchestrationProjectShell,
   type OrchestrationThreadShell,
-} from "@synara/contracts";
-import { isTemporaryWorktreeBranch } from "@synara/shared/git";
+} from "@forkara/contracts";
+import { isTemporaryWorktreeBranch } from "@forkara/shared/git";
 import { Duration, Effect, Layer, Option, Stream } from "effect";
 import { TestClock } from "effect/testing";
 

@@ -11,7 +11,7 @@
 import * as fs from "node:fs/promises";
 import * as nodePath from "node:path";
 
-import type { ProviderKind, ProviderSkillDescriptor } from "@synara/contracts";
+import type { ProviderKind, ProviderSkillDescriptor } from "@forkara/contracts";
 import { discoverClaudePluginSkillRoots } from "./claudePluginSkills.ts";
 
 type FrontmatterValue = string | boolean;

@@ -19,7 +19,7 @@ import type {
   ThreadId,
   ThreadMarker,
   ThreadMarkerId,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import { useNavigate } from "@tanstack/react-router";
 import { type ReactNode } from "react";
 

@@ -6,8 +6,8 @@ import {
   type ProviderRuntimeEvent,
   ThreadId,
   TurnId,
-} from "@synara/contracts";
-import { nonEmptyTrimmed } from "@synara/shared/text";
+} from "@forkara/contracts";
+import { nonEmptyTrimmed } from "@forkara/shared/text";
 
 import {
   sanitizeUnmappedProviderData,

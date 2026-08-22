@@ -15,7 +15,7 @@ import {
   RuntimeTaskId,
   ThreadId,
   TurnId,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import { Effect, Layer, Option, Queue, Stream } from "effect";
 
 import {

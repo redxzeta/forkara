@@ -11,8 +11,8 @@ import {
   type CodexGeneratedImageArtifact,
   type ProviderRuntimeEvent,
   type ThreadId,
-} from "@synara/contracts";
-import { isSupportedLocalImagePath as isSupportedLocalImagePathShared } from "@synara/shared/localPreviewFiles";
+} from "@forkara/contracts";
+import { isSupportedLocalImagePath as isSupportedLocalImagePathShared } from "@forkara/shared/localPreviewFiles";
 
 import {
   resolveActiveCodexHomeWritePath,
