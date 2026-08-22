@@ -92,6 +92,7 @@ import {
 } from "../Services/StudioOutputReactor.ts";
 import { attachmentRelativePath } from "../../attachmentStore.ts";
 import { resolveProviderAttachmentPath } from "../../provider/providerAttachmentPaths.ts";
+import { PROVIDER_BULLY_MODE_PROMPT_PREFIX } from "../../provider/bullyMode.ts";
 import { PROVIDER_DEBUG_MODE_PROMPT_PREFIX } from "../../provider/debugMode.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
 import { checkpointRefForThreadTurn } from "../../checkpointing/Utils.ts";
@@ -210,6 +211,7 @@ describe("ProviderCommandReactor", () => {
     readonly commandEventTimeout?: Duration.Duration;
     readonly gatewayOperationId?: string;
     readonly gitWritingModelSelection?: ModelSelection;
+    readonly bullyModeEnabled?: boolean;
   }) {
     const now = new Date().toISOString();
     const baseDir = input?.baseDir ?? fs.mkdtempSync(path.join(os.tmpdir(), "synara-reactor-"));
@@ -524,11 +526,14 @@ describe("ProviderCommandReactor", () => {
         } as unknown as TextGenerationShape),
       ),
       Layer.provideMerge(
-        ServerSettingsService.layerTest(
-          input?.gitWritingModelSelection
+        ServerSettingsService.layerTest({
+          ...(input?.gitWritingModelSelection
             ? { textGenerationModelSelection: input.gitWritingModelSelection }
-            : {},
-        ),
+            : {}),
+          ...(input?.bullyModeEnabled !== undefined
+            ? { bullyModeEnabled: input.bullyModeEnabled }
+            : {}),
+        }),
       ),
       Layer.provideMerge(ServerConfig.layerTest(process.cwd(), baseDir)),
       Layer.provideMerge(NodeServices.layer),
@@ -570,6 +575,7 @@ describe("ProviderCommandReactor", () => {
     const pendingInteractionRepository = await runtime.runPromise(
       Effect.service(ProjectionPendingInteractionRepository),
     );
+    const settingsService = await runtime.runPromise(Effect.service(ServerSettingsService));
     const gatewayOperations = await runtime.runPromise(
       Effect.service(AgentGatewayOperationRepository),
     );
@@ -797,6 +803,8 @@ describe("ProviderCommandReactor", () => {
         `),
       queuedTurnPromotionRepository,
       interceptEngineDispatch,
+      updateServerSettings: (bullyModeEnabled: boolean) =>
+        runtime.runPromise(settingsService.updateSettings({ bullyModeEnabled })),
     };
   }
 
@@ -2333,6 +2341,91 @@ describe("ProviderCommandReactor", () => {
     expect(input?.mentions).toBeUndefined();
   });
 
+  it("reads the live Bully setting for provider input without mutating user history", async () => {
+    const harness = await createHarness();
+    const now = new Date().toISOString();
+    const userText = "Fix the websocket reconnect bug";
+
+    await harness.updateServerSettings(true);
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-turn-start-bully-live-setting"),
+        threadId: ThreadId.makeUnsafe("thread-1"),
+        message: {
+          messageId: asMessageId("user-message-bully-live-setting"),
+          role: "user",
+          text: userText,
+          attachments: [],
+        },
+        runtimeMode: "approval-required",
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        createdAt: now,
+      }),
+    );
+
+    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+    const providerInput = harness.sendTurn.mock.calls[0]?.[0].input;
+    expect(providerInput).toContain(userText);
+    expect(providerInput?.split(PROVIDER_BULLY_MODE_PROMPT_PREFIX)).toHaveLength(2);
+    expect((await readHarnessThread(harness))?.messages.map((message) => message.text)).toEqual([
+      userText,
+    ]);
+  });
+
+  it("leaves provider input unchanged while Bully Mode is disabled", async () => {
+    const harness = await createHarness({ bullyModeEnabled: false });
+    const now = new Date().toISOString();
+
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-turn-start-bully-disabled"),
+        threadId: ThreadId.makeUnsafe("thread-1"),
+        message: {
+          messageId: asMessageId("user-message-bully-disabled"),
+          role: "user",
+          text: "Keep the default response style",
+          attachments: [],
+        },
+        runtimeMode: "approval-required",
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        createdAt: now,
+      }),
+    );
+
+    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+    expect(harness.sendTurn.mock.calls[0]?.[0].input).toBe("Keep the default response style");
+  });
+
+  it("rejects a provider-max input that cannot also fit Bully Mode", async () => {
+    const harness = await createHarness({ bullyModeEnabled: true });
+    const now = new Date().toISOString();
+
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-max-input-with-bully"),
+        threadId: ThreadId.makeUnsafe("thread-1"),
+        message: {
+          messageId: asMessageId("max-input-with-bully"),
+          role: "user",
+          text: "x".repeat(PROVIDER_SEND_TURN_MAX_INPUT_CHARS),
+          attachments: [],
+        },
+        runtimeMode: "approval-required",
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        createdAt: now,
+      }),
+    );
+
+    await waitFor(async () => (await readHarnessThread(harness))?.session?.status === "error");
+    expect(harness.sendTurn).not.toHaveBeenCalled();
+    expect((await readHarnessThread(harness))?.session?.lastError).toContain(
+      "too long to include Forkara Bully Mode instructions",
+    );
+  });
+
   it("rejects a provider-max input that cannot also fit the persistent thread goal", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
@@ -2370,8 +2463,8 @@ describe("ProviderCommandReactor", () => {
     );
   });
 
-  it("starts an idle active goal with an internal continuation turn", async () => {
-    const harness = await createHarness();
+  it("starts an idle active goal with an internal Bully continuation turn", async () => {
+    const harness = await createHarness({ bullyModeEnabled: true });
 
     await Effect.runPromise(
       harness.engine.dispatch({
@@ -2387,6 +2480,7 @@ describe("ProviderCommandReactor", () => {
     expect(providerInput).toContain("<synara_goal>");
     expect(providerInput).toContain("Finish the complete implementation");
     expect(providerInput).toContain("Continue working toward the active thread goal");
+    expect(providerInput?.split(PROVIDER_BULLY_MODE_PROMPT_PREFIX)).toHaveLength(2);
     expect((await readHarnessThread(harness))?.messages).toEqual([]);
   });
 
@@ -3455,7 +3549,7 @@ describe("ProviderCommandReactor", () => {
   });
 
   it("stops an active provider runtime and immediately resends an edited latest message", async () => {
-    const harness = await createHarness();
+    const harness = await createHarness({ bullyModeEnabled: true });
     const now = new Date().toISOString();
     const imageAttachment = {
       type: "image" as const,
@@ -3536,11 +3630,13 @@ describe("ProviderCommandReactor", () => {
     expect(harness.rollbackConversation.mock.calls.length).toBe(0);
     expect(harness.sendTurn.mock.calls[0]?.[0]).toMatchObject({
       threadId: ThreadId.makeUnsafe("thread-1"),
-      input: "edited prompt",
       attachments: [imageAttachment],
       skills: [skill],
       mentions: [mention],
     });
+    const resentProviderInput = harness.sendTurn.mock.calls[0]?.[0].input;
+    expect(resentProviderInput).toContain("edited prompt");
+    expect(resentProviderInput?.split(PROVIDER_BULLY_MODE_PROMPT_PREFIX)).toHaveLength(2);
 
     const readModel = await Effect.runPromise(harness.engine.getReadModel());
     const thread = readModel.threads.find((entry) => entry.id === ThreadId.makeUnsafe("thread-1"));
@@ -4668,6 +4764,7 @@ describe("ProviderCommandReactor", () => {
   it("retries Debug turns with transcript context without duplicating the prompt prefix", async () => {
     const harness = await createHarness({
       threadModelSelection: { provider: "claudeAgent", model: "claude-opus-4-8" },
+      bullyModeEnabled: true,
     });
     const now = new Date().toISOString();
     const staleResumeFailure = () =>
@@ -4729,6 +4826,9 @@ describe("ProviderCommandReactor", () => {
     );
 
     await waitFor(() => harness.sendTurn.mock.calls.length === 3);
+    for (const [turnInput] of harness.sendTurn.mock.calls) {
+      expect(turnInput.input?.split(PROVIDER_BULLY_MODE_PROMPT_PREFIX)).toHaveLength(2);
+    }
     // Native-resume retry first: stop only the runtime so the persisted cursor survives.
     expect(harness.stopRuntimeSession).toHaveBeenCalledWith({
       threadId: ThreadId.makeUnsafe("thread-1"),
@@ -4739,6 +4839,7 @@ describe("ProviderCommandReactor", () => {
     };
     expect(nativeRetrySendInput.input).not.toContain("<thread_context>");
     expect(nativeRetrySendInput.input?.split(PROVIDER_DEBUG_MODE_PROMPT_PREFIX)).toHaveLength(2);
+    expect(nativeRetrySendInput.input?.split(PROVIDER_BULLY_MODE_PROMPT_PREFIX)).toHaveLength(2);
     // Second stale failure clears the cursor and bootstraps the transcript.
     expect(harness.clearSessionResumeCursor).toHaveBeenCalledWith({
       threadId: ThreadId.makeUnsafe("thread-1"),
@@ -4753,6 +4854,7 @@ describe("ProviderCommandReactor", () => {
     expect(retrySendInput.input).toContain("<latest_user_message>");
     expect(retrySendInput.input).toContain("nice but bring it on the left.");
     expect(retrySendInput.input?.split(PROVIDER_DEBUG_MODE_PROMPT_PREFIX)).toHaveLength(2);
+    expect(retrySendInput.input?.split(PROVIDER_BULLY_MODE_PROMPT_PREFIX)).toHaveLength(2);
   });
 
   it("keeps transcript context when replaying a stale Claude goal continuation", async () => {
@@ -6709,7 +6811,7 @@ describe("ProviderCommandReactor", () => {
   });
 
   it("steers Debug turns immediately with one prompt prefix", async () => {
-    const harness = await createHarness();
+    const harness = await createHarness({ bullyModeEnabled: true });
     const now = new Date().toISOString();
 
     harness.setRuntimeSessionTurnState({
@@ -6767,6 +6869,7 @@ describe("ProviderCommandReactor", () => {
     const steerInput = harness.steerTurn.mock.calls[0]?.[0] as { readonly input?: string };
     expect(steerInput.input).toContain("pivot now");
     expect(steerInput.input?.split(PROVIDER_DEBUG_MODE_PROMPT_PREFIX)).toHaveLength(2);
+    expect(steerInput.input?.split(PROVIDER_BULLY_MODE_PROMPT_PREFIX)).toHaveLength(2);
   });
 
   it("dispatches a codex steer as a queued turn when the live provider turn already settled", async () => {
