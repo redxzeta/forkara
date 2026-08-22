@@ -74,16 +74,11 @@ import {
   ProviderServiceError,
 } from "../../provider/Errors.ts";
 import { buildInlineSkillInstructions } from "../../provider/skillPromptInjection.ts";
+import { activeThreadGoal, buildGoalContinuationInput } from "../../provider/goalMode.ts";
 import {
-  PROVIDER_DEBUG_MODE_PROMPT_PREFIX,
-  withProviderDebugModePrompt,
-} from "../../provider/debugMode.ts";
-import {
-  activeThreadGoal,
-  buildGoalContinuationInput,
-  providerGoalPromptOverheadChars,
-  withProviderGoalPrompt,
-} from "../../provider/goalMode.ts";
+  providerResponseInstructionsOverheadChars,
+  withProviderResponseInstructions,
+} from "../../provider/responseInstructions.ts";
 import {
   appendThreadMentionContextBlocks,
   resolveThreadMentionPromptProjection,
@@ -388,30 +383,21 @@ function availableThreadMentionContextChars(messageText: string, reservedChars =
   );
 }
 
-function debugModePromptOverheadChars(
-  interactionMode: ProviderInteractionMode | undefined,
-): number {
-  return interactionMode === "debug" ? PROVIDER_DEBUG_MODE_PROMPT_PREFIX.length + 2 : 0;
-}
-
-function withProviderThreadStatePrompts(input: {
-  readonly text: string;
+function providerPromptOverflowIssue(input: {
+  readonly hasGoal: boolean;
   readonly interactionMode?: ProviderInteractionMode | undefined;
-  readonly goal?: string | undefined;
+  readonly bullyModeEnabled: boolean;
 }): string {
-  return withProviderGoalPrompt({
-    goal: input.goal,
-    text: withProviderDebugModePrompt({
-      interactionMode: input.interactionMode,
-      text: input.text,
-    }),
-  });
-}
-
-function providerPromptOverflowIssue(goalPromptOverheadChars: number): string {
-  return goalPromptOverheadChars > 0
-    ? "The latest message is too long to include the persistent thread goal. Shorten the message and retry."
-    : "The latest message is too long to include Forkara Debug mode instructions. Shorten the message and retry.";
+  if (input.hasGoal) {
+    return "The latest message is too long to include the persistent thread goal. Shorten the message and retry.";
+  }
+  if (input.interactionMode === "debug") {
+    return "The latest message is too long to include Forkara Debug mode instructions. Shorten the message and retry.";
+  }
+  if (input.bullyModeEnabled) {
+    return "The latest message is too long to include Forkara Bully Mode instructions. Shorten the message and retry.";
+  }
+  return "The latest message is too long to include Forkara response instructions. Shorten the message and retry.";
 }
 
 function isUnknownPendingApprovalRequestError(cause: Cause.Cause<ProviderServiceError>): boolean {
@@ -1459,9 +1445,19 @@ const make = Effect.gen(function* () {
     if (!thread) {
       return;
     }
-    const debugPromptOverheadChars = debugModePromptOverheadChars(input.interactionMode);
-    const goalPromptOverheadChars = providerGoalPromptOverheadChars(activeThreadGoal(thread));
-    const providerPromptOverheadChars = debugPromptOverheadChars + goalPromptOverheadChars;
+    const goal = activeThreadGoal(thread);
+    const { bullyModeEnabled } = yield* serverSettings.getSettings;
+    const responseModifiers = { bullyMode: bullyModeEnabled } as const;
+    const providerPromptOverheadChars = providerResponseInstructionsOverheadChars({
+      interactionMode: input.interactionMode,
+      goal,
+      modifiers: responseModifiers,
+    });
+    const promptOverflowIssue = providerPromptOverflowIssue({
+      hasGoal: Boolean(goal?.trim()),
+      interactionMode: input.interactionMode,
+      bullyModeEnabled,
+    });
     const threadMentionProjection = yield* resolveThreadMentionPromptProjection({
       mentions: input.mentions,
       snapshotQuery: projectionSnapshotQuery,
@@ -1518,9 +1514,10 @@ const make = Effect.gen(function* () {
       const steerMessageWithSkills = steerSkillInlineText
         ? `${messageText}\n\n${steerSkillInlineText}`
         : messageText;
-      const composedSteerInput = withProviderThreadStatePrompts({
+      const composedSteerInput = withProviderResponseInstructions({
         interactionMode: input.interactionMode,
-        goal: activeThreadGoal(thread),
+        goal,
+        modifiers: responseModifiers,
         text: normalizeSkillMentionTextForProvider({
           provider: steerProvider,
           messageText: steerMessageWithSkills,
@@ -1534,7 +1531,7 @@ const make = Effect.gen(function* () {
         return yield* new ProviderAdapterValidationError({
           provider: steerProvider,
           operation: "thread.turn.start",
-          issue: providerPromptOverflowIssue(goalPromptOverheadChars),
+          issue: promptOverflowIssue,
         });
       }
       const normalizedSteerInput = toNonEmptyProviderInput(composedSteerInput);
@@ -1605,16 +1602,17 @@ const make = Effect.gen(function* () {
       thread.modelSelection.provider;
     if (
       providerPromptOverheadChars > 0 &&
-      withProviderThreadStatePrompts({
+      withProviderResponseInstructions({
         interactionMode: input.interactionMode,
-        goal: activeThreadGoal(thread),
+        goal,
+        modifiers: responseModifiers,
         text: bootstrapBudgetMessageText,
       }).length > PROVIDER_SEND_TURN_MAX_INPUT_CHARS
     ) {
       return yield* new ProviderAdapterValidationError({
         provider: selectedProvider as ProviderKind,
         operation: "thread.turn.start",
-        issue: providerPromptOverflowIssue(goalPromptOverheadChars),
+        issue: promptOverflowIssue,
       });
     }
     const hasPendingPriorTranscriptBootstrap =
@@ -1709,9 +1707,10 @@ const make = Effect.gen(function* () {
       bootstrap
         ? wrapProviderContext({ ...bootstrap, messageText: boundaryMessageText })
         : boundaryMessageText;
-    const providerInputWithMentionContext = withProviderThreadStatePrompts({
+    const providerInputWithMentionContext = withProviderResponseInstructions({
       interactionMode: input.interactionMode,
-      goal: activeThreadGoal(thread),
+      goal,
+      modifiers: responseModifiers,
       text: `${composeProviderInput(selectedBootstrapContext)}${mentionContextSuffix}`,
     });
     // Portable skills fallback: providers that cannot load the referenced skill
@@ -1744,9 +1743,10 @@ const make = Effect.gen(function* () {
         ? `${withMentionContext}\n\n${skillInlineText}`
         : withMentionContext;
       return toNonEmptyProviderInput(
-        withProviderThreadStatePrompts({
+        withProviderResponseInstructions({
           interactionMode: input.interactionMode,
-          goal: activeThreadGoal(thread),
+          goal,
+          modifiers: responseModifiers,
           text: normalizeSkillMentionTextForProvider({
             provider: selectedProvider as ProviderKind,
             messageText: withSkills,
