@@ -3,7 +3,7 @@ import type {
   ProviderSessionRuntimeStatus,
   RuntimeMode,
   ThreadId,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import { Option, ServiceMap } from "effect";
 import type { Effect } from "effect";
 

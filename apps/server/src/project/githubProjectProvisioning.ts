@@ -4,12 +4,12 @@ import type {
   GitHubProjectProvisionInput,
   GitHubProjectProvisionPhase,
   GitHubProjectProvisionProgressEvent,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import {
   parseGitHubRepositoryInput,
   parseGitHubRepositoryNameWithOwnerFromRemoteUrl,
-} from "@synara/shared/githubRepository";
-import { normalizeProjectDirectoryName } from "@synara/shared/projectDirectoryName";
+} from "@forkara/shared/githubRepository";
+import { normalizeProjectDirectoryName } from "@forkara/shared/projectDirectoryName";
 import { Effect, FileSystem, Path, Schema, Semaphore } from "effect";
 
 import { GitCommandError, GitHubCliError } from "../git/Errors";

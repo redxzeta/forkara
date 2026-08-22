@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ProjectId, ThreadId } from "@synara/contracts";
+import { ProjectId, ThreadId } from "@forkara/contracts";
 
 import type { SidebarThreadSummary, ThreadSession } from "../types";
 import { formatRelativeTime } from "~/lib/relativeTime";

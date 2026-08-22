@@ -1,5 +1,5 @@
 {
-  "name": "@synara/shared",
+  "name": "@forkara/shared",
   "version": "0.0.0-alpha.1",
   "private": true,
   "type": "module",
@@ -295,7 +295,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@synara/contracts": "workspace:*",
+    "@forkara/contracts": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {

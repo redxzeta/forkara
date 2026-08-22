@@ -6,7 +6,7 @@ import {
   DEVICE_HELPER_BINARY_NAME,
   DEVICE_HELPER_CACHE_SEGMENTS,
   deviceHelperCacheKey,
-} from "@synara/shared/deviceHelperCache";
+} from "@forkara/shared/deviceHelperCache";
 
 import type { ProcessRunResult } from "../processRunner.ts";
 import { DEVICE_HELPER_CACHE_ROOT, IosSimulatorBackend } from "./IosSimulatorBackend.ts";

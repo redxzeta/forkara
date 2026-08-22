@@ -15,9 +15,9 @@ import {
   ServerSettingsError,
   type ServerSettingsPatch,
   type ServerSettingsView,
-} from "@synara/contracts";
-import { deepMerge, type DeepPartial } from "@synara/shared/Struct";
-import { applyServerSettingsPatch } from "@synara/shared/serverSettings";
+} from "@forkara/contracts";
+import { deepMerge, type DeepPartial } from "@forkara/shared/Struct";
+import { applyServerSettingsPatch } from "@forkara/shared/serverSettings";
 import {
   Cause,
   Deferred,

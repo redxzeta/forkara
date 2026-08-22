@@ -4,7 +4,7 @@ import {
   TurnId,
   type OrchestrationThreadShell,
   type ProviderKind,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import { Effect, Option } from "effect";
 
 import {

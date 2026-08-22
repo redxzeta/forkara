@@ -1,4 +1,4 @@
-import { AutomationMode, ThreadId } from "@synara/contracts";
+import { AutomationMode, ThreadId } from "@forkara/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

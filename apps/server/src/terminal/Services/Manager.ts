@@ -17,8 +17,8 @@ import {
   TerminalSessionSnapshot,
   TerminalSessionStatus,
   TerminalWriteInput,
-} from "@synara/contracts";
-import type { TerminalActivityState, TerminalCliKind } from "@synara/shared/terminalThreads";
+} from "@forkara/contracts";
+import type { TerminalActivityState, TerminalCliKind } from "@forkara/shared/terminalThreads";
 import { PtyProcess } from "./PTY";
 import { Effect, Schema, ServiceMap } from "effect";
 import type { TerminalModeReplayTracker } from "../terminalModeReplay";

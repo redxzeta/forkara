@@ -1,4 +1,4 @@
-import { EDITORS, EditorId, NativeApi } from "@synara/contracts";
+import { EDITORS, EditorId, NativeApi } from "@forkara/contracts";
 import { getLocalStorageItem, setLocalStorageItem, useLocalStorage } from "./hooks/useLocalStorage";
 
 const LAST_EDITOR_KEY = "synara:last-editor";

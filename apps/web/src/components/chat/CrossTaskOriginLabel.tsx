@@ -2,7 +2,7 @@
 // Purpose: Identify the source thread for conversations created by another Forkara agent.
 // Layer: Chat transcript UI
 
-import { type ProviderKind, type ThreadId } from "@synara/contracts";
+import { type ProviderKind, type ThreadId } from "@forkara/contracts";
 import { memo, type ReactNode } from "react";
 
 import { ForkaraLogo } from "../ForkaraLogo";

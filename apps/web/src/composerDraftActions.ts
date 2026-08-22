@@ -9,8 +9,8 @@ import {
   ProviderInteractionMode,
   RuntimeMode,
   ThreadId,
-} from "@synara/contracts";
-import { getDefaultModel, normalizeModelSlug } from "@synara/shared/model";
+} from "@forkara/contracts";
+import { getDefaultModel, normalizeModelSlug } from "@forkara/shared/model";
 import * as Equal from "effect/Equal";
 import * as Schema from "effect/Schema";
 import type { StateCreator } from "zustand";

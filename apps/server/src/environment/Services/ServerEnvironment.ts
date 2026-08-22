@@ -1,4 +1,4 @@
-import type { EnvironmentId, ExecutionEnvironmentDescriptor } from "@synara/contracts";
+import type { EnvironmentId, ExecutionEnvironmentDescriptor } from "@forkara/contracts";
 import { Effect, ServiceMap } from "effect";
 
 export interface ServerEnvironmentShape {

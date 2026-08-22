@@ -8,7 +8,7 @@
 import {
   SYNARA_CANARY_DESKTOP_ORIGIN,
   SYNARA_DESKTOP_ORIGIN,
-} from "@synara/shared/desktopIdentity";
+} from "@forkara/shared/desktopIdentity";
 
 import type { ServerConfigShape } from "./config";
 import { isLoopbackHost, isWildcardHost } from "./startupAccess";

@@ -12,7 +12,7 @@ import {
   type ProviderListSkillsResult,
   ProviderReadPluginInput,
   type ProviderSkillDescriptor,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import { Effect, Layer, Option, Schema, SchemaIssue } from "effect";
 
 import { ServerConfig } from "../../config.ts";

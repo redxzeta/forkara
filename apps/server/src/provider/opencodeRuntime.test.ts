@@ -9,8 +9,8 @@ import { pathToFileURL } from "node:url";
 import { Duration, Effect, Exit, Fiber, Layer, Scope, Sink, Stream } from "effect";
 import { type ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 import { TestClock } from "effect/testing";
-import type { ChatAttachment } from "@synara/contracts";
-import { resolveWindowsComSpec } from "@synara/shared/windowsProcess";
+import type { ChatAttachment } from "@forkara/contracts";
+import { resolveWindowsComSpec } from "@forkara/shared/windowsProcess";
 import { describe, expect, it, vi } from "vitest";
 
 import {

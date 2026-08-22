@@ -5,7 +5,7 @@
 
 import nodePath from "node:path";
 
-import type { ProviderKind } from "@synara/contracts";
+import type { ProviderKind } from "@forkara/contracts";
 
 import { getDroidApiKeyEnv } from "../../provider/acp/DroidAcpSupport";
 import { resolveOpenCodeCompatibleAuthPaths } from "../../provider/openCodeAuthPaths";

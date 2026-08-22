@@ -12,7 +12,7 @@ import type {
   OrchestrationMessage,
   OrchestrationThread,
   OrchestrationThreadShell,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 
 export type AgentThreadStatus =
   | "working"

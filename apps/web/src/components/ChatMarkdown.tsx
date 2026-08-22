@@ -4,8 +4,8 @@
 // Exports: ChatMarkdown
 
 import { CheckIcon, CopyIcon, TextWrapIcon } from "~/lib/icons";
-import type { ProviderMentionReference, ThreadMarker } from "@synara/contracts";
-import { isLocalAbsolutePath } from "@synara/shared/path";
+import type { ProviderMentionReference, ThreadMarker } from "@forkara/contracts";
+import { isLocalAbsolutePath } from "@forkara/shared/path";
 import "katex/dist/katex.min.css";
 import React, {
   Children,

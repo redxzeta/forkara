@@ -41,7 +41,7 @@ import type {
   DesktopTheme,
   DesktopUpdateActionResult,
   DesktopUpdateState,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import {
   autoUpdater,
   BaseUpdater,
@@ -49,19 +49,19 @@ import {
   type UpdateDownloadedEvent,
 } from "electron-updater";
 
-import type { ContextMenuItem } from "@synara/contracts";
-import { isKeyboardShortcutsHelpChord } from "@synara/shared/browserShortcuts";
-import { getMacTrafficLightPosition } from "@synara/shared/desktopChrome";
-import { DEVICE_HELPER_SOURCE_DIR_ENV } from "@synara/shared/deviceHelperCache";
+import type { ContextMenuItem } from "@forkara/contracts";
+import { isKeyboardShortcutsHelpChord } from "@forkara/shared/browserShortcuts";
+import { getMacTrafficLightPosition } from "@forkara/shared/desktopChrome";
+import { DEVICE_HELPER_SOURCE_DIR_ENV } from "@forkara/shared/deviceHelperCache";
 import {
   SYNARA_DESKTOP_UPDATE_CHANNEL,
   resolveSynaraDesktopFlavor,
   synaraDesktopIdentity,
-} from "@synara/shared/desktopIdentity";
-import { NetService } from "@synara/shared/Net";
-import { applyShellEnvironmentHydrationMarker } from "@synara/shared/shell";
-import { RotatingFileSink } from "@synara/shared/logging";
-import { ensureStaticSnapshot, findAsarArchivePath } from "@synara/shared/staticSnapshot";
+} from "@forkara/shared/desktopIdentity";
+import { NetService } from "@forkara/shared/Net";
+import { applyShellEnvironmentHydrationMarker } from "@forkara/shared/shell";
+import { RotatingFileSink } from "@forkara/shared/logging";
+import { ensureStaticSnapshot, findAsarArchivePath } from "@forkara/shared/staticSnapshot";
 import { isBackendReadinessAborted, waitForHttpReady } from "./backendReadiness";
 import { resolveBackendNodeArgs } from "./backendNodeOptions";
 import {
@@ -4332,7 +4332,7 @@ function getTitleBarOptions(): BrowserWindowConstructorOptions {
   if (process.platform === "darwin") {
     return {
       titleBarStyle: "hiddenInset",
-      // Derived from the shared chat-surface header geometry (@synara/shared/desktopChrome)
+      // Derived from the shared chat-surface header geometry (@forkara/shared/desktopChrome)
       // so the native lights and the renderer's leading toggle/arrow controls always share
       // the same vertical center. Tune the height/radius there, never the raw px here.
       trafficLightPosition: getMacTrafficLightPosition(),

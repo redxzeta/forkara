@@ -9,10 +9,10 @@ import type {
   ServerListProviderUsageInput,
   ServerListProviderUsageResult,
   ServerProviderUsageSnapshot,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import { Effect } from "effect";
 
-import { PROVIDER_USAGE_PROVIDERS } from "@synara/shared/providerUsage";
+import { PROVIDER_USAGE_PROVIDERS } from "@forkara/shared/providerUsage";
 
 import { ServerConfig } from "../config";
 import { buildProviderChildEnvironment, type ProviderChildKind } from "../providerChildEnvironment";

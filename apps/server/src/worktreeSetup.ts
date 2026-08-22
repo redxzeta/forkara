@@ -1,4 +1,4 @@
-import type { ProjectScript } from "@synara/contracts";
+import type { ProjectScript } from "@forkara/contracts";
 
 import { runProcess } from "./processRunner.ts";
 

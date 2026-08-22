@@ -8,7 +8,7 @@
 
 import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
 
-import type { ThreadId } from "@synara/contracts";
+import type { ThreadId } from "@forkara/contracts";
 
 export type SidebarRowContextMenuPosition = { x: number; y: number };
 

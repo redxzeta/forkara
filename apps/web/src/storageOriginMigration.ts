@@ -1,7 +1,7 @@
 // FILE: storageOriginMigration.ts
 // Purpose: Imports Synara browser state before renderer stores hydrate after a desktop origin move.
 
-import type { SynaraStorageSnapshot } from "@synara/contracts";
+import type { SynaraStorageSnapshot } from "@forkara/contracts";
 
 const MAX_SNAPSHOT_ENTRIES = 2_048;
 const MAX_SNAPSHOT_KEY_LENGTH = 512;

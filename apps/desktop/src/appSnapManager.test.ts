@@ -6,8 +6,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PassThrough } from "node:stream";
 
-import { PROVIDER_SEND_TURN_MAX_ATTACHMENTS } from "@synara/contracts";
-import { SYNARA_DEVELOPMENT_BUNDLE_ID } from "@synara/shared/desktopIdentity";
+import { PROVIDER_SEND_TURN_MAX_ATTACHMENTS } from "@forkara/contracts";
+import { SYNARA_DEVELOPMENT_BUNDLE_ID } from "@forkara/shared/desktopIdentity";
 import { describe, expect, it, vi } from "vitest";
 
 import {

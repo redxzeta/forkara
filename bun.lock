@@ -13,7 +13,7 @@
       },
     },
     "apps/desktop": {
-      "name": "@synara/desktop",
+      "name": "@forkara/desktop",
       "version": "0.7.2",
       "dependencies": {
         "effect": "catalog:",
@@ -21,8 +21,8 @@
         "electron-updater": "^6.6.2",
       },
       "devDependencies": {
-        "@synara/contracts": "workspace:*",
-        "@synara/shared": "workspace:*",
+        "@forkara/contracts": "workspace:*",
+        "@forkara/shared": "workspace:*",
         "@types/node": "catalog:",
         "tsdown": "catalog:",
         "typescript": "catalog:",
@@ -31,7 +31,7 @@
       },
     },
     "apps/marketing": {
-      "name": "@synara/marketing",
+      "name": "@forkara/marketing",
       "version": "0.0.0",
       "dependencies": {
         "astro": "^6.4.6",
@@ -42,7 +42,7 @@
       },
     },
     "apps/server": {
-      "name": "@synara/cli",
+      "name": "@forkara/cli",
       "version": "0.7.2",
       "bin": {
         "synara": "dist/index.mjs",
@@ -69,9 +69,9 @@
       "devDependencies": {
         "@effect/language-service": "catalog:",
         "@effect/vitest": "catalog:",
-        "@synara/contracts": "workspace:*",
-        "@synara/shared": "workspace:*",
-        "@synara/web": "workspace:*",
+        "@forkara/contracts": "workspace:*",
+        "@forkara/shared": "workspace:*",
+        "@forkara/web": "workspace:*",
         "@types/bun": "catalog:",
         "@types/node": "catalog:",
         "@types/ws": "^8.5.13",
@@ -82,7 +82,7 @@
       },
     },
     "apps/web": {
-      "name": "@synara/web",
+      "name": "@forkara/web",
       "version": "0.7.2",
       "dependencies": {
         "@base-ui/react": "^1.5.0",
@@ -91,12 +91,12 @@
         "@dnd-kit/sortable": "^10.0.0",
         "@dnd-kit/utilities": "^3.2.2",
         "@fontsource-variable/jetbrains-mono": "^5.2.8",
+        "@forkara/contracts": "workspace:*",
+        "@forkara/shared": "workspace:*",
         "@formkit/auto-animate": "^0.9.0",
         "@legendapp/list": "3.3.3",
         "@lexical/react": "^0.41.0",
         "@pierre/diffs": "^1.2.12",
-        "@synara/contracts": "workspace:*",
-        "@synara/shared": "workspace:*",
         "@tabler/icons-react": "^3.44.0",
         "@tanstack/react-pacer": "^0.19.4",
         "@tanstack/react-query": "^5.90.0",
@@ -151,7 +151,7 @@
       },
     },
     "packages/contracts": {
-      "name": "@synara/contracts",
+      "name": "@forkara/contracts",
       "version": "0.7.2",
       "dependencies": {
         "effect": "catalog:",
@@ -165,10 +165,10 @@
       },
     },
     "packages/shared": {
-      "name": "@synara/shared",
+      "name": "@forkara/shared",
       "version": "0.0.0-alpha.1",
       "dependencies": {
-        "@synara/contracts": "workspace:*",
+        "@forkara/contracts": "workspace:*",
         "effect": "catalog:",
       },
       "devDependencies": {
@@ -180,12 +180,12 @@
       },
     },
     "scripts": {
-      "name": "@synara/scripts",
+      "name": "@forkara/scripts",
       "dependencies": {
         "@anthropic-ai/claude-agent-sdk": "^0.3.207",
         "@effect/platform-node": "catalog:",
-        "@synara/contracts": "workspace:*",
-        "@synara/shared": "workspace:*",
+        "@forkara/contracts": "workspace:*",
+        "@forkara/shared": "workspace:*",
         "effect": "catalog:",
       },
       "devDependencies": {
@@ -523,6 +523,20 @@
     "@floating-ui/utils": ["@floating-ui/utils@0.2.11", "", {}, "sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg=="],
 
     "@fontsource-variable/jetbrains-mono": ["@fontsource-variable/jetbrains-mono@5.2.8", "", {}, "sha512-WBA9elru6Jdp5df2mES55wuOO0WIrn3kpXnI4+W2ek5u3ZgLS9XS4gmIlcQhiZOWEKl95meYdvK7xI+ETLCq/Q=="],
+
+    "@forkara/cli": ["@forkara/cli@workspace:apps/server"],
+
+    "@forkara/contracts": ["@forkara/contracts@workspace:packages/contracts"],
+
+    "@forkara/desktop": ["@forkara/desktop@workspace:apps/desktop"],
+
+    "@forkara/marketing": ["@forkara/marketing@workspace:apps/marketing"],
+
+    "@forkara/scripts": ["@forkara/scripts@workspace:scripts"],
+
+    "@forkara/shared": ["@forkara/shared@workspace:packages/shared"],
+
+    "@forkara/web": ["@forkara/web@workspace:apps/web"],
 
     "@formkit/auto-animate": ["@formkit/auto-animate@0.9.0", "", {}, "sha512-VhP4zEAacXS3dfTpJpJ88QdLqMTcabMg0jwpOSxZ/VzfQVfl3GkZSCZThhGC5uhq/TxPHPzW0dzr4H9Bb1OgKA=="],
 
@@ -957,20 +971,6 @@
     "@stablelib/base64": ["@stablelib/base64@1.0.1", "", {}, "sha512-1bnPQqSxSuc3Ii6MhBysoWCg58j97aUjuCSZrGSmDxNqtytIi0k8utUenAwTZN4V5mXXYGsVUI9zeBqy+jBOSQ=="],
 
     "@standard-schema/spec": ["@standard-schema/spec@1.1.0", "", {}, "sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w=="],
-
-    "@synara/cli": ["@synara/cli@workspace:apps/server"],
-
-    "@synara/contracts": ["@synara/contracts@workspace:packages/contracts"],
-
-    "@synara/desktop": ["@synara/desktop@workspace:apps/desktop"],
-
-    "@synara/marketing": ["@synara/marketing@workspace:apps/marketing"],
-
-    "@synara/scripts": ["@synara/scripts@workspace:scripts"],
-
-    "@synara/shared": ["@synara/shared@workspace:packages/shared"],
-
-    "@synara/web": ["@synara/web@workspace:apps/web"],
 
     "@szmarczak/http-timer": ["@szmarczak/http-timer@4.0.6", "", { "dependencies": { "defer-to-connect": "^2.0.0" } }, "sha512-4BAffykYOgO+5nzBWYwE3W90sBgLJoUPRWWcL8wlyiM8IB8ipJz3UMJ9KXQd1RKQXpKp8Tutn80HZtWsu2u76w=="],
 

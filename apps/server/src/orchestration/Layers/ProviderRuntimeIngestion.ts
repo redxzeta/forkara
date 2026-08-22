@@ -17,18 +17,21 @@ import {
   type ProviderKind,
   type ProviderRuntimeEvent,
   type RuntimeMode,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import { Cache, Cause, Deferred, Duration, Effect, Layer, Option, Ref, Stream } from "effect";
 import * as Semaphore from "effect/Semaphore";
-import { makeDrainableWorker, startDrainableWorkerProducers } from "@synara/shared/DrainableWorker";
-import { providerSupportsNativeTurnSteering } from "@synara/shared/providerMetadata";
-import { buildStalePendingRequestFailureDetail } from "@synara/shared/threadSummary";
+import {
+  makeDrainableWorker,
+  startDrainableWorkerProducers,
+} from "@forkara/shared/DrainableWorker";
+import { providerSupportsNativeTurnSteering } from "@forkara/shared/providerMetadata";
+import { buildStalePendingRequestFailureDetail } from "@forkara/shared/threadSummary";
 import {
   buildSubagentIdentityDirectory,
   collectSubagentProviderThreadIds,
   extractSubagentIdentityHints,
   resolveSubagentIdentityFromDirectory,
-} from "@synara/shared/subagents";
+} from "@forkara/shared/subagents";
 
 import {
   generatedImageMarkdown,

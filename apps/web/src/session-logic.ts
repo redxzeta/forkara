@@ -5,8 +5,8 @@ import {
   type ProviderKind,
   type ThreadId,
   type TurnId,
-} from "@synara/contracts";
-import { PROVIDER_DESCRIPTORS } from "@synara/shared/providerMetadata";
+} from "@forkara/contracts";
+import { PROVIDER_DESCRIPTORS } from "@forkara/shared/providerMetadata";
 
 import { orderedActivities, parseTaskListTasks } from "./workLog";
 

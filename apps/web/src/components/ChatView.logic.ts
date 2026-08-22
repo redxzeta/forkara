@@ -11,11 +11,11 @@ import {
   type RuntimeMode,
   type ServerProviderAuthStatus,
   type ThreadId as ThreadIdType,
-} from "@synara/contracts";
-import { normalizeModelSlug } from "@synara/shared/model";
-import { buildSynaraBranchName } from "@synara/shared/git";
-import { isGenericChatThreadTitle } from "@synara/shared/chatThreads";
-import { isGenericTerminalThreadTitle } from "@synara/shared/terminalThreads";
+} from "@forkara/contracts";
+import { normalizeModelSlug } from "@forkara/shared/model";
+import { buildSynaraBranchName } from "@forkara/shared/git";
+import { isGenericChatThreadTitle } from "@forkara/shared/chatThreads";
+import { isGenericTerminalThreadTitle } from "@forkara/shared/terminalThreads";
 import {
   type ChatMessage,
   type SessionPhase,

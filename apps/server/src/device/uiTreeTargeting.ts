@@ -18,7 +18,7 @@
  *
  * @module device/uiTreeTargeting
  */
-import type { DeviceUiNode, DeviceUiPoint } from "@synara/contracts";
+import type { DeviceUiNode, DeviceUiPoint } from "@forkara/contracts";
 
 /** What the caller asked for. At least a label; role narrows an ambiguous one. */
 export interface DeviceUiTarget {

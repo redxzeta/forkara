@@ -6,11 +6,11 @@ import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 import {
   DEFAULT_GIT_TEXT_GENERATION_MODEL,
   DEFAULT_GIT_TEXT_GENERATION_REASONING_EFFORT,
-} from "@synara/contracts";
-import { sanitizeGeneratedThreadTitle } from "@synara/shared/chatThreads";
-import { resolveCodexHome } from "@synara/shared/codexConfig";
-import { sanitizeBranchFragment, sanitizeFeatureBranchName } from "@synara/shared/git";
-import { prepareWindowsSafeProcess } from "@synara/shared/windowsProcess";
+} from "@forkara/contracts";
+import { sanitizeGeneratedThreadTitle } from "@forkara/shared/chatThreads";
+import { resolveCodexHome } from "@forkara/shared/codexConfig";
+import { sanitizeBranchFragment, sanitizeFeatureBranchName } from "@forkara/shared/git";
+import { prepareWindowsSafeProcess } from "@forkara/shared/windowsProcess";
 
 import { resolveProviderAttachmentPath } from "../../provider/providerAttachmentPaths.ts";
 import { buildCodexProcessEnv } from "../../codexProcessEnv.ts";

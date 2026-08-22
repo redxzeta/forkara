@@ -13,7 +13,7 @@ import {
   type ServerLocalServerProcess,
   type ThreadBrowserState,
   type ThreadId,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -29,17 +29,17 @@ import {
   XIcon,
 } from "~/lib/icons";
 
-import { localServerPrimaryLabel } from "@synara/shared/localServers";
-import { resolveDesktopDipRectFromCssRect } from "@synara/shared/desktopChrome";
+import { localServerPrimaryLabel } from "@forkara/shared/localServers";
+import { resolveDesktopDipRectFromCssRect } from "@forkara/shared/desktopChrome";
 import {
   BROWSER_BLANK_URL,
   isBlankBrowserTabUrl,
   resolveCopyableBrowserTabUrl,
-} from "@synara/shared/browserSession";
+} from "@forkara/shared/browserSession";
 import {
   BROWSER_COPY_LINK_TOAST_TITLE,
   isBrowserCopyLinkChord,
-} from "@synara/shared/browserShortcuts";
+} from "@forkara/shared/browserShortcuts";
 
 import { isElectron } from "~/env";
 import { CentralIcon } from "~/lib/central-icons";

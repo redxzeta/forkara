@@ -10,7 +10,7 @@ import type {
   ProviderApprovalDecision,
   ProviderInteractionMode,
   RuntimeMode,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import {
   type ConsoleState,
   createOpencodeClient,
@@ -41,8 +41,8 @@ import {
 import * as Semaphore from "effect/Semaphore";
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 
-import { NetService, type NetServiceShape } from "@synara/shared/Net";
-import { prepareWindowsSafeProcess } from "@synara/shared/windowsProcess";
+import { NetService, type NetServiceShape } from "@forkara/shared/Net";
+import { prepareWindowsSafeProcess } from "@forkara/shared/windowsProcess";
 import { buildProviderChildEnvironment } from "../providerChildEnvironment.ts";
 import {
   readOpenCodeAuthFileUtf8,

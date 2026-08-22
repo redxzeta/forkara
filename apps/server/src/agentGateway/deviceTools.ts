@@ -28,7 +28,7 @@ import {
   type DeviceHardwareButton,
   type DeviceOpenPaneReason,
   type ProviderKind,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import { Effect } from "effect";
 
 import type { DeviceManager } from "../device/DeviceManager.ts";

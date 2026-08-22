@@ -1,4 +1,4 @@
-import { type ThreadId } from "@synara/contracts";
+import { type ThreadId } from "@forkara/contracts";
 import { create } from "zustand";
 
 interface TemporaryThreadStoreState {

@@ -7,7 +7,7 @@
 
 import { useState } from "react";
 
-import type { PullRequestActor } from "@synara/contracts";
+import type { PullRequestActor } from "@forkara/contracts";
 
 import { cn } from "~/lib/utils";
 

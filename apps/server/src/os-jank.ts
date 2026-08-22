@@ -9,12 +9,12 @@ import {
   mergePathEntries,
   readPathFromLaunchctl,
   readPathFromLoginShell,
-} from "@synara/shared/shell";
-import { createCachedLoginShellPathReader } from "@synara/shared/loginShellEnvironment";
+} from "@forkara/shared/shell";
+import { createCachedLoginShellPathReader } from "@forkara/shared/loginShellEnvironment";
 import {
   expandHomePath as expandHomePathSync,
   resolveSynaraHomeDirectory,
-} from "@synara/shared/synaraHome";
+} from "@forkara/shared/synaraHome";
 
 function logPathHydrationWarning(message: string, error?: unknown): void {
   console.warn(`[server] ${message}`, error instanceof Error ? error.message : (error ?? ""));

@@ -13,7 +13,7 @@ import {
   ThreadId,
   ThreadMarkerId,
   TurnId,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import { describe, expect, it } from "vitest";
 
 import { applyOrchestrationEvents, applyOrchestrationEventsHotPath } from "./storeEventReducer";

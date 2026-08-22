@@ -4,14 +4,14 @@ import {
   type GitBranch,
   type ProviderInteractionMode,
   type ProviderKind,
-} from "@synara/contracts";
+} from "@forkara/contracts";
 import { DEFAULT_PROVIDER_ORDER } from "./providerOrdering";
 import {
   BUILT_IN_COMPOSER_SLASH_COMMANDS,
   isBuiltInComposerSlashCommandName,
   normalizeComposerSlashCommandName,
   type BuiltInComposerSlashCommand,
-} from "@synara/shared/composerSlashCommands";
+} from "@forkara/shared/composerSlashCommands";
 import { rankProviderDiscoveryItems } from "./lib/providerDiscovery";
 
 export { BUILT_IN_COMPOSER_SLASH_COMMANDS };

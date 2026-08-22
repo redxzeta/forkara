@@ -1,4 +1,4 @@
-import { type ThreadGoalStartBehavior, type ThreadId } from "@synara/contracts";
+import { type ThreadGoalStartBehavior, type ThreadId } from "@forkara/contracts";
 
 import { newCommandId } from "./lib/utils";
 import { readNativeApi } from "./nativeApi";
