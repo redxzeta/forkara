@@ -28,6 +28,10 @@ describe("OriginalityMeterReport", () => {
     const html = renderToStaticMarkup(<OriginalityMeterReport result={result()} />);
 
     expect(html).toContain("Originality: 25% ✨");
+    expect(html).toContain("Inspired By");
+    expect(html).toContain(
+      'aria-label="Certification badge: Inspired By. Originality score 25 percent."',
+    );
     expect(html).toContain("This score is a joke");
     expect(html).toContain("not a measure of legal originality");
     expect(html).toContain("1 of 4");
@@ -54,5 +58,16 @@ describe("OriginalityMeterReport", () => {
     expect(html).not.toContain("Originality: 0%");
     expect(html).not.toContain("Factual receipts");
     expect(html).toContain("Configure and refresh an upstream remote.");
+    expect(html).not.toContain("Certification badge:");
+  });
+
+  it("renders the Built From Scratch badge with its upstream-history disclaimer", () => {
+    const html = renderToStaticMarkup(
+      <OriginalityMeterReport result={result({ scorePercent: 100, changedFileCount: 4 })} />,
+    );
+
+    expect(html).toContain("Built From Scratch™*");
+    expect(html).toContain("* upstream history may apply");
+    expect(html).toContain("Upstream history may apply");
   });
 });

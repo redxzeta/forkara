@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { Button } from "~/components/ui/button";
+import { Badge } from "~/components/ui/badge";
 import {
   Dialog,
   DialogDescription,
@@ -17,6 +18,7 @@ import {
 } from "~/components/ui/dialog";
 import { RefreshCwIcon, StarIcon } from "~/lib/icons";
 import { GIT_EXPENSIVE_READ_RETRY_OPTIONS, gitQueryKeys } from "~/lib/gitReactQuery";
+import { originalityCertification } from "~/lib/originalityCertification";
 import { ensureNativeApi } from "~/nativeApi";
 
 import {
@@ -40,6 +42,7 @@ function unavailableTitle(state: GitOriginalityMeterResult["state"]): string {
 
 export function OriginalityMeterReport({ result }: { result: GitOriginalityMeterResult }) {
   const available = result.state === "ready" && result.scorePercent !== null;
+  const certification = originalityCertification(result);
   return (
     <div className="space-y-4">
       <section
@@ -60,6 +63,22 @@ export function OriginalityMeterReport({ result }: { result: GitOriginalityMeter
           <StarIcon className="size-5 shrink-0 text-warning" aria-hidden />
         </div>
         <p className="mt-2 text-muted-foreground text-sm">{result.message}</p>
+        {certification ? (
+          <div className="mt-3 rounded-lg border border-border/70 bg-background/60 p-2.5">
+            <Badge
+              variant={certification.variant}
+              size="lg"
+              aria-label={certification.accessibleText}
+            >
+              <StarIcon aria-hidden />
+              {certification.label}
+            </Badge>
+            <p className="mt-1.5 text-muted-foreground text-xs">{certification.description}</p>
+            {certification.disclaimer ? (
+              <p className="mt-1 font-medium text-warning text-xs">{certification.disclaimer}</p>
+            ) : null}
+          </div>
+        ) : null}
         <p className="mt-3 rounded-lg border border-warning/30 bg-warning/5 p-2 text-sm">
           This score is a joke. It is not a measure of legal originality, authorship, ownership, or
           license compliance.
