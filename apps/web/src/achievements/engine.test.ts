@@ -120,7 +120,7 @@ describe("achievement engine", () => {
     expect(new Set(ACHIEVEMENT_CATALOG.map((definition) => definition.id)).size).toBe(
       ACHIEVEMENT_CATALOG.length,
     );
-    expect(ACHIEVEMENT_CATALOG).toHaveLength(13);
+    expect(ACHIEVEMENT_CATALOG).toHaveLength(14);
     expect(ACHIEVEMENT_CATALOG.find((definition) => definition.id === "forty_two")).toMatchObject({
       secret: true,
       description: "You know what you did.",

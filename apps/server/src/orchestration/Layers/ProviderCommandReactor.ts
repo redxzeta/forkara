@@ -60,6 +60,7 @@ import {
 } from "@forkara/shared/providerDeliveryBlock";
 import { buildStalePendingRequestFailureDetail } from "@forkara/shared/threadSummary";
 import { resolveThreadWorkspaceState } from "@forkara/shared/threadEnvironment";
+import { BULLY_MODE_CAPTURE_ACTIVITY_KIND } from "@forkara/shared/achievementActivities";
 
 import {
   checkpointRefForThreadMessageStart,
@@ -813,6 +814,38 @@ const make = Effect.gen(function* () {
       },
       createdAt: input.createdAt,
     });
+
+  const appendResponseModifierCaptureActivity = (input: {
+    readonly threadId: ThreadId;
+    readonly turnId: TurnId;
+    readonly bullyModeEnabled: boolean;
+    readonly createdAt: string;
+  }) =>
+    orchestrationEngine
+      .dispatch({
+        type: "thread.activity.append",
+        commandId: serverCommandId("response-modifiers-captured"),
+        threadId: input.threadId,
+        activity: {
+          id: EventId.makeUnsafe(`response-modifiers:${input.turnId}`),
+          tone: "info",
+          kind: BULLY_MODE_CAPTURE_ACTIVITY_KIND,
+          summary: "Response modifiers captured",
+          payload: { bullyModeEnabled: input.bullyModeEnabled },
+          turnId: input.turnId,
+          createdAt: input.createdAt,
+        },
+        createdAt: input.createdAt,
+      })
+      .pipe(
+        Effect.catchCause((cause) =>
+          Effect.logWarning("provider response modifier capture could not be persisted", {
+            threadId: input.threadId,
+            turnId: input.turnId,
+            cause: Cause.pretty(cause),
+          }),
+        ),
+      );
 
   const setThreadSession = (input: {
     readonly threadId: ThreadId;
@@ -1992,6 +2025,12 @@ const make = Effect.gen(function* () {
         ),
       );
       startedTurn = sentTurn;
+      yield* appendResponseModifierCaptureActivity({
+        threadId: input.threadId,
+        turnId: sentTurn.turnId,
+        bullyModeEnabled: responseModifiers.bullyMode,
+        createdAt: input.createdAt,
+      });
       if (pendingContextBootstrapAttempt) {
         pendingContextBootstrapAttempt.turnId = sentTurn.turnId;
         const terminalEvent = pendingContextBootstrapAttempt.terminalEvent;
