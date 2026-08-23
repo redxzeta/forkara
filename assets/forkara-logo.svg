@@ -17,7 +17,7 @@
 
   <!-- Forkara mark -->
   <g fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <!-- flowing upper connection / subtle Synara network reference -->
+    <!-- flowing upper connection / subtle fork-network reference -->
     <path
       d="M360 270
          C360 345 390 366 443 391
@@ -27,7 +27,7 @@
       stroke="url(#branchGradient)"
       stroke-width="48"/>
 
-    <!-- fork / triadic T3 reference -->
+    <!-- fork / triadic three-point reference -->
     <path
       d="M404 384
          C458 413 500 435 523 466
