@@ -24,6 +24,7 @@ import {
   GitRunStackedActionResult,
   GitStatusInput,
   GitStatusResult,
+  GitForkFamilyTreeResult,
   GitSummarizeDiffInput,
   GitSummarizeDiffResult,
 } from "@forkara/contracts";
@@ -44,6 +45,11 @@ export interface GitRunStackedActionOptions {
  * GitManagerShape - Service API for high-level Git workflow actions.
  */
 export interface GitManagerShape {
+  /** Read bounded direct fork ancestry from local remotes and optional GitHub metadata. */
+  readonly forkFamilyTree: (
+    cwd: string,
+  ) => Effect.Effect<GitForkFamilyTreeResult, GitManagerServiceError>;
+
   /**
    * Read current repository Git status plus open PR metadata when available.
    */

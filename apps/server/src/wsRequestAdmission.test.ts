@@ -15,6 +15,7 @@ describe("WsRequestAdmission", () => {
     expect(classifyWsRequest(WS_METHODS.gitUpstreamStatus)).toBe("expensive-read");
     expect(classifyWsRequest(WS_METHODS.gitForkHealth)).toBe("expensive-read");
     expect(classifyWsRequest(WS_METHODS.gitAttributionGuardian)).toBe("expensive-read");
+    expect(classifyWsRequest(WS_METHODS.gitForkFamilyTree)).toBe("expensive-read");
     expect(classifyWsRequest(WS_METHODS.gitForkArchaeologyOverview)).toBe("expensive-read");
     expect(classifyWsRequest(WS_METHODS.gitForkArchaeologyCommitPage)).toBe("expensive-read");
     expect(classifyWsRequest(WS_METHODS.gitForkArchaeologyFileHistory)).toBe("expensive-read");
