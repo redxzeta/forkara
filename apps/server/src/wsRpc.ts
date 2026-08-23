@@ -1375,6 +1375,8 @@ const makeWsRpcHandlersLayer = () =>
           rpcEffect(gitManager.forkFamilyTree(input.cwd), "Failed to read fork family tree"),
         [WS_METHODS.gitOriginalityMeter]: (input) =>
           rpcEffect(git.originalityMeter(input.cwd), "Failed to calculate originality parody"),
+        [WS_METHODS.gitForkSpeedrun]: (input) =>
+          rpcEffect(git.forkSpeedrun(input), "Failed to read local fork speedrun milestones"),
         [WS_METHODS.gitForkArchaeologyOverview]: (input) =>
           rpcEffect(
             git.forkArchaeologyOverview(input.cwd),

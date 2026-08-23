@@ -66,6 +66,7 @@ export const gitQueryKeys = {
   attributionGuardian: (cwd: string | null) => ["git", "attribution-guardian", cwd] as const,
   forkFamilyTree: (cwd: string | null) => ["git", "fork-family-tree", cwd] as const,
   originalityMeter: (cwd: string | null) => ["git", "originality-meter", cwd] as const,
+  forkSpeedrun: (cwd: string | null) => ["git", "fork-speedrun", cwd] as const,
   forkArchaeology: (cwd: string | null) => ["git", "fork-archaeology", cwd] as const,
   branches: (cwd: string | null) => ["git", "branches", cwd] as const,
   pullRequest: (cwd: string | null) => ["git", "pull-request", cwd] as const,
@@ -215,6 +216,10 @@ async function refreshGitAvailability(queryClient: QueryClient, cwd: string): Pr
       refetchType: "none",
     }),
     queryClient.invalidateQueries({
+      queryKey: gitQueryKeys.forkSpeedrun(cwd),
+      refetchType: "none",
+    }),
+    queryClient.invalidateQueries({
       queryKey: gitQueryKeys.forkArchaeology(cwd),
       refetchType: "none",
     }),
@@ -244,6 +249,7 @@ function activeGitDetailQueries(queryClient: QueryClient, cwd: string) {
     ...queryCache.findAll({ queryKey: gitQueryKeys.attributionGuardian(cwd), type: "active" }),
     ...queryCache.findAll({ queryKey: gitQueryKeys.forkFamilyTree(cwd), type: "active" }),
     ...queryCache.findAll({ queryKey: gitQueryKeys.originalityMeter(cwd), type: "active" }),
+    ...queryCache.findAll({ queryKey: gitQueryKeys.forkSpeedrun(cwd), type: "active" }),
     ...queryCache.findAll({ queryKey: gitQueryKeys.forkArchaeology(cwd), type: "active" }),
   ];
   const uniqueQueries = [...new Map(queries.map((query) => [query.queryHash, query])).values()];
@@ -278,6 +284,10 @@ async function refreshActiveGitDetails(queryClient: QueryClient, cwd: string): P
     }),
     queryClient.invalidateQueries({
       queryKey: gitQueryKeys.originalityMeter(cwd),
+      refetchType: "none",
+    }),
+    queryClient.invalidateQueries({
+      queryKey: gitQueryKeys.forkSpeedrun(cwd),
       refetchType: "none",
     }),
     queryClient.invalidateQueries({
@@ -345,6 +355,7 @@ function cachedGitCwds(queryClient: QueryClient): string[] {
     "attribution-guardian",
     "fork-family-tree",
     "originality-meter",
+    "fork-speedrun",
     "fork-archaeology",
     "branches",
     "working-tree-diff",
