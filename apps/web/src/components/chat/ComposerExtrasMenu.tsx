@@ -11,6 +11,7 @@ import { ComposerPickerMenuPopup, ComposerPickerMenuSubPopup } from "./ComposerP
 import { Button } from "../ui/button";
 import {
   Menu,
+  MenuCheckboxItem,
   MenuItem,
   MenuRadioGroup,
   MenuRadioItem,
@@ -24,8 +25,10 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
   interactionMode: ProviderInteractionMode;
   supportsFastMode: boolean;
   fastModeEnabled: boolean;
+  bullyModeEnabled: boolean;
   onAddAttachments: (files: File[]) => void;
   onToggleFastMode: () => void;
+  onBullyModeChange: (enabled: boolean) => void;
   onInteractionModeChange: (mode: ProviderInteractionMode) => void;
 }) {
   const inputId = useId();
@@ -73,6 +76,21 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
             <PaperclipIcon className="size-4 shrink-0" />
             Add files
           </MenuItem>
+
+          <MenuSeparator />
+          <MenuCheckboxItem
+            checked={props.bullyModeEnabled}
+            variant="switch"
+            onCheckedChange={props.onBullyModeChange}
+            aria-label="Bully Mode — changes response tone only"
+          >
+            <span className="flex min-w-0 flex-col">
+              <span>Bully Mode</span>
+              <span className="text-[length:var(--app-font-size-ui-xs,10px)] text-muted-foreground">
+                Response tone only
+              </span>
+            </span>
+          </MenuCheckboxItem>
 
           <MenuSeparator />
           <MenuSub>
