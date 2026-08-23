@@ -3,7 +3,7 @@
 // Layer: Environment panel section
 
 import type { GitUpstreamSyncPreviewResult, GitUpstreamStatusResult } from "@forkara/contracts";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { toastManager } from "~/components/ui/toast";
@@ -18,6 +18,7 @@ import {
 import { formatRelativeTime } from "~/lib/relativeTime";
 import { cn } from "~/lib/utils";
 import { ensureNativeApi } from "~/nativeApi";
+import { recordAchievementEvent } from "~/achievements/engine";
 
 import {
   ENVIRONMENT_ROW_CLASS_NAME,
@@ -74,6 +75,11 @@ export function EnvironmentUpstreamRadarSection({
   const [syncDialogOpen, setSyncDialogOpen] = useState(false);
   const [syncPreview, setSyncPreview] = useState<GitUpstreamSyncPreviewResult | null>(null);
   const statusQuery = useQuery(gitUpstreamStatusQueryOptions(gitCwd, enabled));
+  useEffect(() => {
+    if (statusQuery.data?.hasUpstream) {
+      recordAchievementEvent({ type: "repository.upstream_detected" });
+    }
+  }, [statusQuery.data?.hasUpstream]);
   const refreshMutation = useMutation({
     mutationFn: async () => {
       if (!gitCwd) throw new Error("Upstream status is unavailable.");

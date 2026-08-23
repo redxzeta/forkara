@@ -43,6 +43,7 @@ interface GitHubForkSourceInfo {
 interface GitHubForkPlan {
   readonly cloneRepository: string;
   readonly upstreamRepository: string | null;
+  readonly forkCreated: boolean;
 }
 
 export const GitHubProjectProvisioningErrorCode = Schema.Literals([
@@ -78,6 +79,7 @@ export interface GitHubProjectCheckoutResult {
   readonly repository: string;
   readonly workspaceRoot: string;
   readonly checkout: "created" | "reused";
+  readonly forkCreated: boolean;
   readonly recoveryPath: string | null;
 }
 
@@ -332,6 +334,7 @@ function ensureFork(
     return Effect.succeed({
       cloneRepository: sourceRepository,
       upstreamRepository: forkSource.parentNameWithOwner,
+      forkCreated: false,
     });
   }
 
@@ -379,6 +382,7 @@ function ensureFork(
     return {
       cloneRepository: forkRepository,
       upstreamRepository: sourceRepository,
+      forkCreated: forked,
     };
   });
 }
@@ -724,6 +728,7 @@ export const makeGitHubProjectProvisioner = Effect.fn(function* (
       repository,
       workspaceRoot,
       checkout: "reused" as const,
+      forkCreated: false,
       recoveryPath: null,
     };
   });
@@ -871,13 +876,17 @@ export const makeGitHubProjectProvisioner = Effect.fn(function* (
                 input.operationId,
                 github,
               )
-            : { cloneRepository: repository, upstreamRepository: null };
+            : { cloneRepository: repository, upstreamRepository: null, forkCreated: false };
           const existing = yield* inspectExistingDestination(
             workspaceRoot,
             forkPlan.cloneRepository,
           );
           if (existing) {
-            return { ...existing, operationId: input.operationId };
+            return {
+              ...existing,
+              operationId: input.operationId,
+              forkCreated: forkPlan.forkCreated,
+            };
           }
 
           yield* publishPhase(
@@ -937,7 +946,11 @@ export const makeGitHubProjectProvisioner = Effect.fn(function* (
               forkPlan.cloneRepository,
             );
             if (appearedDuringClone) {
-              return { ...appearedDuringClone, operationId: input.operationId };
+              return {
+                ...appearedDuringClone,
+                operationId: input.operationId,
+                forkCreated: forkPlan.forkCreated,
+              };
             }
 
             yield* fileSystem
@@ -949,6 +962,7 @@ export const makeGitHubProjectProvisioner = Effect.fn(function* (
               repository: forkPlan.cloneRepository,
               workspaceRoot,
               checkout: "created" as const,
+              forkCreated: forkPlan.forkCreated,
               recoveryPath: stagingPath,
             };
           });

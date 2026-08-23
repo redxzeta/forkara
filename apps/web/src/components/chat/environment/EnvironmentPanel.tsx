@@ -21,7 +21,7 @@ import type {
   ThreadMarkerId,
 } from "@forkara/contracts";
 import { useNavigate } from "@tanstack/react-router";
-import { type ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 
 import { useAppSettings } from "~/appSettings";
 import { SETTINGS_TARGETS } from "~/settingsNavigation";
@@ -42,6 +42,7 @@ import type { RepoDiffTotals } from "~/hooks/useRepoDiffTotals";
 import { ArrowUpRightIcon, ChangesIcon, GitHubIcon, SettingsIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import { readNativeApi } from "~/nativeApi";
+import { recordAchievementEvent } from "~/achievements/engine";
 
 import { EnvironmentEditorSection } from "./EnvironmentEditorSection";
 import { EnvironmentForkHealthSection } from "./EnvironmentForkHealthSection";
@@ -51,11 +52,13 @@ import { EnvironmentForkFamilyTreeSection } from "./EnvironmentForkFamilyTreeSec
 import { EnvironmentOriginalityMeterSection } from "./EnvironmentOriginalityMeterSection";
 import { EnvironmentForkSpeedrunSection } from "./EnvironmentForkSpeedrunSection";
 import { EnvironmentApologyProgressionSection } from "./EnvironmentApologyProgressionSection";
+import { EnvironmentReadmeTruthinessSection } from "./EnvironmentReadmeTruthinessSection";
 import {
   EnvironmentAutomationsSection,
   type EnvironmentAutomationPanelItem,
 } from "./EnvironmentAutomationsSection";
 import { EnvironmentUsageSection } from "./EnvironmentUsageSection";
+import { EnvironmentAchievementsSection } from "./EnvironmentAchievementsSection";
 import { EnvironmentUpstreamRadarSection } from "./EnvironmentUpstreamRadarSection";
 import { EnvironmentLocalServersSection } from "./EnvironmentLocalServersSection";
 import { EnvironmentPullRequestSection } from "./EnvironmentPullRequestSection";
@@ -301,6 +304,12 @@ export function EnvironmentPanel({
   const { settings } = useAppSettings();
   const { additions, deletions, hasChanges } = diffTotals;
 
+  useEffect(() => {
+    if (settings.hideUpstreamRepositoryInfo) {
+      recordAchievementEvent({ type: "upstream_amnesia.enabled" });
+    }
+  }, [settings.hideUpstreamRepositoryInfo]);
+
   // Disable the Changes row only when the diff cannot be opened *and* is not already open
   // (so an open diff stays toggleable closed even when there are no pending changes).
   const changesDisabled = diffDisabledReason !== null && !diffOpen;
@@ -415,6 +424,7 @@ export function EnvironmentPanel({
         dangling rule. Visibility is gated on the per-section AppSettings flags.
       */}
       {settings.showEnvironmentUsage ? <EnvironmentUsageSection provider={activeProvider} /> : null}
+      <EnvironmentAchievementsSection enabled={open} />
 
       {settings.showEnvironmentRepository && githubRepository && onOpenGithubRepository ? (
         <EnvironmentLabeledSection label="Repository">
@@ -452,6 +462,7 @@ export function EnvironmentPanel({
           <EnvironmentForkArchaeologySection gitCwd={gitCwd} enabled={open} />
           <EnvironmentForkFamilyTreeSection gitCwd={gitCwd} enabled={open} />
           <EnvironmentOriginalityMeterSection gitCwd={gitCwd} enabled={open} />
+          <EnvironmentReadmeTruthinessSection gitCwd={gitCwd} enabled={open} />
           <EnvironmentForkSpeedrunSection
             key={activeProjectId}
             gitCwd={gitCwd}

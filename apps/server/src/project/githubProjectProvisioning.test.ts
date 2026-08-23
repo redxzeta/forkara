@@ -138,6 +138,7 @@ describe("GitHub project provisioning", () => {
     );
 
     expect(result.provisioned.checkout).toBe("created");
+    expect(result.provisioned.forkCreated).toBe(true);
     expect(result.ghCalls).toEqual([
       ["repo", "view", "openai/codex", "--json", "isFork,parent"],
       ["repo", "fork", "openai/codex", "--clone=false"],
@@ -284,6 +285,7 @@ describe("GitHub project provisioning", () => {
     );
 
     expect(result.provisioned.checkout).toBe("reused");
+    expect(result.provisioned.forkCreated).toBe(false);
     expect(result.calls).toEqual(["verify GitHub project clone"]);
   });
 

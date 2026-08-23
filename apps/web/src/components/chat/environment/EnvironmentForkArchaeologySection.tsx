@@ -26,6 +26,7 @@ import { ensureNativeApi } from "~/nativeApi";
 import { GitCommitIcon, HistoryIcon, RefreshCwIcon } from "~/lib/icons";
 import { formatRelativeTime } from "~/lib/relativeTime";
 import { GIT_EXPENSIVE_READ_RETRY_OPTIONS, gitQueryKeys } from "~/lib/gitReactQuery";
+import { recordAchievementEvent } from "~/achievements/engine";
 
 import {
   ENVIRONMENT_ROW_ICON_CLASS_NAME,
@@ -449,7 +450,10 @@ export function EnvironmentForkArchaeologySection({
         label="Fork Archaeology"
         trailing={<GitCommitIcon className={ENVIRONMENT_ROW_ICON_CLASS_NAME} aria-hidden />}
         title="Inspect merge-base, unique commits, and selected-file history"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          recordAchievementEvent({ type: "fork_archaeology.opened" });
+          setOpen(true);
+        }}
       />
       <ForkArchaeologyDialog open={open} gitCwd={gitCwd} onOpenChange={setOpen} />
     </EnvironmentLabeledSection>

@@ -10,6 +10,7 @@ function checkout(kind: "created" | "reused"): GitHubProjectCheckoutResult {
     repository: "openai/codex",
     workspaceRoot: "/repos/codex",
     checkout: kind,
+    forkCreated: false,
     recoveryPath: kind === "created" ? "/repos/.synara-clone-1" : null,
   };
 }

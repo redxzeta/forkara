@@ -11475,6 +11475,11 @@ export default function ChatView({
               {activePendingApproval ? (
                 <div className="pb-2">
                   <ComposerPendingApprovalPanel
+                    key={pendingRequestInstanceKey(
+                      activePendingApproval.requestId,
+                      activePendingApproval.lifecycleGeneration,
+                    )}
+                    workspaceRoot={threadWorkspaceCwd}
                     approval={activePendingApproval}
                     pendingCount={pendingApprovals.length}
                     isResponding={respondingRequestKeys.includes(
