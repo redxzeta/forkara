@@ -2,14 +2,16 @@
 // Purpose: Centrally composes provider-independent response instruction overlays.
 // Layer: Provider prompt policy
 
-import type { ProviderInteractionMode } from "@forkara/contracts";
+import type { MakeNoMistakeLevel, ProviderInteractionMode } from "@forkara/contracts";
 
 import { PROVIDER_DEBUG_MODE_PROMPT_PREFIX, withProviderDebugModePrompt } from "./debugMode.ts";
 import { withProviderGoalPrompt } from "./goalMode.ts";
 import { withProviderBullyModePrompt } from "./bullyMode.ts";
+import { withProviderMakeNoMistakePrompt } from "./makeNoMistake.ts";
 
 export interface ProviderResponseModifierState {
   readonly bullyMode?: boolean | undefined;
+  readonly makeNoMistakeLevel?: MakeNoMistakeLevel | undefined;
 }
 
 export interface ProviderResponseInstructionsInput {
@@ -33,9 +35,13 @@ export function withProviderResponseInstructions(input: ProviderResponseInstruct
         interactionMode: input.interactionMode,
         text: input.text,
       });
-  const withModifiers = withProviderBullyModePrompt({
+  const withBullyMode = withProviderBullyModePrompt({
     enabled: input.modifiers?.bullyMode,
     text: withDebug,
+  });
+  const withModifiers = withProviderMakeNoMistakePrompt({
+    level: input.modifiers?.makeNoMistakeLevel,
+    text: withBullyMode,
   });
 
   return withProviderGoalPrompt({

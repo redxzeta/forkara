@@ -493,6 +493,39 @@ it.effect("preserves explicit provider and runtime mode in thread.turn.start", (
   }),
 );
 
+it.effect("captures only bounded Make No Mistake response levels", () =>
+  Effect.gen(function* () {
+    const command = {
+      type: "thread.turn.start",
+      commandId: "cmd-make-no-mistake",
+      threadId: "thread-1",
+      message: {
+        messageId: "msg-make-no-mistake",
+        role: "user",
+        text: "Explain it",
+        attachments: [],
+      },
+      responseModifiers: { makeNoMistakeLevel: 3 },
+      runtimeMode: "full-access",
+      interactionMode: "default",
+      createdAt: "2026-01-01T00:00:00.000Z",
+    };
+    const parsed = yield* decodeClientOrchestrationCommand(command);
+    assert.strictEqual(parsed.type, "thread.turn.start");
+    if (parsed.type === "thread.turn.start") {
+      assert.deepStrictEqual(parsed.responseModifiers, { makeNoMistakeLevel: 3 });
+    }
+
+    const rejected = yield* Effect.exit(
+      decodeClientOrchestrationCommand({
+        ...command,
+        responseModifiers: { makeNoMistakeLevel: 4 },
+      }),
+    );
+    assert.strictEqual(rejected._tag, "Failure");
+  }),
+);
+
 it.effect("preserves debug mode in thread turns and interaction-mode commands", () =>
   Effect.gen(function* () {
     const turn = yield* decodeThreadTurnStartCommand({

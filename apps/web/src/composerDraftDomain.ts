@@ -4,6 +4,7 @@
 
 import {
   type ModelSelection,
+  type MakeNoMistakeLevel,
   type OrchestrationLatestTurn,
   type OrchestrationThreadPullRequest,
   type ProjectId,
@@ -134,6 +135,7 @@ export interface QueuedComposerChatTurn {
   sourceProposedPlan?: NonNullable<OrchestrationLatestTurn["sourceProposedPlan"]> | undefined;
   runtimeMode: RuntimeMode;
   interactionMode: ProviderInteractionMode;
+  makeNoMistakeLevel?: MakeNoMistakeLevel;
   envMode: DraftThreadEnvMode;
 }
 
@@ -156,6 +158,7 @@ export interface QueuedComposerPlanFollowUp {
   modelSelection: ModelSelection;
   providerOptionsForDispatch?: ProviderStartOptions | undefined;
   runtimeMode: RuntimeMode;
+  makeNoMistakeLevel?: MakeNoMistakeLevel;
 }
 
 export type QueuedComposerTurn = QueuedComposerChatTurn | QueuedComposerPlanFollowUp;
@@ -184,6 +187,7 @@ export interface ComposerThreadDraftState {
   activeProvider: ProviderKind | null;
   runtimeMode: RuntimeMode | null;
   interactionMode: ProviderInteractionMode | null;
+  makeNoMistakeLevel?: MakeNoMistakeLevel;
 }
 
 export interface DraftThreadState {
@@ -324,6 +328,7 @@ export interface ComposerDraftStoreState {
     threadId: ThreadId,
     interactionMode: ProviderInteractionMode | null | undefined,
   ) => void;
+  setMakeNoMistakeLevel: (threadId: ThreadId, level: MakeNoMistakeLevel) => void;
   enqueueQueuedTurn: (threadId: ThreadId, queuedTurn: QueuedComposerTurn) => void;
   insertQueuedTurn: (threadId: ThreadId, queuedTurn: QueuedComposerTurn, index: number) => void;
   removeQueuedTurn: (threadId: ThreadId, queuedTurnId: string) => void;
@@ -534,6 +539,7 @@ export function createEmptyThreadDraft(): ComposerThreadDraftState {
     activeProvider: null,
     runtimeMode: null,
     interactionMode: null,
+    makeNoMistakeLevel: 0,
   };
 }
 
@@ -767,6 +773,7 @@ export function buildTransferredComposerDraft(input: {
     skills: [...sourceDraft.skills],
     mentions: [...sourceDraft.mentions],
     restoredSourceProposedPlan: null,
+    makeNoMistakeLevel: sourceDraft.makeNoMistakeLevel ?? 0,
   };
 }
 
@@ -831,7 +838,8 @@ export function shouldRemoveDraft(draft: ComposerThreadDraftState): boolean {
     Object.keys(draft.modelSelectionByProvider).length === 0 &&
     draft.activeProvider === null &&
     draft.runtimeMode === null &&
-    draft.interactionMode === null
+    draft.interactionMode === null &&
+    (draft.makeNoMistakeLevel ?? 0) === 0
   );
 }
 
@@ -885,6 +893,7 @@ const EMPTY_THREAD_DRAFT = Object.freeze<ComposerThreadDraftState>({
   activeProvider: null,
   runtimeMode: null,
   interactionMode: null,
+  makeNoMistakeLevel: 0,
 });
 
 export function selectComposerThreadDraft(
