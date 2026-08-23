@@ -33,6 +33,7 @@ import type {
   GitUpstreamSyncPreviewResult,
   GitUpstreamStatusResult,
   GitForkHealthResult,
+  GitAttributionGuardianResult,
   GitForkArchaeologyCommitPageInput,
   GitForkArchaeologyCommitPageResult,
   GitForkArchaeologyFileHistoryInput,
@@ -241,6 +242,11 @@ export interface GitCoreShape {
 
   /** Derive factual fork health from cached upstream data and local Git state only. */
   readonly forkHealth: (cwd: string) => Effect.Effect<GitForkHealthResult, GitCommandError>;
+
+  /** Compare common attribution files in HEAD against the cached upstream branch. */
+  readonly attributionGuardian: (
+    cwd: string,
+  ) => Effect.Effect<GitAttributionGuardianResult, GitCommandError>;
 
   /** Read the exact merge-base and unique commit counts for HEAD and cached upstream. */
   readonly forkArchaeologyOverview: (

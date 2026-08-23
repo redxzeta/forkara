@@ -195,6 +195,7 @@ export const WS_METHODS = {
   gitUpstreamStatus: "git.upstreamStatus",
   gitRefreshUpstream: "git.refreshUpstream",
   gitForkHealth: "git.forkHealth",
+  gitAttributionGuardian: "git.attributionGuardian",
   gitForkArchaeologyOverview: "git.forkArchaeologyOverview",
   gitForkArchaeologyCommitPage: "git.forkArchaeologyCommitPage",
   gitForkArchaeologyFileHistory: "git.forkArchaeologyFileHistory",

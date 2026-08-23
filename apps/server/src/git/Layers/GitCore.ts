@@ -31,6 +31,7 @@ import { parseGitHubRepositoryNameWithOwnerFromRemoteUrl } from "@forkara/shared
 import { decodeJsonResult } from "@forkara/shared/schemaJson";
 
 import { GitCheckoutDirtyWorktreeError, GitCommandError } from "../Errors.ts";
+import { makeGitAttributionGuardian } from "../gitAttributionGuardian.ts";
 import { makeGitForkArchaeology } from "../gitForkArchaeology.ts";
 import { makeGitForkHealth } from "../gitForkHealth.ts";
 import { makeGitUpstreamRadar } from "../gitUpstreamRadar.ts";
@@ -1129,9 +1130,14 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
       status: upstreamRadar.status,
       refresh: upstreamRadar.refresh,
     });
+    const attributionGuardian = makeGitAttributionGuardian({
+      execute: executeGit,
+      upstreamStatus: upstreamRadar.status,
+    });
     const forkHealth = makeGitForkHealth({
       execute: executeGit,
       upstreamStatus: upstreamRadar.status,
+      attributionGuardian: attributionGuardian.readWithUpstream,
     });
     const forkArchaeology = makeGitForkArchaeology({
       execute: executeGit,
@@ -1142,6 +1148,7 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
     const previewUpstreamSync: GitCoreShape["previewUpstreamSync"] = upstreamSync.preview;
     const applyUpstreamSync: GitCoreShape["applyUpstreamSync"] = upstreamSync.apply;
     const readForkHealth: GitCoreShape["forkHealth"] = forkHealth.read;
+    const readAttributionGuardian: GitCoreShape["attributionGuardian"] = attributionGuardian.read;
     const readForkArchaeologyOverview: GitCoreShape["forkArchaeologyOverview"] =
       forkArchaeology.overview;
     const readForkArchaeologyCommitPage: GitCoreShape["forkArchaeologyCommitPage"] =
@@ -3343,6 +3350,7 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
       previewUpstreamSync,
       applyUpstreamSync,
       forkHealth: readForkHealth,
+      attributionGuardian: readAttributionGuardian,
       forkArchaeologyOverview: readForkArchaeologyOverview,
       forkArchaeologyCommitPage: readForkArchaeologyCommitPage,
       forkArchaeologyFileHistory: readForkArchaeologyFileHistory,
