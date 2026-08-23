@@ -50,7 +50,7 @@ function gitExpensiveReadRetryDelay(attemptIndex: number, error: unknown): numbe
   return Math.min(1_000 * 2 ** attemptIndex, 30_000);
 }
 
-const GIT_EXPENSIVE_READ_RETRY_OPTIONS = {
+export const GIT_EXPENSIVE_READ_RETRY_OPTIONS = {
   retry: shouldRetryGitExpensiveRead,
   retryDelay: gitExpensiveReadRetryDelay,
 } as const;
@@ -63,6 +63,7 @@ export const gitQueryKeys = {
   status: (cwd: string | null) => ["git", "status", cwd] as const,
   upstreamStatus: (cwd: string | null) => ["git", "upstream-status", cwd] as const,
   forkHealth: (cwd: string | null) => ["git", "fork-health", cwd] as const,
+  forkArchaeology: (cwd: string | null) => ["git", "fork-archaeology", cwd] as const,
   branches: (cwd: string | null) => ["git", "branches", cwd] as const,
   pullRequest: (cwd: string | null) => ["git", "pull-request", cwd] as const,
   workingTreeDiff: (
@@ -196,6 +197,10 @@ async function refreshGitAvailability(queryClient: QueryClient, cwd: string): Pr
       refetchType: "none",
     }),
     queryClient.invalidateQueries({
+      queryKey: gitQueryKeys.forkArchaeology(cwd),
+      refetchType: "none",
+    }),
+    queryClient.invalidateQueries({
       queryKey: gitQueryKeys.branches(cwd),
       exact: true,
       refetchType: "none",
@@ -218,6 +223,7 @@ function activeGitDetailQueries(queryClient: QueryClient, cwd: string) {
       type: "active",
     }),
     ...queryCache.findAll({ queryKey: gitQueryKeys.pullRequest(cwd), type: "active" }),
+    ...queryCache.findAll({ queryKey: gitQueryKeys.forkArchaeology(cwd), type: "active" }),
   ];
   const uniqueQueries = [...new Map(queries.map((query) => [query.queryHash, query])).values()];
   return uniqueQueries.toSorted((left, right) => {
@@ -239,6 +245,10 @@ async function refreshActiveGitDetails(queryClient: QueryClient, cwd: string): P
     }),
     queryClient.invalidateQueries({
       queryKey: gitQueryKeys.pullRequest(cwd),
+      refetchType: "none",
+    }),
+    queryClient.invalidateQueries({
+      queryKey: gitQueryKeys.forkArchaeology(cwd),
       refetchType: "none",
     }),
   ]);
@@ -298,6 +308,8 @@ function cachedGitCwds(queryClient: QueryClient): string[] {
     "github-repository",
     "status",
     "upstream-status",
+    "fork-health",
+    "fork-archaeology",
     "branches",
     "working-tree-diff",
     "pull-request",

@@ -84,6 +84,12 @@ import type {
   GitUpstreamStatusResult,
   GitForkHealthInput,
   GitForkHealthResult,
+  GitForkArchaeologyOverviewInput,
+  GitForkArchaeologyOverviewResult,
+  GitForkArchaeologyCommitPageInput,
+  GitForkArchaeologyCommitPageResult,
+  GitForkArchaeologyFileHistoryInput,
+  GitForkArchaeologyFileHistoryResult,
   GitApplyUpstreamSyncInput,
   GitUpstreamSyncApplyResult,
   GitUpstreamSyncPreviewResult,
@@ -719,6 +725,15 @@ export interface NativeApi {
     upstreamStatus: (input: GitUpstreamStatusInput) => Promise<GitUpstreamStatusResult>;
     refreshUpstream: (input: GitUpstreamStatusInput) => Promise<GitUpstreamStatusResult>;
     forkHealth: (input: GitForkHealthInput) => Promise<GitForkHealthResult>;
+    forkArchaeologyOverview: (
+      input: GitForkArchaeologyOverviewInput,
+    ) => Promise<GitForkArchaeologyOverviewResult>;
+    forkArchaeologyCommitPage: (
+      input: GitForkArchaeologyCommitPageInput,
+    ) => Promise<GitForkArchaeologyCommitPageResult>;
+    forkArchaeologyFileHistory: (
+      input: GitForkArchaeologyFileHistoryInput,
+    ) => Promise<GitForkArchaeologyFileHistoryResult>;
     previewUpstreamSync: (input: GitUpstreamStatusInput) => Promise<GitUpstreamSyncPreviewResult>;
     applyUpstreamSync: (input: GitApplyUpstreamSyncInput) => Promise<GitUpstreamSyncApplyResult>;
     readWorkingTreeDiff: (

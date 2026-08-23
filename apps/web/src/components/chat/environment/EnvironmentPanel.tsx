@@ -45,6 +45,7 @@ import { readNativeApi } from "~/nativeApi";
 
 import { EnvironmentEditorSection } from "./EnvironmentEditorSection";
 import { EnvironmentForkHealthSection } from "./EnvironmentForkHealthSection";
+import { EnvironmentForkArchaeologySection } from "./EnvironmentForkArchaeologySection";
 import {
   EnvironmentAutomationsSection,
   type EnvironmentAutomationPanelItem,
@@ -439,6 +440,7 @@ export function EnvironmentPanel({
         <div key={gitCwd} className="contents">
           <EnvironmentForkHealthSection gitCwd={gitCwd} enabled={open} />
           <EnvironmentUpstreamRadarSection gitCwd={gitCwd} enabled={open} />
+          <EnvironmentForkArchaeologySection gitCwd={gitCwd} enabled={open} />
         </div>
       ) : null}
 

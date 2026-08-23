@@ -138,6 +138,28 @@ export type GitUpstreamStatusInput = typeof GitUpstreamStatusInput.Type;
 export const GitForkHealthInput = GitUpstreamStatusInput;
 export type GitForkHealthInput = typeof GitForkHealthInput.Type;
 
+export const GIT_FORK_ARCHAEOLOGY_DEFAULT_PAGE_SIZE = 20;
+export const GIT_FORK_ARCHAEOLOGY_MAX_PAGE_SIZE = 50;
+
+export const GitForkArchaeologyOverviewInput = GitUpstreamStatusInput;
+export type GitForkArchaeologyOverviewInput = typeof GitForkArchaeologyOverviewInput.Type;
+
+export const GitForkArchaeologyCommitPageInput = Schema.Struct({
+  cwd: TrimmedNonEmptyStringSchema,
+  side: Schema.Literals(["fork", "upstream"]),
+  offset: NonNegativeInt,
+  limit: PositiveInt.check(Schema.isLessThanOrEqualTo(GIT_FORK_ARCHAEOLOGY_MAX_PAGE_SIZE)),
+});
+export type GitForkArchaeologyCommitPageInput = typeof GitForkArchaeologyCommitPageInput.Type;
+
+export const GitForkArchaeologyFileHistoryInput = Schema.Struct({
+  cwd: TrimmedNonEmptyStringSchema,
+  path: TrimmedNonEmptyStringSchema.check(Schema.isMaxLength(4_096)),
+  offset: NonNegativeInt,
+  limit: PositiveInt.check(Schema.isLessThanOrEqualTo(GIT_FORK_ARCHAEOLOGY_MAX_PAGE_SIZE)),
+});
+export type GitForkArchaeologyFileHistoryInput = typeof GitForkArchaeologyFileHistoryInput.Type;
+
 export const GitApplyUpstreamSyncInput = Schema.Struct({
   cwd: TrimmedNonEmptyStringSchema,
   expectedLocalHead: TrimmedNonEmptyStringSchema,
@@ -418,6 +440,63 @@ export const GitForkHealthResult = Schema.Struct({
   upstream: GitUpstreamStatusResult,
 });
 export type GitForkHealthResult = typeof GitForkHealthResult.Type;
+
+export const GitForkArchaeologyState = Schema.Literals([
+  "ready",
+  "missing_upstream",
+  "incomplete_history",
+  "unrelated_history",
+]);
+export type GitForkArchaeologyState = typeof GitForkArchaeologyState.Type;
+
+export const GitForkArchaeologyCommitOrigin = Schema.Literals([
+  "fork",
+  "upstream",
+  "shared",
+  "unknown",
+]);
+export type GitForkArchaeologyCommitOrigin = typeof GitForkArchaeologyCommitOrigin.Type;
+
+export const GitForkArchaeologyCommit = Schema.Struct({
+  sha: TrimmedNonEmptyStringSchema,
+  shortSha: TrimmedNonEmptyStringSchema,
+  subject: TrimmedNonEmptyStringSchema,
+  authorName: TrimmedNonEmptyStringSchema,
+  authoredAt: IsoDateTime,
+  origin: GitForkArchaeologyCommitOrigin,
+  upstreamUrl: Schema.NullOr(TrimmedNonEmptyStringSchema),
+});
+export type GitForkArchaeologyCommit = typeof GitForkArchaeologyCommit.Type;
+
+export const GitForkArchaeologyOverviewResult = Schema.Struct({
+  state: GitForkArchaeologyState,
+  message: TrimmedNonEmptyStringSchema,
+  localRef: TrimmedNonEmptyStringSchema,
+  upstreamRef: TrimmedNonEmptyStringSchema.pipe(Schema.NullOr),
+  mergeBase: Schema.NullOr(GitForkArchaeologyCommit),
+  forkUniqueCount: NonNegativeInt,
+  upstreamUniqueCount: NonNegativeInt,
+  upstreamRepositoryUrl: Schema.NullOr(TrimmedNonEmptyStringSchema),
+});
+export type GitForkArchaeologyOverviewResult = typeof GitForkArchaeologyOverviewResult.Type;
+
+export const GitForkArchaeologyCommitPageResult = Schema.Struct({
+  commits: Schema.Array(GitForkArchaeologyCommit),
+  nextOffset: Schema.NullOr(NonNegativeInt),
+});
+export type GitForkArchaeologyCommitPageResult = typeof GitForkArchaeologyCommitPageResult.Type;
+
+export const GitForkArchaeologyFileHistoryState = Schema.Literals(["available", "unknown"]);
+export type GitForkArchaeologyFileHistoryState = typeof GitForkArchaeologyFileHistoryState.Type;
+
+export const GitForkArchaeologyFileHistoryResult = Schema.Struct({
+  state: GitForkArchaeologyFileHistoryState,
+  message: TrimmedNonEmptyStringSchema,
+  path: TrimmedNonEmptyStringSchema,
+  commits: Schema.Array(GitForkArchaeologyCommit),
+  nextOffset: Schema.NullOr(NonNegativeInt),
+});
+export type GitForkArchaeologyFileHistoryResult = typeof GitForkArchaeologyFileHistoryResult.Type;
 
 export const GitUpstreamSyncState = Schema.Literals([
   "missing",

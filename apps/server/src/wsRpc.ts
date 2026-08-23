@@ -1369,6 +1369,21 @@ const makeWsRpcHandlersLayer = () =>
           ),
         [WS_METHODS.gitForkHealth]: (input) =>
           rpcEffect(git.forkHealth(input.cwd), "Failed to read fork health"),
+        [WS_METHODS.gitForkArchaeologyOverview]: (input) =>
+          rpcEffect(
+            git.forkArchaeologyOverview(input.cwd),
+            "Failed to read fork archaeology overview",
+          ),
+        [WS_METHODS.gitForkArchaeologyCommitPage]: (input) =>
+          rpcEffect(
+            git.forkArchaeologyCommitPage(input),
+            "Failed to read fork archaeology commits",
+          ),
+        [WS_METHODS.gitForkArchaeologyFileHistory]: (input) =>
+          rpcEffect(
+            git.forkArchaeologyFileHistory(input),
+            "Failed to read file provenance history",
+          ),
         [WS_METHODS.gitPreviewUpstreamSync]: (input) =>
           rpcEffect(
             git.withMutation(input.cwd, git.previewUpstreamSync(input.cwd)),

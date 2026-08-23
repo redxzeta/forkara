@@ -33,6 +33,11 @@ import type {
   GitUpstreamSyncPreviewResult,
   GitUpstreamStatusResult,
   GitForkHealthResult,
+  GitForkArchaeologyCommitPageInput,
+  GitForkArchaeologyCommitPageResult,
+  GitForkArchaeologyFileHistoryInput,
+  GitForkArchaeologyFileHistoryResult,
+  GitForkArchaeologyOverviewResult,
 } from "@forkara/contracts";
 
 import type { GitCheckoutDirtyWorktreeError, GitCommandError } from "../Errors.ts";
@@ -236,6 +241,21 @@ export interface GitCoreShape {
 
   /** Derive factual fork health from cached upstream data and local Git state only. */
   readonly forkHealth: (cwd: string) => Effect.Effect<GitForkHealthResult, GitCommandError>;
+
+  /** Read the exact merge-base and unique commit counts for HEAD and cached upstream. */
+  readonly forkArchaeologyOverview: (
+    cwd: string,
+  ) => Effect.Effect<GitForkArchaeologyOverviewResult, GitCommandError>;
+
+  /** Read one bounded page of commits unique to the fork or upstream. */
+  readonly forkArchaeologyCommitPage: (
+    input: GitForkArchaeologyCommitPageInput,
+  ) => Effect.Effect<GitForkArchaeologyCommitPageResult, GitCommandError>;
+
+  /** Read one bounded page of exact Git history for a selected repository-relative file. */
+  readonly forkArchaeologyFileHistory: (
+    input: GitForkArchaeologyFileHistoryInput,
+  ) => Effect.Effect<GitForkArchaeologyFileHistoryResult, GitCommandError>;
 
   /** Read only branch identity, without diff stats or remote refresh work. */
   readonly readBranchContext: (cwd: string) => Effect.Effect<GitBranchContext, GitCommandError>;
