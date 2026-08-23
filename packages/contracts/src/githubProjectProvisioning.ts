@@ -34,6 +34,8 @@ export const GitHubProjectProvisionResult = Schema.Struct({
   workspaceRoot: TrimmedNonEmptyString,
   projectId: ProjectId,
   checkout: Schema.Literals(["created", "reused"]),
+  /** True only when this operation successfully created the GitHub fork itself. */
+  forkCreated: Schema.Boolean.pipe(Schema.withDecodingDefaultKey(() => false)),
 });
 export type GitHubProjectProvisionResult = typeof GitHubProjectProvisionResult.Type;
 

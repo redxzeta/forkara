@@ -289,6 +289,7 @@ describe("WsTransport", () => {
         workspaceRoot: "/projects/codex",
         projectId: "project-1",
         checkout: "created" as const,
+        forkCreated: true,
       },
     };
     const emit = vi.fn();

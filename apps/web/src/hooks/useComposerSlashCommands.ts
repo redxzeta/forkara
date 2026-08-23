@@ -52,6 +52,7 @@ import {
   sendSidechatPrompt,
   type SidechatCreationFlight,
 } from "../lib/sidechatCreation";
+import { recordAchievementEvent } from "../achievements/engine";
 
 type ComposerSnapshot = {
   value: string;
@@ -851,6 +852,7 @@ export function useComposerSlashCommands(input: {
         return true;
       }
       if (slashInvocation.command === "blame-someone-else") {
+        recordAchievementEvent({ type: "parody.blame_someone_else" });
         editorActions.clearComposerSlashDraft();
         editorActions.setComposerPromptValue(buildBlameSlashPrompt(slashInvocation.args));
         toastManager.add({
@@ -1147,6 +1149,7 @@ export function useComposerSlashCommands(input: {
         if (!wasPromptReplacementApplied(applied)) {
           return;
         }
+        recordAchievementEvent({ type: "parody.blame_someone_else" });
         editorActions.setComposerHighlightedItemId(null);
         toastManager.add({
           type: "info",
