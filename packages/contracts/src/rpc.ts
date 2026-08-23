@@ -113,6 +113,8 @@ import {
   GitAttributionGuardianResult,
   GitForkFamilyTreeInput,
   GitForkFamilyTreeResult,
+  GitOriginalityMeterInput,
+  GitOriginalityMeterResult,
   GitForkArchaeologyOverviewInput,
   GitForkArchaeologyOverviewResult,
   GitForkArchaeologyCommitPageInput,
@@ -700,6 +702,12 @@ export const WsGitAttributionGuardianRpc = Rpc.make(WS_METHODS.gitAttributionGua
 export const WsGitForkFamilyTreeRpc = Rpc.make(WS_METHODS.gitForkFamilyTree, {
   payload: GitForkFamilyTreeInput,
   success: GitForkFamilyTreeResult,
+  error: WsRpcError,
+});
+
+export const WsGitOriginalityMeterRpc = Rpc.make(WS_METHODS.gitOriginalityMeter, {
+  payload: GitOriginalityMeterInput,
+  success: GitOriginalityMeterResult,
   error: WsRpcError,
 });
 
@@ -1331,6 +1339,7 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsGitForkHealthRpc,
   WsGitAttributionGuardianRpc,
   WsGitForkFamilyTreeRpc,
+  WsGitOriginalityMeterRpc,
   WsGitForkArchaeologyOverviewRpc,
   WsGitForkArchaeologyCommitPageRpc,
   WsGitForkArchaeologyFileHistoryRpc,
