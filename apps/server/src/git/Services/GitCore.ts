@@ -28,6 +28,9 @@ import type {
   GitStashInfoResult,
   GitStatusInput,
   GitStatusResult,
+  GitApplyUpstreamSyncInput,
+  GitUpstreamSyncApplyResult,
+  GitUpstreamSyncPreviewResult,
   GitUpstreamStatusResult,
 } from "@forkara/contracts";
 
@@ -219,6 +222,16 @@ export interface GitCoreShape {
   readonly refreshUpstream: (
     cwd: string,
   ) => Effect.Effect<GitUpstreamStatusResult, GitCommandError>;
+
+  /** Fetch upstream and build a non-mutating sync preview for the current branch. */
+  readonly previewUpstreamSync: (
+    cwd: string,
+  ) => Effect.Effect<GitUpstreamSyncPreviewResult, GitCommandError>;
+
+  /** Apply a previously previewed clean fast-forward after revalidating repository state. */
+  readonly applyUpstreamSync: (
+    input: GitApplyUpstreamSyncInput,
+  ) => Effect.Effect<GitUpstreamSyncApplyResult, GitCommandError>;
 
   /** Read only branch identity, without diff stats or remote refresh work. */
   readonly readBranchContext: (cwd: string) => Effect.Effect<GitBranchContext, GitCommandError>;

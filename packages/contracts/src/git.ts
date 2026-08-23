@@ -135,6 +135,13 @@ export const GitUpstreamStatusInput = Schema.Struct({
 });
 export type GitUpstreamStatusInput = typeof GitUpstreamStatusInput.Type;
 
+export const GitApplyUpstreamSyncInput = Schema.Struct({
+  cwd: TrimmedNonEmptyStringSchema,
+  expectedLocalHead: TrimmedNonEmptyStringSchema,
+  expectedUpstreamHead: TrimmedNonEmptyStringSchema,
+});
+export type GitApplyUpstreamSyncInput = typeof GitApplyUpstreamSyncInput.Type;
+
 export const GitHubRepositoryInput = Schema.Struct({
   cwd: TrimmedNonEmptyStringSchema,
 });
@@ -378,6 +385,62 @@ export const GitUpstreamStatusResult = Schema.Struct({
   message: TrimmedNonEmptyStringSchema,
 });
 export type GitUpstreamStatusResult = typeof GitUpstreamStatusResult.Type;
+
+export const GitUpstreamSyncState = Schema.Literals([
+  "missing",
+  "unreachable",
+  "detached",
+  "branch_mismatch",
+  "conflicts",
+  "dirty",
+  "up_to_date",
+  "local_ahead",
+  "diverged",
+  "fast_forward",
+]);
+export type GitUpstreamSyncState = typeof GitUpstreamSyncState.Type;
+
+export const GitUpstreamSyncStrategy = Schema.Literals([
+  "fast-forward-only",
+  "rebase",
+  "merge",
+  "unspecified",
+]);
+export type GitUpstreamSyncStrategy = typeof GitUpstreamSyncStrategy.Type;
+
+export const GitUpstreamSyncCommit = Schema.Struct({
+  sha: TrimmedNonEmptyStringSchema,
+  shortSha: TrimmedNonEmptyStringSchema,
+  subject: TrimmedNonEmptyStringSchema,
+  authorName: TrimmedNonEmptyStringSchema,
+  authoredAt: IsoDateTime,
+});
+export type GitUpstreamSyncCommit = typeof GitUpstreamSyncCommit.Type;
+
+export const GitUpstreamSyncPreviewResult = Schema.Struct({
+  state: GitUpstreamSyncState,
+  canApply: Schema.Boolean,
+  localBranch: TrimmedNonEmptyStringSchema.pipe(Schema.NullOr),
+  upstreamBranch: TrimmedNonEmptyStringSchema.pipe(Schema.NullOr),
+  localHead: TrimmedNonEmptyStringSchema.pipe(Schema.NullOr),
+  upstreamHead: TrimmedNonEmptyStringSchema.pipe(Schema.NullOr),
+  aheadCount: NonNegativeInt,
+  behindCount: NonNegativeInt,
+  incomingCommits: Schema.Array(GitUpstreamSyncCommit),
+  incomingCommitsTruncated: Schema.Boolean,
+  conflictFiles: Schema.Array(TrimmedNonEmptyStringSchema),
+  preferredStrategy: GitUpstreamSyncStrategy,
+  message: TrimmedNonEmptyStringSchema,
+});
+export type GitUpstreamSyncPreviewResult = typeof GitUpstreamSyncPreviewResult.Type;
+
+export const GitUpstreamSyncApplyResult = Schema.Struct({
+  branch: TrimmedNonEmptyStringSchema,
+  beforeSha: TrimmedNonEmptyStringSchema,
+  afterSha: TrimmedNonEmptyStringSchema,
+  upstreamStatus: GitUpstreamStatusResult,
+});
+export type GitUpstreamSyncApplyResult = typeof GitUpstreamSyncApplyResult.Type;
 
 export const GitStatusLocalResult = Schema.Struct({
   branch: TrimmedNonEmptyStringSchema.pipe(Schema.NullOr),

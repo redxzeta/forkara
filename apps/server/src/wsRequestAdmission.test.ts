@@ -14,6 +14,8 @@ describe("WsRequestAdmission", () => {
     expect(classifyWsRequest(ORCHESTRATION_WS_METHODS.repairState)).toBe("expensive-read");
     expect(classifyWsRequest(WS_METHODS.gitUpstreamStatus)).toBe("expensive-read");
     expect(classifyWsRequest(WS_METHODS.gitRefreshUpstream)).toBe("standard");
+    expect(classifyWsRequest(WS_METHODS.gitPreviewUpstreamSync)).toBe("expensive-read");
+    expect(classifyWsRequest(WS_METHODS.gitApplyUpstreamSync)).toBe("standard");
     expect(classifyWsRequest(WS_METHODS.serverPrewarmVoice)).toBe("expensive-read");
     expect(classifyWsRequest(WS_METHODS.terminalAckOutput)).toBe("control");
   });
