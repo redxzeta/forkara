@@ -499,6 +499,7 @@ import {
 } from "./chat/ComposerLocalDirectoryMenu";
 import { ComposerPendingApprovalPanel } from "./chat/ComposerPendingApprovalPanel";
 import { ComposerExtrasMenu } from "./chat/ComposerExtrasMenu";
+import { ComposerBullyModeIndicator } from "./chat/ComposerBullyModeIndicator";
 import { ComposerMakeNoMistakeControl } from "./chat/ComposerMakeNoMistakeControl";
 import { ContextWindowMeter } from "./chat/ContextWindowMeter";
 import { ComposerInputBanners } from "./chat/ComposerInputBanners";
@@ -1215,6 +1216,7 @@ export default function ChatView({
   const setStoreThreadError = useStore((store) => store.setError);
   const setStoreThreadWorkspace = useStore((store) => store.setThreadWorkspace);
   const { settings, updateSettings } = useAppSettings();
+  const handleBullyModeChange = (enabled: boolean) => updateSettings({ bullyModeEnabled: enabled });
   const assistantDeliveryMode = resolveAssistantDeliveryMode(settings);
   const desktopTopBarTrafficLightGutterClassName = useDesktopTopBarTrafficLightGutterClassName();
   const desktopTopBarWindowControlsGutterClassName =
@@ -11124,8 +11126,10 @@ export default function ChatView({
         interactionMode={interactionMode}
         supportsFastMode={composerTraitSelection.caps.supportsFastMode}
         fastModeEnabled={composerTraitSelection.fastModeEnabled}
+        bullyModeEnabled={settings.bullyModeEnabled}
         onAddAttachments={addComposerAttachments}
         onToggleFastMode={toggleFastMode}
+        onBullyModeChange={handleBullyModeChange}
         onInteractionModeChange={handleInteractionModeChange}
       />
       {!isVoiceRecording && !isVoiceTranscribing ? (
@@ -11701,12 +11705,18 @@ export default function ChatView({
                           ) : null}
 
                           {!activePendingProgress ? (
-                            <ComposerMakeNoMistakeControl
-                              level={makeNoMistakeLevel}
-                              onLevelChange={(level) =>
-                                setComposerDraftMakeNoMistakeLevel(threadId, level)
-                              }
-                            />
+                            <>
+                              <ComposerBullyModeIndicator
+                                enabled={settings.bullyModeEnabled}
+                                onEnabledChange={handleBullyModeChange}
+                              />
+                              <ComposerMakeNoMistakeControl
+                                level={makeNoMistakeLevel}
+                                onLevelChange={(level) =>
+                                  setComposerDraftMakeNoMistakeLevel(threadId, level)
+                                }
+                              />
+                            </>
                           ) : null}
 
                           {activeTaskList || sidebarProposedPlan || planSidebarOpen ? (
