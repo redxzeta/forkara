@@ -1,4 +1,5 @@
 import { MessageId, TurnId, type OrchestrationThreadActivity } from "@forkara/contracts";
+import { BULLY_MODE_CAPTURE_ACTIVITY_KIND } from "@forkara/shared/achievementActivities";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -13,6 +14,14 @@ import { makeActivity } from "./storeTestFixtures";
 describe("deriveWorkLogEntries", () => {
   it("keeps started tool entries so pending Cursor calls appear immediately", () => {
     const activities: OrchestrationThreadActivity[] = [
+      makeActivity({
+        id: "response-modifiers-captured",
+        createdAt: "2026-02-23T00:00:00.000Z",
+        kind: BULLY_MODE_CAPTURE_ACTIVITY_KIND,
+        summary: "Response modifiers captured",
+        tone: "info",
+        payload: { bullyModeEnabled: true },
+      }),
       makeActivity({
         id: "tool-start",
         createdAt: "2026-02-23T00:00:02.000Z",

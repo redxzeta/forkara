@@ -103,6 +103,7 @@ import {
   type CheckpointStoreShape,
 } from "../../checkpointing/Services/CheckpointStore.ts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
+import { BULLY_MODE_CAPTURE_ACTIVITY_KIND } from "@forkara/shared/achievementActivities";
 
 const asProjectId = (value: string): ProjectId => ProjectId.makeUnsafe(value);
 const asApprovalRequestId = (value: string): ApprovalRequestId =>
@@ -2370,6 +2371,18 @@ describe("ProviderCommandReactor", () => {
     const providerInput = harness.sendTurn.mock.calls[0]?.[0].input;
     expect(providerInput).toContain(userText);
     expect(providerInput?.split(PROVIDER_BULLY_MODE_PROMPT_PREFIX)).toHaveLength(2);
+    await waitFor(async () =>
+      Boolean(
+        (await readHarnessThread(harness))?.activities.some(
+          (activity) => activity.kind === BULLY_MODE_CAPTURE_ACTIVITY_KIND,
+        ),
+      ),
+    );
+    await harness.updateServerSettings(false);
+    const capture = (await readHarnessThread(harness))?.activities.find(
+      (activity) => activity.kind === BULLY_MODE_CAPTURE_ACTIVITY_KIND,
+    );
+    expect(capture?.payload).toEqual({ bullyModeEnabled: true });
     expect((await readHarnessThread(harness))?.messages.map((message) => message.text)).toEqual([
       userText,
     ]);
@@ -2398,6 +2411,17 @@ describe("ProviderCommandReactor", () => {
 
     await waitFor(() => harness.sendTurn.mock.calls.length === 1);
     expect(harness.sendTurn.mock.calls[0]?.[0].input).toBe("Keep the default response style");
+    await waitFor(async () =>
+      Boolean(
+        (await readHarnessThread(harness))?.activities.some(
+          (activity) => activity.kind === BULLY_MODE_CAPTURE_ACTIVITY_KIND,
+        ),
+      ),
+    );
+    const capture = (await readHarnessThread(harness))?.activities.find(
+      (activity) => activity.kind === BULLY_MODE_CAPTURE_ACTIVITY_KIND,
+    );
+    expect(capture?.payload).toEqual({ bullyModeEnabled: false });
   });
 
   it("applies a captured Make No Mistake level without mutating user history", async () => {

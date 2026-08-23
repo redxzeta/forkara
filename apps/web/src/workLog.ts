@@ -7,6 +7,7 @@ import {
   type ToolLifecycleItemType,
   type TurnId,
 } from "@forkara/contracts";
+import { BULLY_MODE_CAPTURE_ACTIVITY_KIND } from "@forkara/shared/achievementActivities";
 import {
   decodeSubagentAgentStates,
   extractSubagentIdentityHints,
@@ -354,6 +355,9 @@ function shouldKeepActivityForWorkLog(
 }
 
 function isQuietTurnLifecycleActivity(activity: OrchestrationThreadActivity): boolean {
+  if (activity.kind === BULLY_MODE_CAPTURE_ACTIVITY_KIND) {
+    return true;
+  }
   if (activity.kind !== "turn.completed" && activity.kind !== "turn.aborted") {
     return false;
   }

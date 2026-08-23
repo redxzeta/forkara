@@ -500,6 +500,7 @@ import {
 import { ComposerPendingApprovalPanel } from "./chat/ComposerPendingApprovalPanel";
 import { ComposerExtrasMenu } from "./chat/ComposerExtrasMenu";
 import { ComposerBullyModeIndicator } from "./chat/ComposerBullyModeIndicator";
+import { recordBullyModeAchievements } from "../achievements/bullyMode";
 import { ComposerMakeNoMistakeControl } from "./chat/ComposerMakeNoMistakeControl";
 import { ContextWindowMeter } from "./chat/ContextWindowMeter";
 import { ComposerInputBanners } from "./chat/ComposerInputBanners";
@@ -1931,6 +1932,9 @@ export default function ChatView({
   const activeLatestTurnState = activeLatestTurn?.state ?? null;
   const activeLatestTurnCompletedAt = activeLatestTurn?.completedAt ?? null;
   const threadActivities = activeThread?.activities ?? EMPTY_ACTIVITIES;
+  useEffect(() => {
+    recordBullyModeAchievements(threadActivities);
+  }, [threadActivities]);
   const hasLiveTurnTail = hasLiveTurnTailWork({
     latestTurn: activeLatestTurn,
     messages: activeThread?.messages ?? EMPTY_MESSAGES,
