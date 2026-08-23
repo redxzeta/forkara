@@ -2,12 +2,19 @@
 // Purpose: Cached fork/upstream divergence with an explicit, user-initiated fetch action.
 // Layer: Environment panel section
 
-import type { GitUpstreamStatusResult } from "@forkara/contracts";
+import type { GitUpstreamSyncPreviewResult, GitUpstreamStatusResult } from "@forkara/contracts";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { toastManager } from "~/components/ui/toast";
 import { gitQueryKeys, gitUpstreamStatusQueryOptions } from "~/lib/gitReactQuery";
-import { CircleAlertIcon, CircleCheckIcon, GitForkIcon, RefreshCwIcon } from "~/lib/icons";
+import {
+  CircleAlertIcon,
+  CircleCheckIcon,
+  GitForkIcon,
+  GitMergeIcon,
+  RefreshCwIcon,
+} from "~/lib/icons";
 import { formatRelativeTime } from "~/lib/relativeTime";
 import { cn } from "~/lib/utils";
 import { ensureNativeApi } from "~/nativeApi";
@@ -19,6 +26,7 @@ import {
   EnvironmentRow,
   EnvironmentRowBody,
 } from "./EnvironmentRow";
+import { EnvironmentUpstreamSyncDialog } from "./EnvironmentUpstreamSyncDialog";
 
 function statusIcon(status: GitUpstreamStatusResult) {
   switch (status.state) {
@@ -63,6 +71,8 @@ export function EnvironmentUpstreamRadarSection({
   enabled: boolean;
 }) {
   const queryClient = useQueryClient();
+  const [syncDialogOpen, setSyncDialogOpen] = useState(false);
+  const [syncPreview, setSyncPreview] = useState<GitUpstreamSyncPreviewResult | null>(null);
   const statusQuery = useQuery(gitUpstreamStatusQueryOptions(gitCwd, enabled));
   const refreshMutation = useMutation({
     mutationFn: async () => {
@@ -80,6 +90,55 @@ export function EnvironmentUpstreamRadarSection({
       });
     },
   });
+  const previewSyncMutation = useMutation({
+    mutationFn: async () => {
+      if (!gitCwd) throw new Error("Upstream sync is unavailable.");
+      return ensureNativeApi().git.previewUpstreamSync({ cwd: gitCwd });
+    },
+    onSuccess: (preview) => {
+      setSyncPreview(preview);
+      void statusQuery.refetch();
+    },
+  });
+  const applySyncMutation = useMutation({
+    mutationFn: async (preview: GitUpstreamSyncPreviewResult) => {
+      if (!gitCwd || !preview.localHead || !preview.upstreamHead) {
+        throw new Error("The sync preview is incomplete. Preview again.");
+      }
+      return ensureNativeApi().git.applyUpstreamSync({
+        cwd: gitCwd,
+        expectedLocalHead: preview.localHead,
+        expectedUpstreamHead: preview.upstreamHead,
+      });
+    },
+    onSuccess: (result) => {
+      queryClient.setQueryData(gitQueryKeys.upstreamStatus(gitCwd), result.upstreamStatus);
+      void queryClient.invalidateQueries({ queryKey: gitQueryKeys.status(gitCwd), exact: true });
+      setSyncDialogOpen(false);
+      setSyncPreview(null);
+      toastManager.add({
+        type: "success",
+        title: "Upstream sync applied",
+        description: `${result.branch} was fast-forwarded locally. Push separately when ready.`,
+      });
+    },
+    onError: (error) => {
+      toastManager.add({
+        type: "error",
+        title: "Unable to apply upstream sync",
+        description: error instanceof Error ? error.message : "An unknown error occurred.",
+      });
+      setSyncPreview(null);
+      previewSyncMutation.mutate();
+    },
+  });
+
+  const openSyncPreview = () => {
+    setSyncPreview(null);
+    previewSyncMutation.reset();
+    setSyncDialogOpen(true);
+    previewSyncMutation.mutate();
+  };
 
   if (!enabled || !gitCwd) return null;
 
@@ -152,6 +211,16 @@ export function EnvironmentUpstreamRadarSection({
 
       {status?.hasUpstream ? (
         <EnvironmentRow
+          icon={<GitMergeIcon className={ENVIRONMENT_ROW_ICON_CLASS_NAME} aria-hidden />}
+          label="Preview sync"
+          disabled={previewSyncMutation.isPending}
+          title="Fetch upstream and preview a safe local synchronization"
+          onClick={openSyncPreview}
+        />
+      ) : null}
+
+      {status?.hasUpstream ? (
+        <EnvironmentRow
           icon={
             <RefreshCwIcon
               className={cn(
@@ -172,6 +241,24 @@ export function EnvironmentUpstreamRadarSection({
           onClick={() => refreshMutation.mutate()}
         />
       ) : null}
+
+      <EnvironmentUpstreamSyncDialog
+        open={syncDialogOpen}
+        preview={syncPreview}
+        previewPending={previewSyncMutation.isPending}
+        previewError={
+          previewSyncMutation.error instanceof Error ? previewSyncMutation.error.message : null
+        }
+        applyPending={applySyncMutation.isPending}
+        onOpenChange={(open) => {
+          setSyncDialogOpen(open);
+          if (!open) setSyncPreview(null);
+        }}
+        onRetry={() => previewSyncMutation.mutate()}
+        onApply={() => {
+          if (syncPreview) applySyncMutation.mutate(syncPreview);
+        }}
+      />
     </EnvironmentLabeledSection>
   );
 }

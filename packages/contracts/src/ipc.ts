@@ -82,6 +82,9 @@ import type {
   GitStatusResult,
   GitUpstreamStatusInput,
   GitUpstreamStatusResult,
+  GitApplyUpstreamSyncInput,
+  GitUpstreamSyncApplyResult,
+  GitUpstreamSyncPreviewResult,
   GitSummarizeDiffInput,
   GitSummarizeDiffResult,
   GitUnstageFilesInput,
@@ -713,6 +716,8 @@ export interface NativeApi {
     status: (input: GitStatusInput) => Promise<GitStatusResult>;
     upstreamStatus: (input: GitUpstreamStatusInput) => Promise<GitUpstreamStatusResult>;
     refreshUpstream: (input: GitUpstreamStatusInput) => Promise<GitUpstreamStatusResult>;
+    previewUpstreamSync: (input: GitUpstreamStatusInput) => Promise<GitUpstreamSyncPreviewResult>;
+    applyUpstreamSync: (input: GitApplyUpstreamSyncInput) => Promise<GitUpstreamSyncApplyResult>;
     readWorkingTreeDiff: (
       input: GitReadWorkingTreeDiffInput,
     ) => Promise<GitReadWorkingTreeDiffResult>;

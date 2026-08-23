@@ -434,7 +434,9 @@ export function EnvironmentPanel({
         </EnvironmentLabeledSection>
       ) : null}
 
-      {isGitRepo ? <EnvironmentUpstreamRadarSection gitCwd={gitCwd} enabled={open} /> : null}
+      {isGitRepo ? (
+        <EnvironmentUpstreamRadarSection key={gitCwd} gitCwd={gitCwd} enabled={open} />
+      ) : null}
 
       {settings.showEnvironmentPullRequest && isGitRepo && onOpenGithubRepository ? (
         <EnvironmentPullRequestSection

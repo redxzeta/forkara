@@ -117,6 +117,40 @@ function initRepoWithCommit(
   });
 }
 
+function makeForkUpstreamFixture(prefix = "git-upstream-sync-") {
+  return Effect.gen(function* () {
+    const root = yield* makeTmpDir(prefix);
+    const upstreamWork = path.join(root, "upstream-work");
+    const upstreamBare = path.join(root, "upstream.git");
+    const forkBare = path.join(root, "fork.git");
+    const fork = path.join(root, "fork");
+    yield* Effect.promise(() =>
+      Promise.all([fs.mkdir(upstreamWork), fs.mkdir(upstreamBare), fs.mkdir(forkBare)]),
+    );
+    yield* initRepoWithCommit(upstreamWork);
+    yield* git(upstreamWork, ["branch", "-M", "main"]);
+    yield* git(upstreamBare, ["init", "--bare"]);
+    yield* git(upstreamWork, ["remote", "add", "origin", upstreamBare]);
+    yield* git(upstreamWork, ["push", "-u", "origin", "main"]);
+    yield* git(upstreamBare, ["symbolic-ref", "HEAD", "refs/heads/main"]);
+    yield* git(forkBare, ["init", "--bare"]);
+    yield* git(root, ["clone", upstreamBare, fork]);
+    yield* git(fork, ["config", "user.email", "test@test.com"]);
+    yield* git(fork, ["config", "user.name", "Test"]);
+    yield* git(fork, ["branch", "-m", "built-from-scratch"]);
+    yield* git(fork, ["remote", "set-url", "origin", forkBare]);
+    yield* git(fork, ["push", "-u", "origin", "built-from-scratch"]);
+    yield* git(forkBare, ["symbolic-ref", "HEAD", "refs/heads/built-from-scratch"]);
+    yield* git(fork, [
+      "symbolic-ref",
+      "refs/remotes/origin/HEAD",
+      "refs/remotes/origin/built-from-scratch",
+    ]);
+    yield* git(fork, ["remote", "add", "upstream", upstreamBare]);
+    return { root, upstreamWork, upstreamBare, forkBare, fork };
+  });
+}
+
 function initRepoWithoutCommit(cwd: string): Effect.Effect<void, GitCommandError, GitCore> {
   return Effect.gen(function* () {
     const core = yield* GitCore;
@@ -2909,6 +2943,182 @@ it.layer(TestLayer)("git integration", (it) => {
         });
         expect(refAfter).toBe(refBefore);
         expect(failed.message).not.toContain(root);
+      }),
+    );
+  });
+
+  describe("safe upstream sync", () => {
+    it.effect("previews and applies a clean local fast-forward without pushing", () =>
+      Effect.gen(function* () {
+        const { fork, forkBare, upstreamWork } = yield* makeForkUpstreamFixture();
+        const core = yield* GitCore;
+        yield* writeTextFile(path.join(upstreamWork, "upstream.txt"), "upstream change\n");
+        yield* git(upstreamWork, ["add", "upstream.txt"]);
+        yield* git(upstreamWork, ["commit", "-m", "Add upstream change"]);
+        yield* git(upstreamWork, ["push", "origin", "main"]);
+
+        const preview = yield* core.previewUpstreamSync(fork);
+        expect(preview).toMatchObject({
+          state: "fast_forward",
+          canApply: true,
+          localBranch: "built-from-scratch",
+          upstreamBranch: "main",
+          aheadCount: 0,
+          behindCount: 1,
+          incomingCommitsTruncated: false,
+          conflictFiles: [],
+        });
+        expect(preview.incomingCommits).toHaveLength(1);
+        expect(preview.incomingCommits[0]).toMatchObject({ subject: "Add upstream change" });
+        const originBefore = yield* git(forkBare, ["rev-parse", "built-from-scratch"]);
+
+        const applied = yield* core.applyUpstreamSync({
+          cwd: fork,
+          expectedLocalHead: preview.localHead!,
+          expectedUpstreamHead: preview.upstreamHead!,
+        });
+
+        expect(applied).toMatchObject({
+          branch: "built-from-scratch",
+          beforeSha: preview.localHead,
+          afterSha: preview.upstreamHead,
+          upstreamStatus: { aheadCount: 0, behindCount: 0 },
+        });
+        expect(yield* git(forkBare, ["rev-parse", "built-from-scratch"])).toBe(originBefore);
+      }),
+    );
+
+    it.effect("keeps dirty worktrees untouched and blocks stale apply", () =>
+      Effect.gen(function* () {
+        const { fork, upstreamWork } = yield* makeForkUpstreamFixture();
+        const core = yield* GitCore;
+        yield* writeTextFile(path.join(upstreamWork, "upstream.txt"), "upstream change\n");
+        yield* git(upstreamWork, ["add", "upstream.txt"]);
+        yield* git(upstreamWork, ["commit", "-m", "Add upstream change"]);
+        yield* git(upstreamWork, ["push", "origin", "main"]);
+        const cleanPreview = yield* core.previewUpstreamSync(fork);
+        expect(cleanPreview.state).toBe("fast_forward");
+        yield* writeTextFile(path.join(fork, "local.txt"), "uncommitted local work\n");
+        const headBefore = yield* git(fork, ["rev-parse", "HEAD"]);
+
+        const preview = yield* core.previewUpstreamSync(fork);
+
+        expect(preview).toMatchObject({ state: "dirty", canApply: false, behindCount: 1 });
+        expect(preview.message).toContain("Commit or stash");
+        const applyResult = yield* Effect.result(
+          core.applyUpstreamSync({
+            cwd: fork,
+            expectedLocalHead: cleanPreview.localHead!,
+            expectedUpstreamHead: cleanPreview.upstreamHead!,
+          }),
+        );
+        expect(applyResult._tag).toBe("Failure");
+        if (applyResult._tag === "Failure") {
+          expect(applyResult.failure.detail).toContain("no longer clean");
+        }
+        expect(yield* git(fork, ["rev-parse", "HEAD"])).toBe(headBefore);
+        expect(yield* readTextFile(path.join(fork, "local.txt"))).toBe("uncommitted local work\n");
+      }),
+    );
+
+    it.effect("reports repository convention and prospective conflicts for diverged branches", () =>
+      Effect.gen(function* () {
+        const { fork, upstreamWork } = yield* makeForkUpstreamFixture();
+        const core = yield* GitCore;
+        yield* git(fork, ["config", "pull.rebase", "true"]);
+        yield* writeTextFile(path.join(fork, "README.md"), "local version\n");
+        yield* git(fork, ["add", "README.md"]);
+        yield* git(fork, ["commit", "-m", "Local README"]);
+        yield* writeTextFile(path.join(upstreamWork, "README.md"), "upstream version\n");
+        yield* git(upstreamWork, ["add", "README.md"]);
+        yield* git(upstreamWork, ["commit", "-m", "Upstream README"]);
+        yield* git(upstreamWork, ["push", "origin", "main"]);
+
+        const preview = yield* core.previewUpstreamSync(fork);
+
+        expect(preview).toMatchObject({
+          state: "conflicts",
+          canApply: false,
+          aheadCount: 1,
+          behindCount: 1,
+          preferredStrategy: "rebase",
+        });
+        expect(preview.conflictFiles).toContain("README.md");
+      }),
+    );
+
+    it.effect("guides clean divergence without choosing or applying a strategy", () =>
+      Effect.gen(function* () {
+        const { fork, upstreamWork } = yield* makeForkUpstreamFixture();
+        const core = yield* GitCore;
+        yield* git(fork, ["config", "pull.ff", "only"]);
+        yield* writeTextFile(path.join(fork, "local.txt"), "local\n");
+        yield* git(fork, ["add", "local.txt"]);
+        yield* git(fork, ["commit", "-m", "Local change"]);
+        yield* writeTextFile(path.join(upstreamWork, "upstream.txt"), "upstream\n");
+        yield* git(upstreamWork, ["add", "upstream.txt"]);
+        yield* git(upstreamWork, ["commit", "-m", "Upstream change"]);
+        yield* git(upstreamWork, ["push", "origin", "main"]);
+        const headBefore = yield* git(fork, ["rev-parse", "HEAD"]);
+
+        const preview = yield* core.previewUpstreamSync(fork);
+
+        expect(preview).toMatchObject({
+          state: "diverged",
+          canApply: false,
+          preferredStrategy: "fast-forward-only",
+          conflictFiles: [],
+        });
+        expect(preview.message).toContain("resolve the divergence manually");
+        expect(yield* git(fork, ["rev-parse", "HEAD"])).toBe(headBefore);
+      }),
+    );
+
+    it.effect("requires the fork default branch to be checked out", () =>
+      Effect.gen(function* () {
+        const { fork } = yield* makeForkUpstreamFixture();
+        const core = yield* GitCore;
+        yield* git(fork, ["checkout", "-b", "feature/local-work"]);
+
+        const preview = yield* core.previewUpstreamSync(fork);
+
+        expect(preview).toMatchObject({
+          state: "branch_mismatch",
+          canApply: false,
+          localBranch: "built-from-scratch",
+          upstreamBranch: "main",
+          localHead: null,
+          upstreamHead: null,
+        });
+      }),
+    );
+
+    it.effect("rejects apply when repository refs changed after preview", () =>
+      Effect.gen(function* () {
+        const { fork, upstreamWork } = yield* makeForkUpstreamFixture();
+        const core = yield* GitCore;
+        yield* writeTextFile(path.join(upstreamWork, "first.txt"), "first\n");
+        yield* git(upstreamWork, ["add", "first.txt"]);
+        yield* git(upstreamWork, ["commit", "-m", "First upstream change"]);
+        yield* git(upstreamWork, ["push", "origin", "main"]);
+        const preview = yield* core.previewUpstreamSync(fork);
+        yield* writeTextFile(path.join(upstreamWork, "second.txt"), "second\n");
+        yield* git(upstreamWork, ["add", "second.txt"]);
+        yield* git(upstreamWork, ["commit", "-m", "Second upstream change"]);
+        yield* git(upstreamWork, ["push", "origin", "main"]);
+        yield* core.refreshUpstream(fork);
+
+        const result = yield* Effect.result(
+          core.applyUpstreamSync({
+            cwd: fork,
+            expectedLocalHead: preview.localHead!,
+            expectedUpstreamHead: preview.upstreamHead!,
+          }),
+        );
+
+        expect(result._tag).toBe("Failure");
+        if (result._tag === "Failure") expect(result.failure.detail).toContain("changed after");
+        expect(yield* git(fork, ["rev-parse", "HEAD"])).toBe(preview.localHead);
       }),
     );
   });

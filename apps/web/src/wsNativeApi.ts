@@ -581,6 +581,10 @@ export function createWsNativeApi(): NativeApi {
       upstreamStatus: (input) => transport.request(WS_METHODS.gitUpstreamStatus, input),
       refreshUpstream: (input) =>
         transport.request(WS_METHODS.gitRefreshUpstream, input, { timeoutMs: null }),
+      previewUpstreamSync: (input) =>
+        transport.request(WS_METHODS.gitPreviewUpstreamSync, input, { timeoutMs: null }),
+      applyUpstreamSync: (input) =>
+        transport.request(WS_METHODS.gitApplyUpstreamSync, input, { timeoutMs: null }),
       readWorkingTreeDiff: (input) => transport.request(WS_METHODS.gitReadWorkingTreeDiff, input),
       workingTreeDiffStats: (input) => transport.request(WS_METHODS.gitWorkingTreeDiffStats, input),
       summarizeDiff: (input) =>
