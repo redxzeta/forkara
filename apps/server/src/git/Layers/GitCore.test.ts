@@ -2779,4 +2779,137 @@ it.layer(TestLayer)("git integration", (it) => {
       }),
     );
   });
+
+  describe("upstream radar", () => {
+    it.effect("reports a useful missing state without an upstream remote", () =>
+      Effect.gen(function* () {
+        const repo = yield* makeTmpDir("git-upstream-radar-missing-");
+        yield* initRepoWithCommit(repo);
+        const core = yield* GitCore;
+
+        const status = yield* core.upstreamStatus(repo);
+
+        expect(status).toMatchObject({
+          state: "missing",
+          hasUpstream: false,
+          localBranch: null,
+          upstreamBranch: null,
+          aheadCount: 0,
+          behindCount: 0,
+          lastSuccessfulFetchAt: null,
+        });
+        expect(status.message).toContain("No upstream remote");
+      }),
+    );
+
+    it.effect(
+      "computes equal, ahead, diverged, and behind states from the fetched upstream ref",
+      () =>
+        Effect.gen(function* () {
+          const root = yield* makeTmpDir("git-upstream-radar-");
+          const upstreamWork = path.join(root, "upstream-work");
+          const upstreamBare = path.join(root, "upstream.git");
+          const forkBare = path.join(root, "fork.git");
+          const fork = path.join(root, "fork");
+          yield* Effect.promise(() => fs.mkdir(upstreamWork));
+          yield* Effect.promise(() => fs.mkdir(upstreamBare));
+          yield* Effect.promise(() => fs.mkdir(forkBare));
+          yield* initRepoWithCommit(upstreamWork);
+          yield* git(upstreamWork, ["branch", "-M", "main"]);
+          yield* git(upstreamBare, ["init", "--bare"]);
+          yield* git(upstreamWork, ["remote", "add", "origin", upstreamBare]);
+          yield* git(upstreamWork, ["push", "-u", "origin", "main"]);
+          yield* git(upstreamBare, ["symbolic-ref", "HEAD", "refs/heads/main"]);
+          yield* git(forkBare, ["init", "--bare"]);
+          yield* git(root, ["clone", upstreamBare, fork]);
+          yield* git(fork, ["config", "user.email", "test@test.com"]);
+          yield* git(fork, ["config", "user.name", "Test"]);
+          yield* git(fork, ["branch", "-m", "built-from-scratch"]);
+          yield* git(fork, ["remote", "set-url", "origin", forkBare]);
+          yield* git(fork, ["push", "-u", "origin", "built-from-scratch"]);
+          yield* git(forkBare, ["symbolic-ref", "HEAD", "refs/heads/built-from-scratch"]);
+          yield* git(fork, [
+            "symbolic-ref",
+            "refs/remotes/origin/HEAD",
+            "refs/remotes/origin/built-from-scratch",
+          ]);
+          yield* git(fork, ["remote", "add", "upstream", upstreamBare]);
+          const core = yield* GitCore;
+
+          const beforeRefresh = yield* core.upstreamStatus(fork);
+          expect(beforeRefresh.state).toBe("stale");
+          expect(beforeRefresh.lastSuccessfulFetchAt).toBeNull();
+
+          const equal = yield* core.refreshUpstream(fork);
+          expect(equal).toMatchObject({
+            state: "ready",
+            localBranch: "built-from-scratch",
+            upstreamBranch: "main",
+            aheadCount: 0,
+            behindCount: 0,
+          });
+          expect(equal.lastSuccessfulFetchAt).not.toBeNull();
+
+          yield* writeTextFile(path.join(fork, "fork.txt"), "fork-only\n");
+          yield* git(fork, ["add", "fork.txt"]);
+          yield* git(fork, ["commit", "-m", "fork commit"]);
+          const ahead = yield* core.upstreamStatus(fork);
+          expect(ahead).toMatchObject({ state: "ready", aheadCount: 1, behindCount: 0 });
+
+          yield* writeTextFile(path.join(upstreamWork, "upstream.txt"), "upstream-only\n");
+          yield* git(upstreamWork, ["add", "upstream.txt"]);
+          yield* git(upstreamWork, ["commit", "-m", "upstream commit"]);
+          yield* git(upstreamWork, ["push", "origin", "main"]);
+          const diverged = yield* core.refreshUpstream(fork);
+          expect(diverged).toMatchObject({ state: "ready", aheadCount: 1, behindCount: 1 });
+
+          yield* git(fork, ["reset", "--hard", "upstream/main"]);
+          yield* writeTextFile(path.join(upstreamWork, "newer.txt"), "newer upstream\n");
+          yield* git(upstreamWork, ["add", "newer.txt"]);
+          yield* git(upstreamWork, ["commit", "-m", "newer upstream commit"]);
+          yield* git(upstreamWork, ["push", "origin", "main"]);
+          const behind = yield* core.refreshUpstream(fork);
+          expect(behind).toMatchObject({ state: "ready", aheadCount: 0, behindCount: 1 });
+        }),
+    );
+
+    it.effect("keeps cached refs and fetch metadata unchanged when refresh fails", () =>
+      Effect.gen(function* () {
+        const root = yield* makeTmpDir("git-upstream-radar-failure-");
+        const upstreamWork = path.join(root, "upstream-work");
+        const upstreamBare = path.join(root, "upstream.git");
+        const fork = path.join(root, "fork");
+        yield* Effect.promise(() => fs.mkdir(upstreamWork));
+        yield* Effect.promise(() => fs.mkdir(upstreamBare));
+        yield* initRepoWithCommit(upstreamWork);
+        yield* git(upstreamWork, ["branch", "-M", "main"]);
+        yield* git(upstreamBare, ["init", "--bare"]);
+        yield* git(upstreamWork, ["remote", "add", "origin", upstreamBare]);
+        yield* git(upstreamWork, ["push", "-u", "origin", "main"]);
+        yield* git(upstreamBare, ["symbolic-ref", "HEAD", "refs/heads/main"]);
+        yield* git(root, ["clone", upstreamBare, fork]);
+        yield* git(fork, ["remote", "add", "upstream", upstreamBare]);
+        const core = yield* GitCore;
+
+        const refreshed = yield* core.refreshUpstream(fork);
+        const refBefore = yield* git(fork, ["rev-parse", "refs/remotes/upstream/main"]);
+        yield* git(fork, ["remote", "set-url", "upstream", path.join(root, "missing.git")]);
+
+        const cachedWithBrokenRemote = yield* core.upstreamStatus(fork);
+        expect(cachedWithBrokenRemote.state).toBe("ready");
+
+        const failed = yield* core.refreshUpstream(fork);
+        const refAfter = yield* git(fork, ["rev-parse", "refs/remotes/upstream/main"]);
+
+        expect(failed).toMatchObject({
+          state: "unreachable",
+          aheadCount: refreshed.aheadCount,
+          behindCount: refreshed.behindCount,
+          lastSuccessfulFetchAt: refreshed.lastSuccessfulFetchAt,
+        });
+        expect(refAfter).toBe(refBefore);
+        expect(failed.message).not.toContain(root);
+      }),
+    );
+  });
 });

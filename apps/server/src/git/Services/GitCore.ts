@@ -28,6 +28,7 @@ import type {
   GitStashInfoResult,
   GitStatusInput,
   GitStatusResult,
+  GitUpstreamStatusResult,
 } from "@forkara/contracts";
 
 import type { GitCheckoutDirtyWorktreeError, GitCommandError } from "../Errors.ts";
@@ -210,6 +211,14 @@ export interface GitCoreShape {
    * Read detailed working tree / branch status for a repository.
    */
   readonly statusDetails: (cwd: string) => Effect.Effect<GitStatusDetails, GitCommandError>;
+
+  /** Read cached fork/upstream divergence without contacting the network. */
+  readonly upstreamStatus: (cwd: string) => Effect.Effect<GitUpstreamStatusResult, GitCommandError>;
+
+  /** Explicitly fetch the configured upstream and return the refreshed divergence model. */
+  readonly refreshUpstream: (
+    cwd: string,
+  ) => Effect.Effect<GitUpstreamStatusResult, GitCommandError>;
 
   /** Read only branch identity, without diff stats or remote refresh work. */
   readonly readBranchContext: (cwd: string) => Effect.Effect<GitBranchContext, GitCommandError>;

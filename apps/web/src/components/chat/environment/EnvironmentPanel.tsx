@@ -49,6 +49,7 @@ import {
   type EnvironmentAutomationPanelItem,
 } from "./EnvironmentAutomationsSection";
 import { EnvironmentUsageSection } from "./EnvironmentUsageSection";
+import { EnvironmentUpstreamRadarSection } from "./EnvironmentUpstreamRadarSection";
 import { EnvironmentLocalServersSection } from "./EnvironmentLocalServersSection";
 import { EnvironmentPullRequestSection } from "./EnvironmentPullRequestSection";
 import { EnvironmentMarkersSection } from "./EnvironmentMarkersSection";
@@ -432,6 +433,8 @@ export function EnvironmentPanel({
           />
         </EnvironmentLabeledSection>
       ) : null}
+
+      {isGitRepo ? <EnvironmentUpstreamRadarSection gitCwd={gitCwd} enabled={open} /> : null}
 
       {settings.showEnvironmentPullRequest && isGitRepo && onOpenGithubRepository ? (
         <EnvironmentPullRequestSection

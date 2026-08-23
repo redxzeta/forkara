@@ -39,6 +39,7 @@ const EXPENSIVE_READ_METHODS = new Set<string>([
   WS_METHODS.studioListThreadOutputs,
   WS_METHODS.filesystemBrowse,
   WS_METHODS.gitStatus,
+  WS_METHODS.gitUpstreamStatus,
   WS_METHODS.gitReadWorkingTreeDiff,
   WS_METHODS.gitWorkingTreeDiffStats,
   WS_METHODS.gitSummarizeDiff,
