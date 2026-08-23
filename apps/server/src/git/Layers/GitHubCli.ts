@@ -27,6 +27,8 @@ import {
   PULL_REQUEST_SUMMARY_JSON_FIELDS,
   type GitHubRepositoryCloneUrls,
   type GitHubCliShape,
+  type GitHubMergedPullRequestReceipt,
+  type GitHubMergedPullRequestReceiptBatch,
   type GitHubPullRequestDetailData,
   type GitHubPullRequestListBatch,
   type GitHubPullRequestListItem,
@@ -287,6 +289,25 @@ const PULL_REQUEST_REVIEW_THREAD_PAGE_LIMIT = 5;
 const PULL_REQUEST_REVIEW_COMMENT_LIMIT = 20;
 const PULL_REQUEST_STACK_ENTRY_LIMIT = 100;
 const PULL_REQUEST_ASYNC_MERGE_POLL_LIMIT = 300;
+const MERGE_FLEX_SEARCH_PAGE_SIZE = 100;
+const MERGE_FLEX_SEARCH_PAGE_LIMIT = 10;
+
+const MERGE_FLEX_RECEIPTS_QUERY = `query($searchQuery: String!, $first: Int!, $after: String) {
+  search(query: $searchQuery, type: ISSUE, first: $first, after: $after) {
+    issueCount
+    nodes {
+      ... on PullRequest {
+        number
+        title
+        url
+        mergedAt
+        author { login }
+        repository { nameWithOwner visibility }
+      }
+    }
+    pageInfo { hasNextPage endCursor }
+  }
+}`;
 
 // GraphQL review-threads query: resolved threads are filtered after fetch because GitHub's
 // reviewThreads connection does not expose an unresolved-only argument.
@@ -437,6 +458,40 @@ const RawReviewThreadsResponseSchema = Schema.Struct({
     ),
   ),
 });
+
+const RawMergedPullRequestReceiptSchema = Schema.Struct({
+  number: PositiveInt,
+  title: TrimmedNonEmptyString,
+  url: TrimmedNonEmptyString,
+  mergedAt: TrimmedNonEmptyString,
+  author: Schema.optional(
+    Schema.NullOr(
+      Schema.Struct({
+        login: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
+      }),
+    ),
+  ),
+  repository: Schema.Struct({
+    nameWithOwner: TrimmedNonEmptyString,
+    visibility: Schema.optional(Schema.NullOr(Schema.String)),
+  }),
+});
+
+const RawMergeFlexReceiptsResponseSchema = Schema.Struct({
+  errors: Schema.optional(Schema.NullOr(Schema.Array(Schema.NullOr(RawGraphQlErrorSchema)))),
+  data: Schema.Struct({
+    search: Schema.Struct({
+      issueCount: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+      nodes: Schema.Array(RawMergedPullRequestReceiptSchema),
+      pageInfo: Schema.Struct({
+        hasNextPage: Schema.Boolean,
+        endCursor: Schema.NullOr(Schema.String),
+      }),
+    }),
+  }),
+});
+
+type RawMergeFlexReceiptsResponse = Schema.Schema.Type<typeof RawMergeFlexReceiptsResponseSchema>;
 
 const RawPullRequestStackEntrySchema = Schema.Struct({
   position: PositiveInt,
@@ -863,6 +918,99 @@ function getPullRequestReviewThreadsPageInfo(
   };
 }
 
+function normalizeMergeFlexVisibility(
+  visibility: string | null | undefined,
+): GitHubMergedPullRequestReceipt["repositoryVisibility"] {
+  switch (visibility) {
+    case "PUBLIC":
+      return "public";
+    case "PRIVATE":
+      return "private";
+    case "INTERNAL":
+      return "internal";
+    default:
+      return "unknown";
+  }
+}
+
+function mergeFlexPageInfo(raw: RawMergeFlexReceiptsResponse): {
+  readonly hasNextPage: boolean;
+  readonly endCursor: string | null;
+} {
+  return {
+    hasNextPage: raw.data.search.pageInfo.hasNextPage,
+    endCursor: raw.data.search.pageInfo.endCursor?.trim() || null,
+  };
+}
+
+function normalizeMergeFlexReceiptsPage(input: {
+  readonly raw: RawMergeFlexReceiptsResponse;
+  readonly viewer: string;
+  readonly repository: string | null;
+  readonly startedAtMs: number;
+  readonly endedAtMs: number;
+}): Effect.Effect<ReadonlyArray<GitHubMergedPullRequestReceipt>, GitHubCliError> {
+  const graphQlErrorDetail = getGraphQlErrorDetail(input.raw);
+  if (graphQlErrorDetail) {
+    return Effect.fail(
+      new GitHubCliError({
+        operation: "searchMergedPullRequests",
+        detail: graphQlErrorDetail,
+        reason: "other",
+      }),
+    );
+  }
+
+  const entries: GitHubMergedPullRequestReceipt[] = [];
+  for (const node of input.raw.data.search.nodes) {
+    const mergedAtMs = Date.parse(node.mergedAt);
+    if (!Number.isFinite(mergedAtMs)) {
+      return Effect.fail(
+        new GitHubCliError({
+          operation: "searchMergedPullRequests",
+          detail: "GitHub returned a receipt with an invalid merge timestamp.",
+          reason: "other",
+        }),
+      );
+    }
+    if (mergedAtMs < input.startedAtMs || mergedAtMs >= input.endedAtMs) {
+      continue;
+    }
+    if (
+      input.repository !== null &&
+      node.repository.nameWithOwner.toLowerCase() !== input.repository.toLowerCase()
+    ) {
+      return Effect.fail(
+        new GitHubCliError({
+          operation: "searchMergedPullRequests",
+          detail: "GitHub returned a receipt outside the selected repository scope.",
+          reason: "other",
+        }),
+      );
+    }
+    const authorLogin = node.author?.login?.trim() || null;
+    if (authorLogin !== null && authorLogin.toLowerCase() !== input.viewer.toLowerCase()) {
+      return Effect.fail(
+        new GitHubCliError({
+          operation: "searchMergedPullRequests",
+          detail: "GitHub returned a receipt authored by a different account.",
+          reason: "other",
+        }),
+      );
+    }
+    entries.push({
+      number: node.number,
+      title: node.title,
+      url: node.url,
+      repository: node.repository.nameWithOwner,
+      repositoryVisibility: normalizeMergeFlexVisibility(node.repository.visibility),
+      authorLogin,
+      mergedAt: new Date(mergedAtMs).toISOString(),
+    });
+  }
+  return Effect.succeed(entries);
+}
+
 function normalizePullRequestStack(
   raw: RawPullRequestStackResponse,
   selectedPullRequestNumber: number,
@@ -1017,6 +1165,7 @@ function decodeGitHubJson<S extends Schema.Top>(
     | "getPullRequestDetail"
     | "getPullRequestListItem"
     | "listReviewRequestedPullRequestNumbers"
+    | "searchMergedPullRequests"
     | "getRepositoryMergeCapabilities"
     | "runPullRequestAction",
   invalidDetail: string,
@@ -1477,6 +1626,111 @@ const makeGitHubCli = Effect.sync(() => {
               );
         }),
       ),
+    searchMergedPullRequests: (input) =>
+      Effect.gen(function* () {
+        const viewer = input.viewer.trim();
+        if (!/^[a-z\d](?:[a-z\d-]{0,37}[a-z\d])?$/iu.test(viewer)) {
+          return yield* Effect.fail(
+            new GitHubCliError({
+              operation: "searchMergedPullRequests",
+              detail: "GitHub returned an invalid authenticated login.",
+              reason: "other",
+            }),
+          );
+        }
+
+        const startedAtMs = Date.parse(input.startedAt);
+        const endedAtMs = Date.parse(input.endedAt);
+        if (
+          !Number.isFinite(startedAtMs) ||
+          !Number.isFinite(endedAtMs) ||
+          startedAtMs >= endedAtMs ||
+          endedAtMs - startedAtMs > 26 * 60 * 60 * 1_000
+        ) {
+          return yield* Effect.fail(
+            new GitHubCliError({
+              operation: "searchMergedPullRequests",
+              detail: "Merge Flex requires one valid local calendar-day interval.",
+              reason: "other",
+            }),
+          );
+        }
+
+        const repository = input.repository
+          ? yield* validateRepository(input.repository, "searchMergedPullRequests")
+          : null;
+        // GitHub's search qualifier accepts calendar dates, but timestamp comparisons are not
+        // consistently honored. Search the smallest UTC-date envelope and enforce the exact
+        // local-day interval against GraphQL's mergedAt values below.
+        const firstUtcDate = new Date(startedAtMs).toISOString().slice(0, 10);
+        const lastUtcDate = new Date(endedAtMs - 1).toISOString().slice(0, 10);
+        const mergedDateQualifier =
+          firstUtcDate === lastUtcDate
+            ? `merged:${firstUtcDate}`
+            : `merged:${firstUtcDate}..${lastUtcDate}`;
+        const searchQuery = [
+          "is:pr",
+          "is:merged",
+          `author:${viewer}`,
+          mergedDateQualifier,
+          ...(repository ? [`repo:${repository}`] : []),
+        ].join(" ");
+
+        const entriesByUrl = new Map<string, GitHubMergedPullRequestReceipt>();
+        let after: string | null = null;
+        let issueCount = 0;
+        let fetchedNodeCount = 0;
+        let hasNextPage = false;
+
+        for (let page = 0; page < MERGE_FLEX_SEARCH_PAGE_LIMIT; page += 1) {
+          const result = yield* execute({
+            cwd: input.cwd,
+            args: [
+              "api",
+              "graphql",
+              "--hostname",
+              GITHUB_HOST,
+              "-f",
+              `query=${MERGE_FLEX_RECEIPTS_QUERY}`,
+              "-f",
+              `searchQuery=${searchQuery}`,
+              "-F",
+              `first=${MERGE_FLEX_SEARCH_PAGE_SIZE}`,
+              ...(after ? ["-f", `after=${after}`] : []),
+            ],
+          });
+          const decoded = yield* decodeGitHubJson(
+            result.stdout.trim(),
+            RawMergeFlexReceiptsResponseSchema,
+            "searchMergedPullRequests",
+            "GitHub CLI returned invalid Merge Flex receipt JSON.",
+          );
+          issueCount = decoded.data.search.issueCount;
+          fetchedNodeCount += decoded.data.search.nodes.length;
+          const pageEntries = yield* normalizeMergeFlexReceiptsPage({
+            raw: decoded,
+            viewer,
+            repository,
+            startedAtMs,
+            endedAtMs,
+          });
+          for (const entry of pageEntries) entriesByUrl.set(entry.url, entry);
+
+          const pageInfo = mergeFlexPageInfo(decoded);
+          hasNextPage = pageInfo.hasNextPage;
+          if (!pageInfo.hasNextPage) break;
+          if (!pageInfo.endCursor || pageInfo.endCursor === after) break;
+          after = pageInfo.endCursor;
+        }
+
+        const entries = [...entriesByUrl.values()].toSorted((left, right) =>
+          right.mergedAt.localeCompare(left.mergedAt),
+        );
+        return {
+          entries,
+          incomplete: hasNextPage || fetchedNodeCount < issueCount,
+        } satisfies GitHubMergedPullRequestReceiptBatch;
+      }),
     listRepositoryPullRequests: (input) => {
       const searchTerms = [
         ...(input.involvement === "reviewing" ? [`review-requested:${input.viewer}`] : []),

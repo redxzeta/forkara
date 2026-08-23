@@ -8,6 +8,7 @@ export {
   pullRequestQueryErrorState,
   pullRequestQueryKeys,
   pullRequestReviewRequestCountQueryOptions,
+  pullRequestsMergedTodayQueryOptions,
   pullRequestsExactInvolvementQueryOptions,
   pullRequestsListQueryOptions,
   shouldLoadExactPullRequestInvolvement,

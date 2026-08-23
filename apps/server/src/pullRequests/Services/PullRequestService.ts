@@ -1,4 +1,6 @@
 import type {
+  MergeFlexReceiptsInput,
+  MergeFlexReceiptsResult,
   PullRequestActionInput,
   PullRequestActionResult,
   PullRequestCommentInput,
@@ -17,6 +19,9 @@ import type { Effect } from "effect";
 
 export interface PullRequestServiceShape {
   readonly list: (input: PullRequestsListInput) => Effect.Effect<PullRequestsListResult, unknown>;
+  readonly mergedToday: (
+    input: MergeFlexReceiptsInput,
+  ) => Effect.Effect<MergeFlexReceiptsResult, unknown>;
   readonly reviewRequestCount: (
     input: PullRequestReviewRequestCountInput,
   ) => Effect.Effect<PullRequestReviewRequestCountResult, unknown>;

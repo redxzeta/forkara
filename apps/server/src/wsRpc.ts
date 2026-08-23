@@ -1458,6 +1458,11 @@ const makeWsRpcHandlersLayer = () =>
           ),
         [WS_METHODS.pullRequestsList]: (input) =>
           pullRequestsEffect(pullRequests.list(input), "Failed to list pull requests"),
+        [WS_METHODS.pullRequestsMergedToday]: (input) =>
+          pullRequestsEffect(
+            pullRequests.mergedToday(input),
+            "Failed to load merged pull request receipts",
+          ),
         [WS_METHODS.pullRequestsReviewRequestCount]: (input) =>
           pullRequestsEffect(
             pullRequests.reviewRequestCount(input),

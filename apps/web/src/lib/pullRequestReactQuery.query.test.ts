@@ -9,6 +9,7 @@ import {
   pullRequestQueryKeys,
   prefetchPullRequestListState,
   pullRequestReviewRequestCountQueryOptions,
+  pullRequestsMergedTodayQueryOptions,
   pullRequestsExactInvolvementQueryOptions,
   pullRequestsListQueryOptions,
   shouldLoadExactPullRequestInvolvement,
@@ -95,6 +96,18 @@ describe("pull request list query options", () => {
     expect(options.queryKey).toEqual(pullRequestQueryKeys.reviewRequestCount(null));
     expect(options.staleTime).toBe(5 * 60_000);
     expect(options.refetchInterval).toBe(5 * 60_000);
+  });
+
+  it("loads Merge Flex receipts on open without continuous polling", () => {
+    const options = pullRequestsMergedTodayQueryOptions({
+      date: "2026-08-23",
+      startedAt: "2026-08-23T07:00:00.000Z",
+      endedAt: "2026-08-24T07:00:00.000Z",
+      scope: { type: "all" },
+    });
+    expect(options.refetchInterval).toBe(false);
+    expect(options.refetchOnWindowFocus).toBe(false);
+    expect(options.refetchOnReconnect).toBe(false);
   });
 
   it("skips the known-empty reviewing fallback for closed and merged states", () => {

@@ -23,6 +23,7 @@ import {
 } from "../Layers/GitHubCli.ts";
 import {
   type GitHubCliShape,
+  type GitHubMergedPullRequestReceiptBatch,
   type GitHubPullRequestDetailData,
   type GitHubPullRequestListItem,
   type GitHubPullRequestSummary,
@@ -61,6 +62,7 @@ export interface FakeGhScenario {
   mergeCapabilities?: PullRequestMergeCapabilities;
   pullRequestDiff?: { patch: string; truncated: boolean };
   mergeOutcome?: "merged" | "enqueued";
+  mergedPullRequestReceipts?: GitHubMergedPullRequestReceiptBatch;
 }
 
 export type FakePullRequest = NonNullable<FakeGhScenario["pullRequest"]>;
@@ -282,6 +284,16 @@ export function createGitHubCliWithFakeGh(scenario: FakeGhScenario = {}): {
         return scenario.failWith
           ? Effect.fail(scenario.failWith)
           : Effect.succeed(scenario.viewerLogin ?? "viewer");
+      },
+      searchMergedPullRequests: (input) => {
+        ghCalls.push(
+          `search merged prs --author ${input.viewer} --started-at ${input.startedAt} --ended-at ${input.endedAt}${input.repository ? ` --repo ${input.repository}` : ""}`,
+        );
+        return scenario.failWith
+          ? Effect.fail(scenario.failWith)
+          : Effect.succeed(
+              scenario.mergedPullRequestReceipts ?? { entries: [], incomplete: false },
+            );
       },
       listRepositoryPullRequests: (input) => {
         const involvementArgs =

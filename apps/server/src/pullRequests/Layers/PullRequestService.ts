@@ -1,4 +1,5 @@
 import {
+  type MergeFlexReceiptsResult,
   type OrchestrationProject,
   type OrchestrationProjectShell,
   type ProjectId,
@@ -559,6 +560,29 @@ export const makePullRequestService = (
         };
       });
 
+    const mergedToday: PullRequestServiceShape["mergedToday"] = (input) =>
+      Effect.gen(function* () {
+        const viewer = yield* withGitHubRead(
+          dependencies.github.getViewerLogin({ cwd: dependencies.homeDir }),
+        );
+        const batch = yield* withGitHubRead(
+          dependencies.github.searchMergedPullRequests({
+            cwd: dependencies.homeDir,
+            viewer,
+            startedAt: input.startedAt,
+            endedAt: input.endedAt,
+            ...(input.scope.type === "repository" ? { repository: input.scope.repository } : {}),
+          }),
+        );
+        return {
+          ...input,
+          viewer,
+          count: batch.entries.length,
+          receipts: batch.entries,
+          incomplete: batch.incomplete,
+        } satisfies MergeFlexReceiptsResult;
+      });
+
     const operations = makePullRequestOperations({
       github: dependencies.github,
       pins: dependencies.pins,
@@ -572,6 +596,7 @@ export const makePullRequestService = (
 
     return {
       list,
+      mergedToday,
       reviewRequestCount,
       ...operations,
     } satisfies PullRequestServiceShape;

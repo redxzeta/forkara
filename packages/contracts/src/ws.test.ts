@@ -80,6 +80,22 @@ it.effect("accepts git.preparePullRequestThread requests", () =>
   }),
 );
 
+it.effect("accepts explicit local-day Merge Flex receipt requests", () =>
+  Effect.gen(function* () {
+    const parsed = yield* decode(WebSocketRequest, {
+      id: "req-merge-flex-1",
+      body: {
+        _tag: WS_METHODS.pullRequestsMergedToday,
+        date: "2026-08-23",
+        startedAt: "2026-08-23T07:00:00.000Z",
+        endedAt: "2026-08-24T07:00:00.000Z",
+        scope: { type: "all" },
+      },
+    });
+    assert.strictEqual(parsed.body._tag, WS_METHODS.pullRequestsMergedToday);
+  }),
+);
+
 it.effect("accepts project script discovery requests", () =>
   Effect.gen(function* () {
     const parsed = yield* decode(WebSocketRequest, {
