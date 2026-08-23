@@ -214,6 +214,64 @@ export const PullRequestReviewRequestCountResult = Schema.Struct({
 });
 export type PullRequestReviewRequestCountResult = typeof PullRequestReviewRequestCountResult.Type;
 
+export const MergeFlexCalendarDate = TrimmedNonEmptyString.check(
+  Schema.makeFilter((value: string) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/u.test(value)) return false;
+    const parsed = new Date(`${value}T00:00:00.000Z`);
+    return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+  }),
+);
+export type MergeFlexCalendarDate = typeof MergeFlexCalendarDate.Type;
+
+export const MergeFlexReceiptsScope = Schema.Union([
+  Schema.Struct({ type: Schema.Literal("all") }),
+  Schema.Struct({
+    type: Schema.Literal("repository"),
+    repository: TrimmedNonEmptyString,
+  }),
+]);
+export type MergeFlexReceiptsScope = typeof MergeFlexReceiptsScope.Type;
+
+export const MergeFlexReceiptsInput = Schema.Struct({
+  date: MergeFlexCalendarDate,
+  startedAt: IsoDateTime,
+  endedAt: IsoDateTime,
+  scope: MergeFlexReceiptsScope,
+});
+export type MergeFlexReceiptsInput = typeof MergeFlexReceiptsInput.Type;
+
+export const MergeFlexRepositoryVisibility = Schema.Literals([
+  "public",
+  "private",
+  "internal",
+  "unknown",
+]);
+export type MergeFlexRepositoryVisibility = typeof MergeFlexRepositoryVisibility.Type;
+
+export const MergeFlexReceipt = Schema.Struct({
+  number: PositiveInt,
+  title: TrimmedNonEmptyString,
+  url: TrimmedNonEmptyString,
+  repository: TrimmedNonEmptyString,
+  repositoryVisibility: MergeFlexRepositoryVisibility,
+  authorLogin: Schema.NullOr(TrimmedNonEmptyString),
+  mergedAt: IsoDateTime,
+});
+export type MergeFlexReceipt = typeof MergeFlexReceipt.Type;
+
+export const MergeFlexReceiptsResult = Schema.Struct({
+  date: MergeFlexCalendarDate,
+  startedAt: IsoDateTime,
+  endedAt: IsoDateTime,
+  scope: MergeFlexReceiptsScope,
+  viewer: TrimmedNonEmptyString,
+  count: NonNegativeInt,
+  receipts: Schema.Array(MergeFlexReceipt),
+  /** GitHub search is capped; true means the count and list are a documented lower bound. */
+  incomplete: Schema.Boolean,
+});
+export type MergeFlexReceiptsResult = typeof MergeFlexReceiptsResult.Type;
+
 export const PullRequestDetailInput = Schema.Struct({
   projectId: ProjectId,
   repository: TrimmedNonEmptyString,

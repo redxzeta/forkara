@@ -1,4 +1,5 @@
 import type {
+  MergeFlexReceiptsInput,
   ProjectId,
   PullRequestDetailInput,
   PullRequestInvolvement,
@@ -21,6 +22,16 @@ export const pullRequestQueryKeys = {
   reviewRequestCounts: ["pull-requests", "review-request-count"] as const,
   reviewRequestCount: (projectId: ProjectId | null) =>
     [...pullRequestQueryKeys.reviewRequestCounts, projectId] as const,
+  mergedToday: (input: MergeFlexReceiptsInput) =>
+    [
+      "pull-requests",
+      "merged-today",
+      input.date,
+      input.startedAt,
+      input.endedAt,
+      input.scope.type,
+      input.scope.type === "repository" ? input.scope.repository : null,
+    ] as const,
   detail: (input: PullRequestDetailInput | null) =>
     [
       "pull-requests",
@@ -38,6 +49,18 @@ export const pullRequestQueryKeys = {
       input?.number ?? null,
     ] as const,
 };
+
+export function pullRequestsMergedTodayQueryOptions(input: MergeFlexReceiptsInput) {
+  return queryOptions({
+    queryKey: pullRequestQueryKeys.mergedToday(input),
+    queryFn: () => ensureNativeApi().pullRequests.mergedToday(input),
+    staleTime: 60_000,
+    gcTime: 10 * 60_000,
+    refetchInterval: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+}
 
 export const PULL_REQUEST_STATES: readonly PullRequestState[] = ["open", "closed", "merged"];
 

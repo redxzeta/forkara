@@ -67,6 +67,21 @@ export interface GitHubPullRequestReviewCommentsResult {
   readonly truncated: boolean;
 }
 
+export interface GitHubMergedPullRequestReceipt {
+  readonly number: number;
+  readonly title: string;
+  readonly url: string;
+  readonly repository: string;
+  readonly repositoryVisibility: "public" | "private" | "internal" | "unknown";
+  readonly authorLogin: string | null;
+  readonly mergedAt: string;
+}
+
+export interface GitHubMergedPullRequestReceiptBatch {
+  readonly entries: ReadonlyArray<GitHubMergedPullRequestReceipt>;
+  readonly incomplete: boolean;
+}
+
 export interface GitHubPullRequestListItem {
   readonly number: number;
   readonly title: string;
@@ -146,6 +161,15 @@ export interface GitHubCliShape {
   readonly getViewerLogin: (input: {
     readonly cwd: string;
   }) => Effect.Effect<string, GitHubCliError>;
+
+  /** Search factual authored-and-merged receipts inside an exact UTC interval. */
+  readonly searchMergedPullRequests: (input: {
+    readonly cwd: string;
+    readonly viewer: string;
+    readonly startedAt: string;
+    readonly endedAt: string;
+    readonly repository?: string;
+  }) => Effect.Effect<GitHubMergedPullRequestReceiptBatch, GitHubCliError>;
 
   readonly listRepositoryPullRequests: (input: {
     readonly cwd: string;

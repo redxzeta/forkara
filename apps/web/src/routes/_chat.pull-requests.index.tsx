@@ -33,6 +33,7 @@ import {
   isFocusInsideRightDock,
 } from "~/components/pullRequest/pullRequestFocus";
 import { PullRequestList } from "~/components/pullRequest/PullRequestList";
+import { MergeFlexReceiptsCard } from "~/components/pullRequest/MergeFlexReceiptsCard";
 import {
   filterPullRequestEntriesByInvolvement,
   groupPullRequestEntriesByInvolvement,
@@ -59,6 +60,7 @@ import {
   useDesktopTopBarWindowControlsGutterClassName,
 } from "~/hooks/useDesktopTopBarGutter";
 import { RefreshCwIcon } from "~/lib/icons";
+import { gitGithubRepositoryQueryOptions } from "~/lib/gitReactQuery";
 import {
   prefetchPullRequestListState,
   pullRequestMutationKeys,
@@ -197,6 +199,13 @@ function PullRequestsRouteView() {
   const scopedProjectName = search.projectId
     ? repositoryProjects.find(([projectId]) => projectId === search.projectId)?.[1]
     : undefined;
+  const scopedProjectCwd = search.projectId
+    ? (projects.find((project) => project.id === search.projectId)?.cwd ?? null)
+    : null;
+  const scopedGitHubRepositoryQuery = useQuery(
+    gitGithubRepositoryQueryOptions(scopedProjectCwd, scopedProjectCwd !== null),
+  );
+  const mergeFlexRepository = scopedGitHubRepositoryQuery.data?.repository?.nameWithOwner ?? null;
   // Precise fallback for the filtered tabs: when a repository hit the per-repo entry cap, the
   // client-side involvement filter over the truncated superset can miss older matches, so the
   // active tab additionally fetches the server-filtered list. In the common (untruncated) case
@@ -429,6 +438,7 @@ function PullRequestsRouteView() {
           </header>
           <main className="min-h-0 flex-1 overflow-y-auto">
             <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-5 pb-12 pt-4 sm:px-7">
+              <MergeFlexReceiptsCard repository={mergeFlexRepository} />
               {/* Scope first, then search within it: the pills read as the view you are in and
                   the field filters it, which is also the reference layout. */}
               <div className="flex flex-col gap-3">

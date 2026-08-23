@@ -34,7 +34,7 @@ export function PullRequestFilterPillGroup<T extends string>({
   onIntent,
 }: {
   value: T;
-  options: ReadonlyArray<{ value: T; label: string }>;
+  options: ReadonlyArray<{ value: T; label: string; disabled?: boolean; title?: string }>;
   onChange: (value: T) => void;
   onIntent?: (value: T) => void;
 }) {
@@ -47,13 +47,15 @@ export function PullRequestFilterPillGroup<T extends string>({
           key={option.value}
           type="button"
           aria-pressed={option.value === value}
+          disabled={option.disabled}
+          title={option.title}
           onFocus={() => onIntent?.(option.value)}
           onPointerEnter={() => onIntent?.(option.value)}
           onClick={() => onChange(option.value)}
           // Active uses the shared control-active token (real contrast in both modes) — the
           // elevated-secondary tint is a 2–4% hover wash and disappears on dark surfaces.
           className={cn(
-            "rounded-md px-2.5 py-1 transition-colors",
+            "rounded-md px-2.5 py-1 transition-colors disabled:cursor-not-allowed disabled:opacity-50",
             option.value === value
               ? CHAT_SURFACE_CONTROL_ACTIVE_CLASS_NAME
               : "text-muted-foreground hover:text-foreground",

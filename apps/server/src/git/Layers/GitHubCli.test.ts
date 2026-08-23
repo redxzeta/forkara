@@ -20,6 +20,124 @@ afterEach(() => {
 });
 
 layer("GitHubCliLive", (it) => {
+  it.effect("searches authored merge receipts inside exact local-day boundaries", () =>
+    Effect.gen(function* () {
+      mockedRunProcess.mockResolvedValueOnce({
+        stdout: JSON.stringify({
+          data: {
+            search: {
+              issueCount: 4,
+              nodes: [
+                {
+                  number: 11,
+                  title: "Before the local day",
+                  url: "https://github.com/acme/public/pull/11",
+                  mergedAt: "2026-08-23T06:59:59Z",
+                  author: { login: "octocat" },
+                  repository: { nameWithOwner: "acme/public", visibility: "PUBLIC" },
+                },
+                {
+                  number: 12,
+                  title: "Private receipt",
+                  url: "https://github.com/acme/private/pull/12",
+                  mergedAt: "2026-08-23T07:00:00Z",
+                  author: { login: "octocat" },
+                  repository: { nameWithOwner: "acme/private", visibility: "PRIVATE" },
+                },
+                {
+                  number: 13,
+                  title: "Public receipt",
+                  url: "https://github.com/acme/public/pull/13",
+                  mergedAt: "2026-08-24T06:59:59Z",
+                  author: { login: "octocat" },
+                  repository: { nameWithOwner: "acme/public", visibility: "PUBLIC" },
+                },
+                {
+                  number: 14,
+                  title: "At the exclusive end",
+                  url: "https://github.com/acme/public/pull/14",
+                  mergedAt: "2026-08-24T07:00:00Z",
+                  author: { login: "octocat" },
+                  repository: { nameWithOwner: "acme/public", visibility: "PUBLIC" },
+                },
+              ],
+              pageInfo: { hasNextPage: false, endCursor: null },
+            },
+          },
+        }),
+        stderr: "",
+        code: 0,
+        signal: null,
+        timedOut: false,
+      });
+
+      const result = yield* Effect.gen(function* () {
+        const gh = yield* GitHubCli;
+        return yield* gh.searchMergedPullRequests({
+          cwd: "/repo",
+          viewer: "octocat",
+          startedAt: "2026-08-23T07:00:00.000Z",
+          endedAt: "2026-08-24T07:00:00.000Z",
+        });
+      });
+
+      assert.equal(result.entries.length, 2);
+      assert.deepStrictEqual(
+        result.entries.map((entry) => entry.repositoryVisibility),
+        ["public", "private"],
+      );
+      assert.isFalse(result.incomplete);
+      const args = mockedRunProcess.mock.calls[0]?.[1] ?? [];
+      expect(args).toContain(
+        "searchQuery=is:pr is:merged author:octocat merged:2026-08-23..2026-08-24",
+      );
+    }),
+  );
+
+  it.effect("adds repository scope and rejects malformed receipt output", () =>
+    Effect.gen(function* () {
+      mockedRunProcess.mockResolvedValueOnce({
+        stdout: "not-json",
+        stderr: "",
+        code: 0,
+        signal: null,
+        timedOut: false,
+      });
+      const exit = yield* Effect.exit(
+        Effect.gen(function* () {
+          const gh = yield* GitHubCli;
+          return yield* gh.searchMergedPullRequests({
+            cwd: "/repo",
+            viewer: "octocat",
+            startedAt: "2026-08-23T07:00:00.000Z",
+            endedAt: "2026-08-24T07:00:00.000Z",
+            repository: "acme/widgets",
+          });
+        }),
+      );
+      assert.equal(exit._tag, "Failure");
+      expect(mockedRunProcess.mock.calls[0]?.[1]).toContain(
+        "searchQuery=is:pr is:merged author:octocat merged:2026-08-23..2026-08-24 repo:acme/widgets",
+      );
+    }),
+  );
+
+  it.effect("classifies GitHub authentication failures for receipt searches", () =>
+    Effect.gen(function* () {
+      mockedRunProcess.mockRejectedValueOnce(new Error("not logged in; run gh auth login"));
+      const gh = yield* GitHubCli;
+      const failure = yield* gh
+        .searchMergedPullRequests({
+          cwd: "/repo",
+          viewer: "octocat",
+          startedAt: "2026-08-23T07:00:00.000Z",
+          endedAt: "2026-08-24T07:00:00.000Z",
+        })
+        .pipe(Effect.flip);
+      assert.equal(failure.reason, "not-authenticated");
+    }),
+  );
+
   it.effect("parses pull request view output", () =>
     Effect.gen(function* () {
       mockedRunProcess.mockResolvedValueOnce({

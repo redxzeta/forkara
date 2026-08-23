@@ -142,6 +142,7 @@ import {
 } from "./providerDiscovery";
 import { ProviderCompactThreadInput } from "./provider";
 import {
+  MergeFlexReceiptsInput,
   PullRequestActionInput,
   PullRequestCommentInput,
   PullRequestDetailInput,
@@ -228,6 +229,7 @@ export const WS_METHODS = {
 
   // Global pull request methods
   pullRequestsList: "pullRequests.list",
+  pullRequestsMergedToday: "pullRequests.mergedToday",
   pullRequestsReviewRequestCount: "pullRequests.reviewRequestCount",
   pullRequestsDetail: "pullRequests.detail",
   pullRequestsDiff: "pullRequests.diff",
@@ -434,6 +436,7 @@ const WebSocketRequestBody = Schema.Union([
 
   // Global pull requests
   tagRequestBody(WS_METHODS.pullRequestsList, PullRequestsListInput),
+  tagRequestBody(WS_METHODS.pullRequestsMergedToday, MergeFlexReceiptsInput),
   tagRequestBody(WS_METHODS.pullRequestsReviewRequestCount, PullRequestReviewRequestCountInput),
   tagRequestBody(WS_METHODS.pullRequestsDetail, PullRequestDetailInput),
   tagRequestBody(WS_METHODS.pullRequestsDiff, PullRequestDetailInput),
