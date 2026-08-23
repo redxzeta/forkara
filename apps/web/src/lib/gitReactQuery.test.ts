@@ -100,6 +100,7 @@ describe("git query invalidation", () => {
     const keys = [
       gitQueryKeys.githubRepository(cwd),
       gitQueryKeys.status(cwd),
+      gitQueryKeys.forkHealth(cwd),
       gitQueryKeys.branches(cwd),
       gitQueryKeys.workingTreeDiff(cwd, "workingTree"),
       ["git", "pull-request", cwd, "https://example.test/pr/1"] as const,
@@ -123,6 +124,7 @@ describe("git query invalidation", () => {
     const cwdAKeys = [
       gitQueryKeys.githubRepository(cwdA),
       gitQueryKeys.status(cwdA),
+      gitQueryKeys.forkHealth(cwdA),
       gitQueryKeys.branches(cwdA),
       gitQueryKeys.workingTreeDiff(cwdA, "workingTree"),
       gitQueryKeys.workingTreeDiff(cwdA, "staged"),
@@ -131,6 +133,7 @@ describe("git query invalidation", () => {
     const cwdBKeys = [
       gitQueryKeys.githubRepository(cwdB),
       gitQueryKeys.status(cwdB),
+      gitQueryKeys.forkHealth(cwdB),
       gitQueryKeys.branches(cwdB),
       gitQueryKeys.workingTreeDiff(cwdB, "workingTree"),
       ["git", "pull-request", cwdB, "https://example.test/pr/2"] as const,

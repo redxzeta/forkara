@@ -1367,6 +1367,8 @@ const makeWsRpcHandlersLayer = () =>
             git.withMutation(input.cwd, git.refreshUpstream(input.cwd)),
             "Failed to refresh upstream status",
           ),
+        [WS_METHODS.gitForkHealth]: (input) =>
+          rpcEffect(git.forkHealth(input.cwd), "Failed to read fork health"),
         [WS_METHODS.gitPreviewUpstreamSync]: (input) =>
           rpcEffect(
             git.withMutation(input.cwd, git.previewUpstreamSync(input.cwd)),

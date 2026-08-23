@@ -135,6 +135,9 @@ export const GitUpstreamStatusInput = Schema.Struct({
 });
 export type GitUpstreamStatusInput = typeof GitUpstreamStatusInput.Type;
 
+export const GitForkHealthInput = GitUpstreamStatusInput;
+export type GitForkHealthInput = typeof GitForkHealthInput.Type;
+
 export const GitApplyUpstreamSyncInput = Schema.Struct({
   cwd: TrimmedNonEmptyStringSchema,
   expectedLocalHead: TrimmedNonEmptyStringSchema,
@@ -385,6 +388,36 @@ export const GitUpstreamStatusResult = Schema.Struct({
   message: TrimmedNonEmptyStringSchema,
 });
 export type GitUpstreamStatusResult = typeof GitUpstreamStatusResult.Type;
+
+export const GitForkHealthState = Schema.Literals([
+  "healthy",
+  "needs_sync",
+  "diverged",
+  "upstream_unavailable",
+  "conflicts",
+  "local_changes",
+  "attribution_warning",
+  "unknown",
+]);
+export type GitForkHealthState = typeof GitForkHealthState.Type;
+
+export const GitForkHealthAttributionState = Schema.Literals(["unknown", "present", "warning"]);
+export type GitForkHealthAttributionState = typeof GitForkHealthAttributionState.Type;
+
+export const GitForkHealthResult = Schema.Struct({
+  state: GitForkHealthState,
+  label: TrimmedNonEmptyStringSchema,
+  summary: TrimmedNonEmptyStringSchema,
+  reasons: Schema.Array(TrimmedNonEmptyStringSchema),
+  hasWorkingTreeChanges: Schema.Boolean,
+  unresolvedConflictFiles: Schema.Array(TrimmedNonEmptyStringSchema),
+  attribution: Schema.Struct({
+    state: GitForkHealthAttributionState,
+    message: TrimmedNonEmptyStringSchema,
+  }),
+  upstream: GitUpstreamStatusResult,
+});
+export type GitForkHealthResult = typeof GitForkHealthResult.Type;
 
 export const GitUpstreamSyncState = Schema.Literals([
   "missing",

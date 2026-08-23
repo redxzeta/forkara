@@ -107,6 +107,8 @@ import {
   GitStatusResult,
   GitUpstreamStatusInput,
   GitUpstreamStatusResult,
+  GitForkHealthInput,
+  GitForkHealthResult,
   GitApplyUpstreamSyncInput,
   GitUpstreamSyncApplyResult,
   GitUpstreamSyncPreviewResult,
@@ -670,6 +672,12 @@ export const WsGitUpstreamStatusRpc = Rpc.make(WS_METHODS.gitUpstreamStatus, {
 export const WsGitRefreshUpstreamRpc = Rpc.make(WS_METHODS.gitRefreshUpstream, {
   payload: GitUpstreamStatusInput,
   success: GitUpstreamStatusResult,
+  error: WsRpcError,
+});
+
+export const WsGitForkHealthRpc = Rpc.make(WS_METHODS.gitForkHealth, {
+  payload: GitForkHealthInput,
+  success: GitForkHealthResult,
   error: WsRpcError,
 });
 
@@ -1277,6 +1285,7 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsGitStatusRpc,
   WsGitUpstreamStatusRpc,
   WsGitRefreshUpstreamRpc,
+  WsGitForkHealthRpc,
   WsGitPreviewUpstreamSyncRpc,
   WsGitApplyUpstreamSyncRpc,
   WsGitReadWorkingTreeDiffRpc,

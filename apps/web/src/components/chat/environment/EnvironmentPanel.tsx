@@ -44,6 +44,7 @@ import { cn } from "~/lib/utils";
 import { readNativeApi } from "~/nativeApi";
 
 import { EnvironmentEditorSection } from "./EnvironmentEditorSection";
+import { EnvironmentForkHealthSection } from "./EnvironmentForkHealthSection";
 import {
   EnvironmentAutomationsSection,
   type EnvironmentAutomationPanelItem,
@@ -435,7 +436,10 @@ export function EnvironmentPanel({
       ) : null}
 
       {isGitRepo ? (
-        <EnvironmentUpstreamRadarSection key={gitCwd} gitCwd={gitCwd} enabled={open} />
+        <div key={gitCwd} className="contents">
+          <EnvironmentForkHealthSection gitCwd={gitCwd} enabled={open} />
+          <EnvironmentUpstreamRadarSection gitCwd={gitCwd} enabled={open} />
+        </div>
       ) : null}
 
       {settings.showEnvironmentPullRequest && isGitRepo && onOpenGithubRepository ? (

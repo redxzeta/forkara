@@ -581,6 +581,7 @@ export function createWsNativeApi(): NativeApi {
       upstreamStatus: (input) => transport.request(WS_METHODS.gitUpstreamStatus, input),
       refreshUpstream: (input) =>
         transport.request(WS_METHODS.gitRefreshUpstream, input, { timeoutMs: null }),
+      forkHealth: (input) => transport.request(WS_METHODS.gitForkHealth, input),
       previewUpstreamSync: (input) =>
         transport.request(WS_METHODS.gitPreviewUpstreamSync, input, { timeoutMs: null }),
       applyUpstreamSync: (input) =>

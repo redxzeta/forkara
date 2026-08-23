@@ -40,6 +40,7 @@ const EXPENSIVE_READ_METHODS = new Set<string>([
   WS_METHODS.filesystemBrowse,
   WS_METHODS.gitStatus,
   WS_METHODS.gitUpstreamStatus,
+  WS_METHODS.gitForkHealth,
   WS_METHODS.gitPreviewUpstreamSync,
   WS_METHODS.gitReadWorkingTreeDiff,
   WS_METHODS.gitWorkingTreeDiffStats,
