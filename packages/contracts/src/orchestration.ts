@@ -220,6 +220,12 @@ export const DEFAULT_RUNTIME_MODE: RuntimeMode = "full-access";
 export const ProviderInteractionMode = Schema.Literals(["default", "plan", "debug"]);
 export type ProviderInteractionMode = typeof ProviderInteractionMode.Type;
 export const DEFAULT_PROVIDER_INTERACTION_MODE: ProviderInteractionMode = "default";
+export const MakeNoMistakeLevel = Schema.Literals([0, 1, 2, 3]);
+export type MakeNoMistakeLevel = typeof MakeNoMistakeLevel.Type;
+export const ProviderResponseModifiers = Schema.Struct({
+  makeNoMistakeLevel: Schema.optional(MakeNoMistakeLevel).pipe(Schema.withDecodingDefault(() => 0)),
+});
+export type ProviderResponseModifiers = typeof ProviderResponseModifiers.Type;
 const SidechatSourceThreadId = Schema.optional(Schema.NullOr(ThreadId)).pipe(
   Schema.withDecodingDefault(() => null),
 );
@@ -1362,6 +1368,7 @@ export const ThreadTurnStartCommand = Schema.Struct({
   interactionMode: ProviderInteractionMode.pipe(
     Schema.withDecodingDefault(() => DEFAULT_PROVIDER_INTERACTION_MODE),
   ),
+  responseModifiers: Schema.optional(ProviderResponseModifiers),
   sourceProposedPlan: Schema.optional(SourceProposedPlanReference),
   createdAt: IsoDateTime,
 });
@@ -1387,6 +1394,7 @@ const ClientThreadTurnStartCommand = Schema.Struct({
   ),
   runtimeMode: RuntimeMode,
   interactionMode: ProviderInteractionMode,
+  responseModifiers: Schema.optional(ProviderResponseModifiers),
   sourceProposedPlan: Schema.optional(SourceProposedPlanReference),
   createdAt: IsoDateTime,
 });
@@ -1432,6 +1440,7 @@ const ThreadDispatchQueuedTurnCommand = Schema.Struct({
   interactionMode: ProviderInteractionMode.pipe(
     Schema.withDecodingDefault(() => DEFAULT_PROVIDER_INTERACTION_MODE),
   ),
+  responseModifiers: Schema.optional(ProviderResponseModifiers),
   sourceProposedPlan: Schema.optional(SourceProposedPlanReference),
   createdAt: IsoDateTime,
 });
@@ -2016,6 +2025,7 @@ export const ThreadTurnStartRequestedPayload = Schema.Struct({
   interactionMode: ProviderInteractionMode.pipe(
     Schema.withDecodingDefault(() => DEFAULT_PROVIDER_INTERACTION_MODE),
   ),
+  responseModifiers: Schema.optional(ProviderResponseModifiers),
   sourceProposedPlan: Schema.optional(SourceProposedPlanReference),
   createdAt: IsoDateTime,
 });

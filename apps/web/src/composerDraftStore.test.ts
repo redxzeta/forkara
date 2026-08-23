@@ -80,6 +80,17 @@ describe("composerDraftStore clearComposerContent", () => {
 
     expect(useComposerDraftStore.getState().draftsByThreadId[threadId]).toBeUndefined();
   });
+
+  it("resets Make No Mistake after composer content is submitted", () => {
+    const store = useComposerDraftStore.getState();
+
+    store.setPrompt(threadId, "Explain every material edge case");
+    store.setMakeNoMistakeLevel(threadId, 3);
+    expect(useComposerDraftStore.getState().draftsByThreadId[threadId]?.makeNoMistakeLevel).toBe(3);
+
+    store.clearComposerContent(threadId);
+    expect(useComposerDraftStore.getState().draftsByThreadId[threadId]).toBeUndefined();
+  });
 });
 
 describe("composerDraftStore project draft thread mapping", () => {

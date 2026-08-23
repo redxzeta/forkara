@@ -640,6 +640,7 @@ describe("composerDraftStore queued follow-ups", () => {
     store.enqueueQueuedTurn(threadId, {
       ...queuedChatTurn,
       interactionMode: "debug",
+      makeNoMistakeLevel: 3,
     });
 
     const persistApi = useComposerDraftStore.persist as unknown as {
@@ -675,6 +676,7 @@ describe("composerDraftStore queued follow-ups", () => {
         },
         terminalContexts: [{ text: "git status\nOn branch main" }],
         interactionMode: "debug",
+        makeNoMistakeLevel: 3,
       },
     ]);
   });

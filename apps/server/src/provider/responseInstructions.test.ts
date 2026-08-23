@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { PROVIDER_BULLY_MODE_PROMPT_PREFIX } from "./bullyMode.ts";
 import { PROVIDER_DEBUG_MODE_PROMPT_PREFIX } from "./debugMode.ts";
+import { PROVIDER_MAKE_NO_MISTAKE_PROMPT_PREFIX } from "./makeNoMistake.ts";
 import {
   providerResponseInstructionsOverheadChars,
   withProviderResponseInstructions,
@@ -58,5 +59,20 @@ describe("provider response instructions", () => {
       text.length + providerResponseInstructionsOverheadChars(input),
     );
     expect(providerResponseInstructionsOverheadChars({})).toBe(0);
+  });
+
+  it("composes Make No Mistake with Bully Mode without replacing either modifier", () => {
+    const input = {
+      text: "Review the queue drain",
+      modifiers: { bullyMode: true, makeNoMistakeLevel: 3 as const },
+    };
+    const once = withProviderResponseInstructions(input);
+    const twice = withProviderResponseInstructions({ ...input, text: once });
+
+    expect(once).toContain("Review the queue drain");
+    expect(once.split(PROVIDER_BULLY_MODE_PROMPT_PREFIX)).toHaveLength(2);
+    expect(once.split(PROVIDER_MAKE_NO_MISTAKE_PROMPT_PREFIX)).toHaveLength(2);
+    expect(once).toContain("edge cases");
+    expect(twice).toBe(once);
   });
 });

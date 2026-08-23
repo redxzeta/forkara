@@ -4,6 +4,7 @@
 
 import {
   type ModelSelection,
+  MakeNoMistakeLevel,
   type ProviderKind,
   PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
   ProviderInteractionMode,
@@ -1041,6 +1042,32 @@ export const createComposerDraftStoreState =
         return { draftsByThreadId: nextDraftsByThreadId };
       });
     },
+    setMakeNoMistakeLevel: (threadId, level) => {
+      if (threadId.length === 0 || !Schema.is(MakeNoMistakeLevel)(level)) {
+        return;
+      }
+      set((state) => {
+        const existing = state.draftsByThreadId[threadId];
+        if (!existing && level === 0) {
+          return state;
+        }
+        const base = existing ?? createEmptyThreadDraft();
+        if (base.makeNoMistakeLevel === level) {
+          return state;
+        }
+        const nextDraft: ComposerThreadDraftState = {
+          ...base,
+          makeNoMistakeLevel: level,
+        };
+        const nextDraftsByThreadId = { ...state.draftsByThreadId };
+        if (shouldRemoveDraft(nextDraft)) {
+          delete nextDraftsByThreadId[threadId];
+        } else {
+          nextDraftsByThreadId[threadId] = nextDraft;
+        }
+        return { draftsByThreadId: nextDraftsByThreadId };
+      });
+    },
     // Keep queued follow-ups with the thread draft so route changes do not hide them.
     enqueueQueuedTurn: (threadId, queuedTurn) => {
       if (threadId.length === 0) {
@@ -1929,6 +1956,7 @@ export const createComposerDraftStoreState =
           skills: [],
           mentions: [],
           restoredSourceProposedPlan: null,
+          makeNoMistakeLevel: 0,
         };
         const nextDraftsByThreadId = { ...state.draftsByThreadId };
         if (shouldRemoveDraft(nextDraft)) {

@@ -5,6 +5,7 @@ import {
   DEFAULT_MODEL_BY_PROVIDER,
   EventId,
   MessageId,
+  type MakeNoMistakeLevel,
   type ModelSelection,
   type NativeApi,
   type OrchestrationShellSnapshot,
@@ -361,6 +362,7 @@ import {
 } from "../appSettings";
 import { isTerminalFocused } from "../lib/terminalFocus";
 import { isEditableEventTarget } from "../lib/editableEventTarget";
+import { makeNoMistakeResponseModifiers } from "../lib/makeNoMistake";
 import {
   type ComposerFileAttachment,
   type ComposerImageAttachment,
@@ -497,6 +499,7 @@ import {
 } from "./chat/ComposerLocalDirectoryMenu";
 import { ComposerPendingApprovalPanel } from "./chat/ComposerPendingApprovalPanel";
 import { ComposerExtrasMenu } from "./chat/ComposerExtrasMenu";
+import { ComposerMakeNoMistakeControl } from "./chat/ComposerMakeNoMistakeControl";
 import { ContextWindowMeter } from "./chat/ContextWindowMeter";
 import { ComposerInputBanners } from "./chat/ComposerInputBanners";
 import { ComposerBranchMismatchBanner } from "./chat/ComposerBranchMismatchBanner";
@@ -1086,6 +1089,7 @@ interface PlanFollowUpSubmission {
   text: string;
   interactionMode: "default" | "plan";
   dispatchMode: "queue" | "steer";
+  makeNoMistakeLevel?: MakeNoMistakeLevel;
   queuedTurn?: QueuedComposerPlanFollowUp;
 }
 
@@ -1257,6 +1261,7 @@ export default function ChatView({
   const composerSkills = composerDraft.skills;
   const composerMentions = composerDraft.mentions;
   const queuedComposerTurns = composerDraft.queuedTurns;
+  const makeNoMistakeLevel = composerDraft.makeNoMistakeLevel ?? 0;
   const restoredSourceProposedPlan = composerDraft.restoredSourceProposedPlan;
   const composerSendState = useMemo(
     () =>
@@ -1350,6 +1355,9 @@ export default function ChatView({
     (store) => store.setRestoredSourceProposedPlan,
   );
   const clearComposerDraftContent = useComposerDraftStore((store) => store.clearComposerContent);
+  const setComposerDraftMakeNoMistakeLevel = useComposerDraftStore(
+    (store) => store.setMakeNoMistakeLevel,
+  );
   const setDraftThreadContext = useComposerDraftStore((store) => store.setDraftThreadContext);
   const moveDraftThreadToProject = useComposerDraftStore((store) => store.moveDraftThreadToProject);
   const getDraftThreadByProjectId = useComposerDraftStore(
@@ -7184,6 +7192,7 @@ export default function ChatView({
       promptRef.current = nextPrompt;
       clearComposerDraftContent(activeThread.id);
       setComposerDraftPrompt(activeThread.id, nextPrompt);
+      setComposerDraftMakeNoMistakeLevel(activeThread.id, queuedTurn.makeNoMistakeLevel ?? 0);
       // Editing a queued turn should recreate the same draft state the user queued.
       setDraftThreadContext(activeThread.id, {
         runtimeMode: queuedTurn.runtimeMode,
@@ -7250,6 +7259,7 @@ export default function ChatView({
       setRestoredQueuedSourceProposedPlan,
       setComposerDraftInteractionMode,
       setComposerDraftModelSelection,
+      setComposerDraftMakeNoMistakeLevel,
       setComposerDraftPrompt,
       setComposerDraftRuntimeMode,
       updateSelectedComposerMentions,
@@ -7385,6 +7395,8 @@ export default function ChatView({
       queuedChatTurn?.providerOptionsForDispatch ?? providerOptionsForDispatch;
     const runtimeModeForSend = queuedChatTurn?.runtimeMode ?? runtimeMode;
     let interactionModeForSend = queuedChatTurn?.interactionMode ?? interactionMode;
+    const makeNoMistakeLevelForSend = queuedChatTurn?.makeNoMistakeLevel ?? makeNoMistakeLevel;
+    const responseModifiersForSend = makeNoMistakeResponseModifiers(makeNoMistakeLevelForSend);
     const envModeForSend = queuedChatTurn?.envMode ?? envMode;
     const {
       trimmedPrompt: trimmed,
@@ -7453,6 +7465,9 @@ export default function ChatView({
             modelSelection: selectedModelSelection,
             ...(providerOptionsForDispatch ? { providerOptionsForDispatch } : {}),
             runtimeMode,
+            ...(makeNoMistakeLevelForSend > 0
+              ? { makeNoMistakeLevel: makeNoMistakeLevelForSend }
+              : {}),
           });
           return true;
         }
@@ -7462,6 +7477,7 @@ export default function ChatView({
           text: followUp.text,
           interactionMode: followUp.interactionMode,
           dispatchMode,
+          makeNoMistakeLevel: makeNoMistakeLevelForSend,
         });
       }
     }
@@ -7791,6 +7807,7 @@ export default function ChatView({
         ...(sourceProposedPlanForSend ? { sourceProposedPlan: sourceProposedPlanForSend } : {}),
         runtimeMode: runtimeModeForSend,
         interactionMode: interactionModeForSend,
+        ...(makeNoMistakeLevelForSend > 0 ? { makeNoMistakeLevel: makeNoMistakeLevelForSend } : {}),
         envMode: envModeForSend,
       });
       return true;
@@ -8534,6 +8551,7 @@ export default function ChatView({
           dispatchMode,
           runtimeMode: nextRuntimeModeForSend,
           interactionMode: interactionModeForSend,
+          ...(responseModifiersForSend ? { responseModifiers: responseModifiersForSend } : {}),
           ...(sourceProposedPlanForSend ? { sourceProposedPlan: sourceProposedPlanForSend } : {}),
           createdAt: messageCreatedAt,
         }),
@@ -8687,6 +8705,7 @@ export default function ChatView({
         });
         promptRef.current = promptForSend;
         setPrompt(promptForSend);
+        setComposerDraftMakeNoMistakeLevel(threadIdForSend, makeNoMistakeLevelForSend);
         if (sourceProposedPlanForSend) {
           setRestoredQueuedSourceProposedPlan(threadIdForSend, {
             threadId: threadIdForSend,
@@ -8981,11 +9000,13 @@ export default function ChatView({
     text,
     interactionMode: nextInteractionMode,
     dispatchMode,
+    makeNoMistakeLevel: submittedMakeNoMistakeLevel,
     queuedTurn,
   }: {
     text: string;
     interactionMode: "default" | "plan";
     dispatchMode: "queue" | "steer";
+    makeNoMistakeLevel?: MakeNoMistakeLevel;
     queuedTurn?: QueuedComposerPlanFollowUp;
   }): Promise<boolean> {
     const api = readNativeApi();
@@ -9014,6 +9035,9 @@ export default function ChatView({
       effort: queuedTurn?.selectedPromptEffort ?? selectedPromptEffort,
       text: trimmed,
     });
+    const makeNoMistakeLevelForSend =
+      queuedTurn?.makeNoMistakeLevel ?? submittedMakeNoMistakeLevel ?? 0;
+    const responseModifiers = makeNoMistakeResponseModifiers(makeNoMistakeLevelForSend);
 
     sendInFlightRef.current = true;
     beginLocalDispatch({ expectedUserMessageId: messageIdForSend });
@@ -9084,6 +9108,7 @@ export default function ChatView({
         dispatchMode,
         runtimeMode: queuedTurn?.runtimeMode ?? runtimeMode,
         interactionMode: nextInteractionMode,
+        ...(responseModifiers ? { responseModifiers } : {}),
         ...(sourceProposedPlan ? { sourceProposedPlan } : {}),
         createdAt: messageCreatedAt,
       });
@@ -9131,6 +9156,13 @@ export default function ChatView({
       // recover — drop the marker armed when the dispatch began.
       clearPendingTurnDispatch(threadIdForSend);
       resetLocalDispatch();
+      if (
+        queuedTurn === undefined &&
+        (useComposerDraftStore.getState().draftsByThreadId[threadIdForSend]?.makeNoMistakeLevel ??
+          0) === 0
+      ) {
+        setComposerDraftMakeNoMistakeLevel(threadIdForSend, makeNoMistakeLevelForSend);
+      }
       return false;
     }
   }
@@ -9243,6 +9275,9 @@ export default function ChatView({
         text: queuedTurn.text,
         interactionMode: queuedTurn.interactionMode,
         dispatchMode,
+        ...(queuedTurn.makeNoMistakeLevel !== undefined
+          ? { makeNoMistakeLevel: queuedTurn.makeNoMistakeLevel }
+          : {}),
         queuedTurn,
       });
     },
@@ -9444,6 +9479,7 @@ export default function ChatView({
     });
     const nextThreadTitle = truncateTitle(buildPlanImplementationThreadTitle(planMarkdown));
     const nextThreadModelSelection: ModelSelection = selectedModelSelection;
+    const responseModifiers = makeNoMistakeResponseModifiers(makeNoMistakeLevel);
     const sourceProposedPlan = buildSourceProposedPlanReference({
       threadId: activeThread.id,
       proposedPlan: activeProposedPlan,
@@ -9498,6 +9534,7 @@ export default function ChatView({
           dispatchMode: "queue",
           runtimeMode,
           interactionMode: "default",
+          ...(responseModifiers ? { responseModifiers } : {}),
           ...(sourceProposedPlan ? { sourceProposedPlan } : {}),
           createdAt,
         });
@@ -9516,6 +9553,9 @@ export default function ChatView({
           to: "/$threadId",
           params: { threadId: nextThreadId },
         });
+      })
+      .then(() => {
+        setComposerDraftMakeNoMistakeLevel(activeThread.id, 0);
       })
       .catch(async (err) => {
         const deletedOnServer = await api.orchestration
@@ -9551,6 +9591,7 @@ export default function ChatView({
     isConnecting,
     isSendBusy,
     isServerThread,
+    makeNoMistakeLevel,
     navigate,
     resetLocalDispatch,
     runtimeMode,
@@ -9562,6 +9603,7 @@ export default function ChatView({
     assistantDeliveryMode,
     syncServerShellSnapshot,
     selectedModel,
+    setComposerDraftMakeNoMistakeLevel,
   ]);
 
   const setPromptFromTraits = useCallback(
@@ -11656,6 +11698,15 @@ export default function ChatView({
                                 {interactionMode === "plan" ? "Plan" : "Debug"}
                               </span>
                             </Button>
+                          ) : null}
+
+                          {!activePendingProgress ? (
+                            <ComposerMakeNoMistakeControl
+                              level={makeNoMistakeLevel}
+                              onLevelChange={(level) =>
+                                setComposerDraftMakeNoMistakeLevel(threadId, level)
+                              }
+                            />
                           ) : null}
 
                           {activeTaskList || sidebarProposedPlan || planSidebarOpen ? (
