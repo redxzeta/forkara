@@ -2,6 +2,7 @@ import type { GitForkHealthAttributionState, GitUpstreamStatusResult } from "@fo
 import { Effect } from "effect";
 import { describe, expect, it, vi } from "vitest";
 
+import { GitCommandError } from "./Errors.ts";
 import { deriveForkHealth, makeGitForkHealth } from "./gitForkHealth.ts";
 
 function upstream(overrides: Partial<GitUpstreamStatusResult> = {}): GitUpstreamStatusResult {
@@ -105,17 +106,60 @@ describe("makeGitForkHealth", () => {
       }),
     );
     const readUpstream = vi.fn(() => Effect.succeed(upstream()));
-    const service = makeGitForkHealth({ execute, upstreamStatus: readUpstream });
+    const readAttribution = vi.fn(() =>
+      Effect.succeed({
+        state: "ready" as const,
+        message: "No removed or modified attribution files were found relative to cached upstream.",
+        localRef: "HEAD",
+        upstreamRef: "refs/remotes/upstream/main",
+        warningCount: 0,
+        files: [],
+      }),
+    );
+    const service = makeGitForkHealth({
+      execute,
+      upstreamStatus: readUpstream,
+      attributionGuardian: readAttribution,
+    });
 
     const result = await Effect.runPromise(service.read("/repo"));
 
     expect(result.state).toBe("local_changes");
     expect(readUpstream).toHaveBeenCalledOnce();
+    expect(readAttribution).toHaveBeenCalledWith("/repo", upstream());
     expect(execute.mock.calls.map((call) => call[2])).toEqual([
       ["status", "--porcelain=v1", "-z"],
       ["diff", "--name-only", "--diff-filter=U", "-z"],
     ]);
     expect(execute.mock.calls.flatMap((call) => call[2])).not.toContain("fetch");
     expect(execute.mock.calls.flatMap((call) => call[2])).not.toContain("ls-remote");
+  });
+
+  it("keeps fork health available when the attribution detail read fails", async () => {
+    const execute = vi.fn(() => Effect.succeed({ code: 0, stdout: "", stderr: "" }));
+    const service = makeGitForkHealth({
+      execute,
+      upstreamStatus: () => Effect.succeed(upstream()),
+      attributionGuardian: (cwd) =>
+        Effect.fail(
+          new GitCommandError({
+            operation: "GitCore.attributionGuardian",
+            command: "git ls-tree",
+            cwd,
+            detail: "History read failed.",
+          }),
+        ),
+    });
+
+    const result = await Effect.runPromise(service.read("/repo"));
+
+    expect(result).toMatchObject({
+      state: "healthy",
+      attribution: {
+        state: "unknown",
+        message:
+          "Attribution comparison could not be completed. Open Attribution Guardian to retry.",
+      },
+    });
   });
 });

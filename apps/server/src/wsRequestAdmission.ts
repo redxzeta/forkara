@@ -41,6 +41,7 @@ const EXPENSIVE_READ_METHODS = new Set<string>([
   WS_METHODS.gitStatus,
   WS_METHODS.gitUpstreamStatus,
   WS_METHODS.gitForkHealth,
+  WS_METHODS.gitAttributionGuardian,
   WS_METHODS.gitForkArchaeologyOverview,
   WS_METHODS.gitForkArchaeologyCommitPage,
   WS_METHODS.gitForkArchaeologyFileHistory,
