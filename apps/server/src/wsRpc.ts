@@ -1371,6 +1371,8 @@ const makeWsRpcHandlersLayer = () =>
           rpcEffect(git.forkHealth(input.cwd), "Failed to read fork health"),
         [WS_METHODS.gitAttributionGuardian]: (input) =>
           rpcEffect(git.attributionGuardian(input.cwd), "Failed to compare attribution files"),
+        [WS_METHODS.gitForkFamilyTree]: (input) =>
+          rpcEffect(gitManager.forkFamilyTree(input.cwd), "Failed to read fork family tree"),
         [WS_METHODS.gitForkArchaeologyOverview]: (input) =>
           rpcEffect(
             git.forkArchaeologyOverview(input.cwd),

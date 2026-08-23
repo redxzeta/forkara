@@ -48,6 +48,7 @@ function makeTestLayer(state: {
       }),
   } as unknown as GitCoreShape;
   const gitManager: GitManagerShape = {
+    forkFamilyTree: () => Effect.die("forkFamilyTree should not be called in this test"),
     status: () =>
       Effect.sync(() => {
         state.statusCalls += 1;

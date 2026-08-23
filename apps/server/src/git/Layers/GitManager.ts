@@ -19,6 +19,7 @@ import { summarizeUnifiedPatchTotals } from "@forkara/shared/unifiedPatchStats";
 import { resolveWorktreeHandoffIntent } from "@forkara/shared/worktreeHandoff";
 
 import { GitManagerError } from "../Errors.ts";
+import { makeGitForkFamilyTree } from "../gitForkFamilyTree.ts";
 import {
   GitManager,
   type GitActionProgressReporter,
@@ -693,6 +694,12 @@ export const makeGitManager = Effect.gen(function* () {
   const gitCore = yield* GitCore;
   const gitHubCli = yield* GitHubCli;
   const textGeneration = yield* TextGeneration;
+  const forkFamilyTree = makeGitForkFamilyTree({
+    executeGit: gitCore.execute,
+    readConfigValue: gitCore.readConfigValue,
+    upstreamStatus: gitCore.upstreamStatus,
+    executeGitHub: gitHubCli.execute,
+  });
 
   const createProgressEmitter = (
     input: { cwd: string; action: GitStackedAction },
@@ -2780,6 +2787,7 @@ The local stash entry was kept for recovery.`,
   );
 
   return {
+    forkFamilyTree: forkFamilyTree.read,
     status,
     pullRequestForBranch,
     readWorkingTreeDiff,

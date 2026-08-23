@@ -47,6 +47,7 @@ import { EnvironmentEditorSection } from "./EnvironmentEditorSection";
 import { EnvironmentForkHealthSection } from "./EnvironmentForkHealthSection";
 import { EnvironmentForkArchaeologySection } from "./EnvironmentForkArchaeologySection";
 import { EnvironmentAttributionGuardianSection } from "./EnvironmentAttributionGuardianSection";
+import { EnvironmentForkFamilyTreeSection } from "./EnvironmentForkFamilyTreeSection";
 import {
   EnvironmentAutomationsSection,
   type EnvironmentAutomationPanelItem,
@@ -443,6 +444,7 @@ export function EnvironmentPanel({
           <EnvironmentUpstreamRadarSection gitCwd={gitCwd} enabled={open} />
           <EnvironmentAttributionGuardianSection gitCwd={gitCwd} enabled={open} />
           <EnvironmentForkArchaeologySection gitCwd={gitCwd} enabled={open} />
+          <EnvironmentForkFamilyTreeSection gitCwd={gitCwd} enabled={open} />
         </div>
       ) : null}
 
