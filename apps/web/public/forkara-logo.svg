@@ -31,7 +31,7 @@
 
   <!-- Forkara mark -->
   <g fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <!-- flowing upper connection / subtle Synara network reference -->
+    <!-- flowing upper connection / subtle fork-network reference -->
     <path
       d="M360 270
          C360 345 390 366 443 391

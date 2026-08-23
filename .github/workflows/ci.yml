@@ -2,9 +2,11 @@ name: CI
 
 on:
   pull_request:
+    branches:
+      - built-from-scratch
   push:
     branches:
-      - main
+      - built-from-scratch
 
 jobs:
   quality:
@@ -212,7 +214,7 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile --ignore-scripts
 
-      - name: Verify Synara identity
+      - name: Verify Forkara identity
         run: bun run brand:check
 
       - name: Exercise release-only workflow steps
