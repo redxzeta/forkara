@@ -198,6 +198,7 @@ export const WS_METHODS = {
   gitAttributionGuardian: "git.attributionGuardian",
   gitForkFamilyTree: "git.forkFamilyTree",
   gitOriginalityMeter: "git.originalityMeter",
+  gitForkSpeedrun: "git.forkSpeedrun",
   gitForkArchaeologyOverview: "git.forkArchaeologyOverview",
   gitForkArchaeologyCommitPage: "git.forkArchaeologyCommitPage",
   gitForkArchaeologyFileHistory: "git.forkArchaeologyFileHistory",
