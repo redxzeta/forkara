@@ -80,6 +80,8 @@ import type {
   GitStashInfoResult,
   GitStatusInput,
   GitStatusResult,
+  GitUpstreamStatusInput,
+  GitUpstreamStatusResult,
   GitSummarizeDiffInput,
   GitSummarizeDiffResult,
   GitUnstageFilesInput,
@@ -709,6 +711,8 @@ export interface NativeApi {
     // Stacked action API
     pull: (input: GitPullInput) => Promise<GitPullResult>;
     status: (input: GitStatusInput) => Promise<GitStatusResult>;
+    upstreamStatus: (input: GitUpstreamStatusInput) => Promise<GitUpstreamStatusResult>;
+    refreshUpstream: (input: GitUpstreamStatusInput) => Promise<GitUpstreamStatusResult>;
     readWorkingTreeDiff: (
       input: GitReadWorkingTreeDiffInput,
     ) => Promise<GitReadWorkingTreeDiffResult>;
