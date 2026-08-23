@@ -1,6 +1,7 @@
 import { Option, Schema } from "effect";
 import {
   CommandId,
+  IsoDateTime,
   NonNegativeInt,
   PositiveInt,
   ThreadId,
@@ -128,6 +129,11 @@ export const GitStatusInput = Schema.Struct({
   cwd: TrimmedNonEmptyStringSchema,
 });
 export type GitStatusInput = typeof GitStatusInput.Type;
+
+export const GitUpstreamStatusInput = Schema.Struct({
+  cwd: TrimmedNonEmptyStringSchema,
+});
+export type GitUpstreamStatusInput = typeof GitUpstreamStatusInput.Type;
 
 export const GitHubRepositoryInput = Schema.Struct({
   cwd: TrimmedNonEmptyStringSchema,
@@ -351,6 +357,27 @@ export const GitStatusResult = Schema.Struct({
   pr: Schema.NullOr(GitStatusPr),
 });
 export type GitStatusResult = typeof GitStatusResult.Type;
+
+/**
+ * Cached, repository-local relationship between the fork's default branch and the configured
+ * `upstream` remote. Reads of this model never contact the network; only the explicit refresh
+ * operation does that work.
+ */
+export const GitUpstreamStatusState = Schema.Literals(["missing", "stale", "ready", "unreachable"]);
+export type GitUpstreamStatusState = typeof GitUpstreamStatusState.Type;
+
+export const GitUpstreamStatusResult = Schema.Struct({
+  state: GitUpstreamStatusState,
+  hasUpstream: Schema.Boolean,
+  localBranch: TrimmedNonEmptyStringSchema.pipe(Schema.NullOr),
+  upstreamBranch: TrimmedNonEmptyStringSchema.pipe(Schema.NullOr),
+  aheadCount: NonNegativeInt,
+  behindCount: NonNegativeInt,
+  lastSuccessfulFetchAt: IsoDateTime.pipe(Schema.NullOr),
+  checkedAt: IsoDateTime,
+  message: TrimmedNonEmptyStringSchema,
+});
+export type GitUpstreamStatusResult = typeof GitUpstreamStatusResult.Type;
 
 export const GitStatusLocalResult = Schema.Struct({
   branch: TrimmedNonEmptyStringSchema.pipe(Schema.NullOr),

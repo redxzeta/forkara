@@ -31,6 +31,7 @@ import { parseGitHubRepositoryNameWithOwnerFromRemoteUrl } from "@forkara/shared
 import { decodeJsonResult } from "@forkara/shared/schemaJson";
 
 import { GitCheckoutDirtyWorktreeError, GitCommandError } from "../Errors.ts";
+import { makeGitUpstreamRadar } from "../gitUpstreamRadar.ts";
 import {
   countTextFileLines,
   normalizeConfiguredMergeBranch,
@@ -1118,6 +1119,10 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
           "No git remote is configured for this repository.",
         );
       });
+
+    const upstreamRadar = makeGitUpstreamRadar({ execute: executeGit, resolveDefaultBranchName });
+    const upstreamStatus: GitCoreShape["upstreamStatus"] = upstreamRadar.status;
+    const refreshUpstream: GitCoreShape["refreshUpstream"] = upstreamRadar.refresh;
 
     const resolvePushRemoteName = (
       cwd: string,
@@ -3308,6 +3313,8 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
       execute,
       status,
       statusDetails,
+      upstreamStatus,
+      refreshUpstream,
       readBranchContext,
       readWorkingTreePatch,
       readUnstagedPatch,
