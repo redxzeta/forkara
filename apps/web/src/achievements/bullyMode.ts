@@ -51,7 +51,6 @@ export function recordBullyModeAchievements(
   activities: readonly OrchestrationThreadActivity[],
   record: typeof recordAchievementEvent = recordAchievementEvent,
 ): void {
-  for (const _turnId of successfulBullyModeTurnIds(activities)) {
-    record({ type: "assistant_response.completed", bullyModeEnabled: true });
-  }
+  if (successfulBullyModeTurnIds(activities).length === 0) return;
+  record({ type: "assistant_response.completed", bullyModeEnabled: true });
 }

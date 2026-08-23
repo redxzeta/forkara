@@ -112,8 +112,10 @@ describe("Bully Mode achievement activity adapter", () => {
       capture("turn-2", true),
       terminal("turn-2", "completed"),
     ];
-    recordBullyModeAchievements(activities, (event) => engine.record(event));
+    const record = vi.fn((event) => engine.record(event));
+    recordBullyModeAchievements(activities, record);
 
+    expect(record).toHaveBeenCalledOnce();
     expect(engine.getSnapshot().filter((unlock) => unlock.id === "dirt_in_your_eye")).toHaveLength(
       1,
     );
