@@ -11310,6 +11310,7 @@ export default function ChatView({
     markerMessageTextById,
     notes: threadNotes,
     activeProjectId,
+    activeProjectCreatedAt: activeProject?.createdAt ?? null,
     projectInstructions,
     canCopyProjectInstructionsToNotes: !isLocalDraftThread,
     onProjectInstructionsChange: setProjectInstructions,

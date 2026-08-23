@@ -147,6 +147,12 @@ export type GitForkFamilyTreeInput = typeof GitForkFamilyTreeInput.Type;
 export const GitOriginalityMeterInput = GitUpstreamStatusInput;
 export type GitOriginalityMeterInput = typeof GitOriginalityMeterInput.Type;
 
+export const GitForkSpeedrunInput = Schema.Struct({
+  cwd: TrimmedNonEmptyStringSchema,
+  startedAt: IsoDateTime,
+});
+export type GitForkSpeedrunInput = typeof GitForkSpeedrunInput.Type;
+
 export const GIT_FORK_ARCHAEOLOGY_DEFAULT_PAGE_SIZE = 20;
 export const GIT_FORK_ARCHAEOLOGY_MAX_PAGE_SIZE = 50;
 
@@ -547,6 +553,39 @@ export const GitOriginalityMeterResult = Schema.Struct({
   exclusionRules: Schema.Array(TrimmedNonEmptyStringSchema),
 });
 export type GitOriginalityMeterResult = typeof GitOriginalityMeterResult.Type;
+
+export const GitForkSpeedrunState = GitOriginalityMeterState;
+export type GitForkSpeedrunState = typeof GitForkSpeedrunState.Type;
+
+export const GitForkSpeedrunMilestoneKind = Schema.Literals([
+  "first_fork_commit",
+  "readme_changed",
+]);
+export type GitForkSpeedrunMilestoneKind = typeof GitForkSpeedrunMilestoneKind.Type;
+
+export const GitForkSpeedrunEvent = Schema.Struct({
+  kind: Schema.Union([Schema.Literal("project_added"), GitForkSpeedrunMilestoneKind]),
+  label: TrimmedNonEmptyStringSchema,
+  occurredAt: IsoDateTime,
+  elapsedSeconds: NonNegativeInt,
+  commit: Schema.NullOr(
+    Schema.Struct({
+      sha: TrimmedNonEmptyStringSchema,
+      shortSha: TrimmedNonEmptyStringSchema,
+      subject: TrimmedNonEmptyStringSchema,
+    }),
+  ),
+});
+export type GitForkSpeedrunEvent = typeof GitForkSpeedrunEvent.Type;
+
+export const GitForkSpeedrunResult = Schema.Struct({
+  state: GitForkSpeedrunState,
+  message: TrimmedNonEmptyStringSchema,
+  startedAt: IsoDateTime,
+  events: Schema.Array(GitForkSpeedrunEvent),
+  missingEvents: Schema.Array(GitForkSpeedrunMilestoneKind),
+});
+export type GitForkSpeedrunResult = typeof GitForkSpeedrunResult.Type;
 
 export const GitForkArchaeologyState = Schema.Literals([
   "ready",

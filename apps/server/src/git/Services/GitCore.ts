@@ -35,6 +35,8 @@ import type {
   GitForkHealthResult,
   GitAttributionGuardianResult,
   GitOriginalityMeterResult,
+  GitForkSpeedrunInput,
+  GitForkSpeedrunResult,
   GitForkArchaeologyCommitPageInput,
   GitForkArchaeologyCommitPageResult,
   GitForkArchaeologyFileHistoryInput,
@@ -253,6 +255,11 @@ export interface GitCoreShape {
   readonly originalityMeter: (
     cwd: string,
   ) => Effect.Effect<GitOriginalityMeterResult, GitCommandError>;
+
+  /** Derive opt-in display milestones from project creation and exact local fork history. */
+  readonly forkSpeedrun: (
+    input: GitForkSpeedrunInput,
+  ) => Effect.Effect<GitForkSpeedrunResult, GitCommandError>;
 
   /** Read the exact merge-base and unique commit counts for HEAD and cached upstream. */
   readonly forkArchaeologyOverview: (

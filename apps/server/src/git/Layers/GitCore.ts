@@ -34,6 +34,7 @@ import { GitCheckoutDirtyWorktreeError, GitCommandError } from "../Errors.ts";
 import { makeGitAttributionGuardian } from "../gitAttributionGuardian.ts";
 import { makeGitForkArchaeology } from "../gitForkArchaeology.ts";
 import { makeGitForkHealth } from "../gitForkHealth.ts";
+import { makeGitForkSpeedrun } from "../gitForkSpeedrun.ts";
 import { makeGitOriginalityMeter } from "../gitOriginalityMeter.ts";
 import { makeGitUpstreamRadar } from "../gitUpstreamRadar.ts";
 import { makeGitUpstreamSync } from "../gitUpstreamSync.ts";
@@ -1148,6 +1149,10 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
       execute: executeGit,
       forkArchaeologyOverview: forkArchaeology.overview,
     });
+    const forkSpeedrun = makeGitForkSpeedrun({
+      execute: executeGit,
+      forkArchaeologyOverview: forkArchaeology.overview,
+    });
     const upstreamStatus: GitCoreShape["upstreamStatus"] = upstreamRadar.status;
     const refreshUpstream: GitCoreShape["refreshUpstream"] = upstreamRadar.refresh;
     const previewUpstreamSync: GitCoreShape["previewUpstreamSync"] = upstreamSync.preview;
@@ -1161,6 +1166,7 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
     const readForkArchaeologyFileHistory: GitCoreShape["forkArchaeologyFileHistory"] =
       forkArchaeology.fileHistory;
     const readOriginalityMeter: GitCoreShape["originalityMeter"] = originalityMeter.read;
+    const readForkSpeedrun: GitCoreShape["forkSpeedrun"] = forkSpeedrun.read;
 
     const resolvePushRemoteName = (
       cwd: string,
@@ -3358,6 +3364,7 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
       forkHealth: readForkHealth,
       attributionGuardian: readAttributionGuardian,
       originalityMeter: readOriginalityMeter,
+      forkSpeedrun: readForkSpeedrun,
       forkArchaeologyOverview: readForkArchaeologyOverview,
       forkArchaeologyCommitPage: readForkArchaeologyCommitPage,
       forkArchaeologyFileHistory: readForkArchaeologyFileHistory,
