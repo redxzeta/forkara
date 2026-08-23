@@ -13,12 +13,14 @@ import type { ProviderInteractionMode } from "@forkara/contracts";
 import { ComposerExtrasMenu } from "./ComposerExtrasMenu";
 
 async function mountMenu(props?: {
+  bullyModeEnabled?: boolean;
   fastModeEnabled?: boolean;
   interactionMode?: ProviderInteractionMode;
   supportsFastMode?: boolean;
 }) {
   const onAddAttachments = vi.fn();
   const onToggleFastMode = vi.fn();
+  const onBullyModeChange = vi.fn();
   const onInteractionModeChange = vi.fn();
   const host = document.createElement("div");
   document.body.append(host);
@@ -27,8 +29,10 @@ async function mountMenu(props?: {
       interactionMode={props?.interactionMode ?? "default"}
       supportsFastMode={props?.supportsFastMode ?? true}
       fastModeEnabled={props?.fastModeEnabled ?? false}
+      bullyModeEnabled={props?.bullyModeEnabled ?? false}
       onAddAttachments={onAddAttachments}
       onToggleFastMode={onToggleFastMode}
+      onBullyModeChange={onBullyModeChange}
       onInteractionModeChange={onInteractionModeChange}
     />,
     { container: host },
@@ -43,6 +47,7 @@ async function mountMenu(props?: {
     [Symbol.asyncDispose]: cleanup,
     cleanup,
     onAddAttachments,
+    onBullyModeChange,
     onToggleFastMode,
     onInteractionModeChange,
   };
@@ -108,5 +113,18 @@ describe("ComposerExtrasMenu", () => {
     await page.getByRole("menuitemradio", { name: "Fast" }).click();
 
     expect(menu.onToggleFastMode).toHaveBeenCalledTimes(1);
+  });
+
+  it("toggles the shared Bully Mode setting from the extras menu", async () => {
+    await using menu = await mountMenu({ bullyModeEnabled: false });
+
+    await page.getByLabelText("Composer extras").click();
+    const toggle = page.getByRole("menuitemcheckbox", {
+      name: "Bully Mode — changes response tone only",
+    });
+    await expect.element(toggle).toHaveAttribute("aria-checked", "false");
+    await toggle.click();
+
+    expect(menu.onBullyModeChange.mock.calls[0]?.[0]).toBe(true);
   });
 });
