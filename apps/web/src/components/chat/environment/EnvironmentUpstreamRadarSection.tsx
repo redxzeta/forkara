@@ -81,6 +81,10 @@ export function EnvironmentUpstreamRadarSection({
     },
     onSuccess: (status) => {
       queryClient.setQueryData(gitQueryKeys.upstreamStatus(gitCwd), status);
+      void queryClient.invalidateQueries({
+        queryKey: gitQueryKeys.forkHealth(gitCwd),
+        exact: true,
+      });
     },
     onError: (error) => {
       toastManager.add({
@@ -98,6 +102,10 @@ export function EnvironmentUpstreamRadarSection({
     onSuccess: (preview) => {
       setSyncPreview(preview);
       void statusQuery.refetch();
+      void queryClient.invalidateQueries({
+        queryKey: gitQueryKeys.forkHealth(gitCwd),
+        exact: true,
+      });
     },
   });
   const applySyncMutation = useMutation({
@@ -114,6 +122,10 @@ export function EnvironmentUpstreamRadarSection({
     onSuccess: (result) => {
       queryClient.setQueryData(gitQueryKeys.upstreamStatus(gitCwd), result.upstreamStatus);
       void queryClient.invalidateQueries({ queryKey: gitQueryKeys.status(gitCwd), exact: true });
+      void queryClient.invalidateQueries({
+        queryKey: gitQueryKeys.forkHealth(gitCwd),
+        exact: true,
+      });
       setSyncDialogOpen(false);
       setSyncPreview(null);
       toastManager.add({
