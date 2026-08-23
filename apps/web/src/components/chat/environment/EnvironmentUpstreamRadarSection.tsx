@@ -85,6 +85,9 @@ export function EnvironmentUpstreamRadarSection({
         queryKey: gitQueryKeys.forkHealth(gitCwd),
         exact: true,
       });
+      void queryClient.invalidateQueries({
+        queryKey: gitQueryKeys.forkArchaeology(gitCwd),
+      });
     },
     onError: (error) => {
       toastManager.add({
@@ -106,6 +109,9 @@ export function EnvironmentUpstreamRadarSection({
         queryKey: gitQueryKeys.forkHealth(gitCwd),
         exact: true,
       });
+      void queryClient.invalidateQueries({
+        queryKey: gitQueryKeys.forkArchaeology(gitCwd),
+      });
     },
   });
   const applySyncMutation = useMutation({
@@ -125,6 +131,9 @@ export function EnvironmentUpstreamRadarSection({
       void queryClient.invalidateQueries({
         queryKey: gitQueryKeys.forkHealth(gitCwd),
         exact: true,
+      });
+      void queryClient.invalidateQueries({
+        queryKey: gitQueryKeys.forkArchaeology(gitCwd),
       });
       setSyncDialogOpen(false);
       setSyncPreview(null);
