@@ -109,6 +109,12 @@ import {
   GitUpstreamStatusResult,
   GitForkHealthInput,
   GitForkHealthResult,
+  GitForkArchaeologyOverviewInput,
+  GitForkArchaeologyOverviewResult,
+  GitForkArchaeologyCommitPageInput,
+  GitForkArchaeologyCommitPageResult,
+  GitForkArchaeologyFileHistoryInput,
+  GitForkArchaeologyFileHistoryResult,
   GitApplyUpstreamSyncInput,
   GitUpstreamSyncApplyResult,
   GitUpstreamSyncPreviewResult,
@@ -680,6 +686,27 @@ export const WsGitForkHealthRpc = Rpc.make(WS_METHODS.gitForkHealth, {
   success: GitForkHealthResult,
   error: WsRpcError,
 });
+
+export const WsGitForkArchaeologyOverviewRpc = Rpc.make(WS_METHODS.gitForkArchaeologyOverview, {
+  payload: GitForkArchaeologyOverviewInput,
+  success: GitForkArchaeologyOverviewResult,
+  error: WsRpcError,
+});
+
+export const WsGitForkArchaeologyCommitPageRpc = Rpc.make(WS_METHODS.gitForkArchaeologyCommitPage, {
+  payload: GitForkArchaeologyCommitPageInput,
+  success: GitForkArchaeologyCommitPageResult,
+  error: WsRpcError,
+});
+
+export const WsGitForkArchaeologyFileHistoryRpc = Rpc.make(
+  WS_METHODS.gitForkArchaeologyFileHistory,
+  {
+    payload: GitForkArchaeologyFileHistoryInput,
+    success: GitForkArchaeologyFileHistoryResult,
+    error: WsRpcError,
+  },
+);
 
 export const WsGitPreviewUpstreamSyncRpc = Rpc.make(WS_METHODS.gitPreviewUpstreamSync, {
   payload: GitUpstreamStatusInput,
@@ -1286,6 +1313,9 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsGitUpstreamStatusRpc,
   WsGitRefreshUpstreamRpc,
   WsGitForkHealthRpc,
+  WsGitForkArchaeologyOverviewRpc,
+  WsGitForkArchaeologyCommitPageRpc,
+  WsGitForkArchaeologyFileHistoryRpc,
   WsGitPreviewUpstreamSyncRpc,
   WsGitApplyUpstreamSyncRpc,
   WsGitReadWorkingTreeDiffRpc,

@@ -582,6 +582,12 @@ export function createWsNativeApi(): NativeApi {
       refreshUpstream: (input) =>
         transport.request(WS_METHODS.gitRefreshUpstream, input, { timeoutMs: null }),
       forkHealth: (input) => transport.request(WS_METHODS.gitForkHealth, input),
+      forkArchaeologyOverview: (input) =>
+        transport.request(WS_METHODS.gitForkArchaeologyOverview, input),
+      forkArchaeologyCommitPage: (input) =>
+        transport.request(WS_METHODS.gitForkArchaeologyCommitPage, input),
+      forkArchaeologyFileHistory: (input) =>
+        transport.request(WS_METHODS.gitForkArchaeologyFileHistory, input),
       previewUpstreamSync: (input) =>
         transport.request(WS_METHODS.gitPreviewUpstreamSync, input, { timeoutMs: null }),
       applyUpstreamSync: (input) =>
