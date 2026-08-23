@@ -144,6 +144,9 @@ export type GitAttributionGuardianInput = typeof GitAttributionGuardianInput.Typ
 export const GitForkFamilyTreeInput = GitUpstreamStatusInput;
 export type GitForkFamilyTreeInput = typeof GitForkFamilyTreeInput.Type;
 
+export const GitOriginalityMeterInput = GitUpstreamStatusInput;
+export type GitOriginalityMeterInput = typeof GitOriginalityMeterInput.Type;
+
 export const GIT_FORK_ARCHAEOLOGY_DEFAULT_PAGE_SIZE = 20;
 export const GIT_FORK_ARCHAEOLOGY_MAX_PAGE_SIZE = 50;
 
@@ -519,6 +522,31 @@ export const GitForkFamilyTreeResult = Schema.Struct({
   edges: Schema.Array(GitForkFamilyTreeEdge),
 });
 export type GitForkFamilyTreeResult = typeof GitForkFamilyTreeResult.Type;
+
+export const GitOriginalityMeterState = Schema.Literals([
+  "ready",
+  "missing_upstream",
+  "incomplete_history",
+  "unrelated_history",
+]);
+export type GitOriginalityMeterState = typeof GitOriginalityMeterState.Type;
+
+export const GitOriginalityMeterResult = Schema.Struct({
+  state: GitOriginalityMeterState,
+  message: TrimmedNonEmptyStringSchema,
+  scorePercent: Schema.NullOr(NonNegativeInt.check(Schema.isLessThanOrEqualTo(100))),
+  changedFileCount: NonNegativeInt,
+  comparableFileCount: NonNegativeInt,
+  insertions: NonNegativeInt,
+  deletions: NonNegativeInt,
+  binaryFileCount: NonNegativeInt,
+  excludedFileCount: NonNegativeInt,
+  forkUniqueCommitCount: NonNegativeInt,
+  upstreamUniqueCommitCount: NonNegativeInt,
+  calculationVersion: Schema.Literal("changed_eligible_files_v1"),
+  exclusionRules: Schema.Array(TrimmedNonEmptyStringSchema),
+});
+export type GitOriginalityMeterResult = typeof GitOriginalityMeterResult.Type;
 
 export const GitForkArchaeologyState = Schema.Literals([
   "ready",

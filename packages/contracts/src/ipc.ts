@@ -88,6 +88,8 @@ import type {
   GitAttributionGuardianResult,
   GitForkFamilyTreeInput,
   GitForkFamilyTreeResult,
+  GitOriginalityMeterInput,
+  GitOriginalityMeterResult,
   GitForkArchaeologyOverviewInput,
   GitForkArchaeologyOverviewResult,
   GitForkArchaeologyCommitPageInput,
@@ -733,6 +735,7 @@ export interface NativeApi {
       input: GitAttributionGuardianInput,
     ) => Promise<GitAttributionGuardianResult>;
     forkFamilyTree: (input: GitForkFamilyTreeInput) => Promise<GitForkFamilyTreeResult>;
+    originalityMeter: (input: GitOriginalityMeterInput) => Promise<GitOriginalityMeterResult>;
     forkArchaeologyOverview: (
       input: GitForkArchaeologyOverviewInput,
     ) => Promise<GitForkArchaeologyOverviewResult>;

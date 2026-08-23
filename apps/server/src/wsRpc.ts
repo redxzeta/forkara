@@ -1373,6 +1373,8 @@ const makeWsRpcHandlersLayer = () =>
           rpcEffect(git.attributionGuardian(input.cwd), "Failed to compare attribution files"),
         [WS_METHODS.gitForkFamilyTree]: (input) =>
           rpcEffect(gitManager.forkFamilyTree(input.cwd), "Failed to read fork family tree"),
+        [WS_METHODS.gitOriginalityMeter]: (input) =>
+          rpcEffect(git.originalityMeter(input.cwd), "Failed to calculate originality parody"),
         [WS_METHODS.gitForkArchaeologyOverview]: (input) =>
           rpcEffect(
             git.forkArchaeologyOverview(input.cwd),
