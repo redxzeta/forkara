@@ -99,7 +99,7 @@ describe("ComposerExtrasMenu", () => {
     await using menu = await mountMenu();
 
     await page.getByLabelText("Composer extras").click();
-    await page.getByRole("menuitem", { name: "Mode" }).click();
+    await page.getByRole("menuitem", { name: "Mode", exact: true }).click();
     await page.getByRole("menuitemradio", { name: "Debug" }).click();
 
     expect(menu.onInteractionModeChange).toHaveBeenCalledWith("debug");

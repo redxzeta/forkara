@@ -41,7 +41,7 @@
       stroke="url(#branchGradient)"
       stroke-width="48"/>
 
-    <!-- fork / triadic three-point reference -->
+  <!-- fork / triadic geometry reference -->
     <path
       d="M404 384
          C458 413 500 435 523 466

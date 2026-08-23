@@ -15,7 +15,6 @@ import {
   sanitizeFeatureBranchName,
 } from "@forkara/shared/git";
 import { parseGitHubRepositoryNameWithOwnerFromRemoteUrl } from "@forkara/shared/githubRepository";
-import { summarizeUnifiedPatchTotals } from "@forkara/shared/unifiedPatchStats";
 import { resolveWorktreeHandoffIntent } from "@forkara/shared/worktreeHandoff";
 
 import { GitManagerError } from "../Errors.ts";
@@ -1432,15 +1431,9 @@ export const makeGitManager = Effect.gen(function* () {
       }
     },
   );
-
-  // Same reason as summarizeDiff below: the badge surfaces need three integers, not the patch.
-  // Deriving them from the very patch readWorkingTreeDiff would have returned keeps the numbers
-  // identical to the ones a client-side parse produced, so no surface changes what it displays.
   const readWorkingTreeDiffStats: GitManagerShape["readWorkingTreeDiffStats"] = Effect.fnUntraced(
     function* (input) {
-      const { patch } = yield* readWorkingTreeDiff(input);
-      const totals = summarizeUnifiedPatchTotals(patch);
-      return totals ?? { additions: 0, deletions: 0, fileCount: 0 };
+      return yield* gitCore.readDiffStats(input.cwd, input.scope ?? "workingTree");
     },
   );
 
