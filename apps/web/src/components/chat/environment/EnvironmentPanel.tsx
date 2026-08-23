@@ -50,6 +50,7 @@ import { EnvironmentAttributionGuardianSection } from "./EnvironmentAttributionG
 import { EnvironmentForkFamilyTreeSection } from "./EnvironmentForkFamilyTreeSection";
 import { EnvironmentOriginalityMeterSection } from "./EnvironmentOriginalityMeterSection";
 import { EnvironmentForkSpeedrunSection } from "./EnvironmentForkSpeedrunSection";
+import { EnvironmentApologyProgressionSection } from "./EnvironmentApologyProgressionSection";
 import {
   EnvironmentAutomationsSection,
   type EnvironmentAutomationPanelItem,
@@ -456,6 +457,11 @@ export function EnvironmentPanel({
             gitCwd={gitCwd}
             projectId={activeProjectId}
             projectCreatedAt={activeProjectCreatedAt}
+            enabled={open}
+          />
+          <EnvironmentApologyProgressionSection
+            key={`apology-${activeProjectId}`}
+            projectId={activeProjectId}
             enabled={open}
           />
         </div>
