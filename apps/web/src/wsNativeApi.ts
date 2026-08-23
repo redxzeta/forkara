@@ -583,6 +583,7 @@ export function createWsNativeApi(): NativeApi {
         transport.request(WS_METHODS.gitRefreshUpstream, input, { timeoutMs: null }),
       forkHealth: (input) => transport.request(WS_METHODS.gitForkHealth, input),
       attributionGuardian: (input) => transport.request(WS_METHODS.gitAttributionGuardian, input),
+      forkFamilyTree: (input) => transport.request(WS_METHODS.gitForkFamilyTree, input),
       forkArchaeologyOverview: (input) =>
         transport.request(WS_METHODS.gitForkArchaeologyOverview, input),
       forkArchaeologyCommitPage: (input) =>
