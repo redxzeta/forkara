@@ -7,6 +7,7 @@
 import { type GitHubProjectProvisionProgressEvent, type SpaceId } from "@forkara/contracts";
 import { parseGitHubRepositoryInput } from "@forkara/shared/githubRepository";
 import { normalizeProjectDirectoryName } from "@forkara/shared/projectDirectoryName";
+import { recordAchievementEvent } from "../achievements/engine";
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 
 import { isElectron } from "../env";
@@ -195,6 +196,9 @@ export function CreateProjectDialog(props: {
     return api.projects.onProvisionProgress((event: GitHubProjectProvisionProgressEvent) => {
       if (event.operationId !== activeOperationIdRef.current) return;
       if (event.kind === "completed") {
+        if (event.result.forkCreated) {
+          recordAchievementEvent({ type: "fork.created" });
+        }
         setProvisionProgress("Project added");
         return;
       }
