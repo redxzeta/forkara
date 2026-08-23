@@ -12,6 +12,7 @@ export type AchievementEvent =
   | { readonly type: "readme_truthiness.result" }
   | { readonly type: "parody.blame_someone_else" }
   | { readonly type: "originality_meter.result" }
+  | { readonly type: "assistant_response.completed"; readonly bullyModeEnabled: boolean }
   | { readonly type: "apology.stage_reached"; readonly stageIndex: number }
   | { readonly type: "fork_family_tree.viewed"; readonly knownGenerationCount: number };
 
@@ -88,6 +89,14 @@ export const ACHIEVEMENT_CATALOG = [
     icon: "⏱️",
     secret: true,
     unlocks: (event) => event.type === "parody.blame_someone_else",
+  },
+  {
+    id: "dirt_in_your_eye",
+    title: "Dirt in Your Eye",
+    description: "Complete your first response with Bully Mode enabled.",
+    icon: "👁️",
+    secret: false,
+    unlocks: (event) => event.type === "assistant_response.completed" && event.bullyModeEnabled,
   },
   {
     id: "original_visionary",

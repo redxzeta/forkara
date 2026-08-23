@@ -291,6 +291,10 @@
     "./readmeTruthiness": {
       "types": "./src/readmeTruthiness.ts",
       "import": "./src/readmeTruthiness.ts"
+    },
+    "./achievementActivities": {
+      "types": "./src/achievementActivities.ts",
+      "import": "./src/achievementActivities.ts"
     }
   },
   "scripts": {

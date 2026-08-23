@@ -20,7 +20,7 @@ describe("achievement viewer", () => {
 
   it("states the local-only persistence boundary", () => {
     expect(renderToStaticMarkup(<AchievementViewer snapshot={[]} />)).toContain(
-      "No account sync, network request, or telemetry.",
+      "Unlike Git history, you may actually delete these.",
     );
   });
 });
