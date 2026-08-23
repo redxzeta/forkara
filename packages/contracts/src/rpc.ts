@@ -107,6 +107,9 @@ import {
   GitStatusResult,
   GitUpstreamStatusInput,
   GitUpstreamStatusResult,
+  GitApplyUpstreamSyncInput,
+  GitUpstreamSyncApplyResult,
+  GitUpstreamSyncPreviewResult,
   GitSummarizeDiffInput,
   GitSummarizeDiffResult,
   GitUnstageFilesInput,
@@ -667,6 +670,18 @@ export const WsGitUpstreamStatusRpc = Rpc.make(WS_METHODS.gitUpstreamStatus, {
 export const WsGitRefreshUpstreamRpc = Rpc.make(WS_METHODS.gitRefreshUpstream, {
   payload: GitUpstreamStatusInput,
   success: GitUpstreamStatusResult,
+  error: WsRpcError,
+});
+
+export const WsGitPreviewUpstreamSyncRpc = Rpc.make(WS_METHODS.gitPreviewUpstreamSync, {
+  payload: GitUpstreamStatusInput,
+  success: GitUpstreamSyncPreviewResult,
+  error: WsRpcError,
+});
+
+export const WsGitApplyUpstreamSyncRpc = Rpc.make(WS_METHODS.gitApplyUpstreamSync, {
+  payload: GitApplyUpstreamSyncInput,
+  success: GitUpstreamSyncApplyResult,
   error: WsRpcError,
 });
 
@@ -1262,6 +1277,8 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsGitStatusRpc,
   WsGitUpstreamStatusRpc,
   WsGitRefreshUpstreamRpc,
+  WsGitPreviewUpstreamSyncRpc,
+  WsGitApplyUpstreamSyncRpc,
   WsGitReadWorkingTreeDiffRpc,
   WsGitWorkingTreeDiffStatsRpc,
   WsGitSummarizeDiffRpc,

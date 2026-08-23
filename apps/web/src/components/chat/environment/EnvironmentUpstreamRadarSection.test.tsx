@@ -38,6 +38,7 @@ describe("EnvironmentUpstreamRadarSection", () => {
     expect(html).toContain("built-from-scratch → upstream/main");
     expect(html).toContain('aria-label="2 ahead, 3 behind"');
     expect(html).toContain("Fetched now");
+    expect(html).toContain("Preview sync");
     expect(html).toContain("Refresh upstream");
   });
 
@@ -56,5 +57,6 @@ describe("EnvironmentUpstreamRadarSection", () => {
 
     expect(html).toContain("No upstream remote is configured for this repository.");
     expect(html).not.toContain("Refresh upstream");
+    expect(html).not.toContain("Preview sync");
   });
 });

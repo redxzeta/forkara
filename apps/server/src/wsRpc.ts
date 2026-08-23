@@ -1367,6 +1367,19 @@ const makeWsRpcHandlersLayer = () =>
             git.withMutation(input.cwd, git.refreshUpstream(input.cwd)),
             "Failed to refresh upstream status",
           ),
+        [WS_METHODS.gitPreviewUpstreamSync]: (input) =>
+          rpcEffect(
+            git.withMutation(input.cwd, git.previewUpstreamSync(input.cwd)),
+            "Failed to preview upstream sync",
+          ),
+        [WS_METHODS.gitApplyUpstreamSync]: (input) =>
+          rpcEffect(
+            refreshGitStatusAfter(
+              input.cwd,
+              git.withMutation(input.cwd, git.applyUpstreamSync(input)),
+            ),
+            "Failed to apply upstream sync",
+          ),
         [WS_METHODS.gitReadWorkingTreeDiff]: (input) =>
           rpcEffect(gitManager.readWorkingTreeDiff(input), "Failed to read working tree diff"),
         [WS_METHODS.gitWorkingTreeDiffStats]: (input) =>

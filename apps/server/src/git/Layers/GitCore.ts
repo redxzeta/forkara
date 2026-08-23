@@ -32,6 +32,7 @@ import { decodeJsonResult } from "@forkara/shared/schemaJson";
 
 import { GitCheckoutDirtyWorktreeError, GitCommandError } from "../Errors.ts";
 import { makeGitUpstreamRadar } from "../gitUpstreamRadar.ts";
+import { makeGitUpstreamSync } from "../gitUpstreamSync.ts";
 import {
   countTextFileLines,
   normalizeConfiguredMergeBranch,
@@ -1121,8 +1122,15 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
       });
 
     const upstreamRadar = makeGitUpstreamRadar({ execute: executeGit, resolveDefaultBranchName });
+    const upstreamSync = makeGitUpstreamSync({
+      execute: executeGit,
+      status: upstreamRadar.status,
+      refresh: upstreamRadar.refresh,
+    });
     const upstreamStatus: GitCoreShape["upstreamStatus"] = upstreamRadar.status;
     const refreshUpstream: GitCoreShape["refreshUpstream"] = upstreamRadar.refresh;
+    const previewUpstreamSync: GitCoreShape["previewUpstreamSync"] = upstreamSync.preview;
+    const applyUpstreamSync: GitCoreShape["applyUpstreamSync"] = upstreamSync.apply;
 
     const resolvePushRemoteName = (
       cwd: string,
@@ -3315,6 +3323,8 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
       statusDetails,
       upstreamStatus,
       refreshUpstream,
+      previewUpstreamSync,
+      applyUpstreamSync,
       readBranchContext,
       readWorkingTreePatch,
       readUnstagedPatch,
