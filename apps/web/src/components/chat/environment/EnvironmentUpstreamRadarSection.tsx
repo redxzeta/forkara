@@ -97,6 +97,7 @@ export function EnvironmentUpstreamRadarSection({
         queryKey: gitQueryKeys.originalityMeter(gitCwd),
         exact: true,
       });
+      void queryClient.invalidateQueries({ queryKey: gitQueryKeys.forkSpeedrun(gitCwd) });
       void queryClient.invalidateQueries({
         queryKey: gitQueryKeys.forkArchaeology(gitCwd),
       });
@@ -133,6 +134,7 @@ export function EnvironmentUpstreamRadarSection({
         queryKey: gitQueryKeys.originalityMeter(gitCwd),
         exact: true,
       });
+      void queryClient.invalidateQueries({ queryKey: gitQueryKeys.forkSpeedrun(gitCwd) });
       void queryClient.invalidateQueries({
         queryKey: gitQueryKeys.forkArchaeology(gitCwd),
       });
@@ -168,6 +170,7 @@ export function EnvironmentUpstreamRadarSection({
         queryKey: gitQueryKeys.originalityMeter(gitCwd),
         exact: true,
       });
+      void queryClient.invalidateQueries({ queryKey: gitQueryKeys.forkSpeedrun(gitCwd) });
       void queryClient.invalidateQueries({
         queryKey: gitQueryKeys.forkArchaeology(gitCwd),
       });

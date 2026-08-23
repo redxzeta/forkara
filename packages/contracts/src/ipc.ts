@@ -90,6 +90,8 @@ import type {
   GitForkFamilyTreeResult,
   GitOriginalityMeterInput,
   GitOriginalityMeterResult,
+  GitForkSpeedrunInput,
+  GitForkSpeedrunResult,
   GitForkArchaeologyOverviewInput,
   GitForkArchaeologyOverviewResult,
   GitForkArchaeologyCommitPageInput,
@@ -736,6 +738,7 @@ export interface NativeApi {
     ) => Promise<GitAttributionGuardianResult>;
     forkFamilyTree: (input: GitForkFamilyTreeInput) => Promise<GitForkFamilyTreeResult>;
     originalityMeter: (input: GitOriginalityMeterInput) => Promise<GitOriginalityMeterResult>;
+    forkSpeedrun: (input: GitForkSpeedrunInput) => Promise<GitForkSpeedrunResult>;
     forkArchaeologyOverview: (
       input: GitForkArchaeologyOverviewInput,
     ) => Promise<GitForkArchaeologyOverviewResult>;

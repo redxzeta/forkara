@@ -49,6 +49,7 @@ import { EnvironmentForkArchaeologySection } from "./EnvironmentForkArchaeologyS
 import { EnvironmentAttributionGuardianSection } from "./EnvironmentAttributionGuardianSection";
 import { EnvironmentForkFamilyTreeSection } from "./EnvironmentForkFamilyTreeSection";
 import { EnvironmentOriginalityMeterSection } from "./EnvironmentOriginalityMeterSection";
+import { EnvironmentForkSpeedrunSection } from "./EnvironmentForkSpeedrunSection";
 import {
   EnvironmentAutomationsSection,
   type EnvironmentAutomationPanelItem,
@@ -169,6 +170,8 @@ export interface EnvironmentPanelProps {
   notes: string;
   /** Active project whose local instructions should be edited. */
   activeProjectId: ProjectId | null;
+  /** Server-recorded project creation receipt used as the opt-in speedrun start. */
+  activeProjectCreatedAt: string | null;
   /** Per-project freeform instructions, persisted locally and optionally copied into notes. */
   projectInstructions: string;
   /** Whether the current thread is server-backed enough to accept notepad updates. */
@@ -266,6 +269,7 @@ export function EnvironmentPanel({
   markerMessageTextById,
   notes,
   activeProjectId,
+  activeProjectCreatedAt,
   projectInstructions,
   canCopyProjectInstructionsToNotes,
   onProjectInstructionsChange,
@@ -447,6 +451,13 @@ export function EnvironmentPanel({
           <EnvironmentForkArchaeologySection gitCwd={gitCwd} enabled={open} />
           <EnvironmentForkFamilyTreeSection gitCwd={gitCwd} enabled={open} />
           <EnvironmentOriginalityMeterSection gitCwd={gitCwd} enabled={open} />
+          <EnvironmentForkSpeedrunSection
+            key={activeProjectId}
+            gitCwd={gitCwd}
+            projectId={activeProjectId}
+            projectCreatedAt={activeProjectCreatedAt}
+            enabled={open}
+          />
         </div>
       ) : null}
 
