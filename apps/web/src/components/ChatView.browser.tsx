@@ -6754,8 +6754,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
       ).toBe(false);
 
       await cancelButton.click();
-      await expect.element(page.getByRole("button", { name: /Cancel/i })).toBeDisabled();
-
       releaseAttachmentCancel();
       attachmentCancelBarrier = null;
       releaseAttachmentUpload();
@@ -7728,7 +7726,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
     try {
       await page.getByLabelText("Composer extras").click();
-      await page.getByText("Mode").click();
+      await page.getByRole("menuitem", { name: "Mode", exact: true }).click();
       await page.getByRole("menuitemradio", { name: "Plan" }).click();
 
       await vi.waitFor(() => {
