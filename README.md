@@ -4,96 +4,98 @@ Forkara is a free, open-source, local-first desktop workspace and control plane 
 
 It brings provider sessions, tasks, terminals, browser work, diffs, Git worktrees, handoffs,
 automations, and pull-request delivery into one application. Forkara uses the agent subscriptions
-and accounts you already have, keeps your workspace data on your machine, and does not require a
+and accounts you already have, keeps workspace data on your machine, and does not require a
 separate Forkara cloud.
 
-Forkara is now an MCP-native agent harness in two directions: supported agents running inside Forkara
-automatically receive tools to coordinate Forkara tasks and automations, while Codex, Claude, and
-other local MCP clients can connect through a scoped integration to launch and follow Forkara work.
-
-To let a local MCP-capable app create and follow scoped Forkara tasks, see
-[External MCP integrations](docs/external-mcp.md).
+Forkara is early-stage software. APIs and interface details remain under active development.
 
 ![Forkara workspace with agent task, terminal, and project navigation](assets/prod/readme-screenshot.jpeg)
 
-## What it does
+## Capabilities
 
-- **Multi-provider workspace** — Claude Code, Codex, OpenCode, Cursor, Antigravity, Grok Build, Kilo Code, Pi, and Factory Droid from one app, with the subscriptions you already use.
-- **Parallel agents** — run tasks in isolated Git worktrees with their own branches so concurrent agents stay out of each other's way. Watch native subagents and workflows with live phases and pause/stop controls.
-- **One working surface** — keep split chats, real terminals, browser previews and verification, files, diffs, and Git tools beside the conversation.
-- **Handoffs and orchestration** — hand a task to a different provider so the new model continues with the same context and environment, or schedule recurring agent runs with automations.
-- **Agent Gateway and External MCP** — let a supported provider session inside the app create and steer other Forkara tasks, or pair local MCP clients such as Codex and Claude Code with a scoped, revocable integration.
-- **Plan and Debug modes** — the agent can propose before executing and pause to ask questions, or run any provider through an evidence-first debug loop without changing runtime permissions.
-- **Persistent thread goals** — attach an explicit multi-turn objective with pause/resume, achievement history, and bounded autonomous continuation.
-- **Review and delivery** — inspect diffs, run browser verification, commit, push, open pull requests, and use the pull-request workspace to review, comment, and merge without leaving the app.
-- **Local-first by design** — chats, projects, and history stay on your machine. Coding-agent traffic goes directly to the provider you pick rather than through a Forkara model service.
+### Projects, threads, and context
 
-## Providers
+Organize work around projects and threads. Projects define the workspace; threads preserve the
+task-specific conversation, state, files, and history.
 
-Forkara connects to the coding-agent runtimes installed and authenticated on your machine. The
-provider still owns its account, models, tools, permissions, and service; Forkara owns the durable
-task, working environment, transcript, and review surfaces around that session.
+- **Multi-provider workspace** — Claude Code, Codex, OpenCode, Cursor, Antigravity, Grok Build,
+  Kilo Code, Pi, and Factory Droid from one app, with the subscriptions you already use.
+- **Parallel agents** — run tasks in isolated Git worktrees with their own branches so concurrent
+  agents stay out of each other's way. Watch native subagents and workflows with live phases and
+  pause/stop controls.
+- **Plan and Debug modes** — the agent can propose before executing and pause to ask questions, or
+  run any provider through an evidence-first debug loop without changing runtime permissions.
+- **Persistent thread goals** — attach an explicit multi-turn objective with pause/resume,
+  achievement history, and bounded autonomous continuation.
 
-| Provider                                                                | What Forkara connects to                                     |
-| ----------------------------------------------------------------------- | ------------------------------------------------------------ |
-| [Claude Code](https://www.trysynara.com/docs/providers/claude-code)     | Your installed Claude Code runtime and authenticated account |
-| [Codex](https://www.trysynara.com/docs/providers/codex)                 | Your installed and authenticated Codex CLI                   |
-| [OpenCode](https://www.trysynara.com/docs/providers/opencode)           | Your local OpenCode runtime and configured model providers   |
-| [Cursor](https://www.trysynara.com/docs/providers/cursor)               | Your local Cursor agent runtime and account                  |
-| [Antigravity](https://www.trysynara.com/docs/providers/antigravity)     | Your installed and authenticated Antigravity CLI             |
-| [Grok Build](https://www.trysynara.com/docs/providers/grok)             | Your configured Grok Build runtime and access                |
-| [Kilo Code](https://www.trysynara.com/docs/providers/kilo-code)         | Your Kilo Code runtime and configured credentials            |
-| [Pi](https://www.trysynara.com/docs/providers/pi)                       | Pi and the model providers configured through it             |
-| [Factory Droid](https://www.trysynara.com/docs/providers/factory-droid) | Your installed and authenticated Droid runtime               |
+### Integrated workspace tools
 
-## Install
+Keep the active conversation alongside the surface it is changing:
 
-Install the [desktop app from the Releases page](https://github.com/redxzeta/forkara/releases),
-or download it from [trysynara.com](https://www.trysynara.com/).
+| Surface            | Purpose                                                                                       |
+| ------------------ | --------------------------------------------------------------------------------------------- |
+| **Changes**        | Inspect diffs, changed files, and review state.                                               |
+| **Terminal**       | Run commands in the project environment.                                                      |
+| **Browser**        | Keep local previews, browser work, and the floating in-chat browser panel next to the thread. |
+| **Files / Editor** | Browse, inspect, and edit project files in context.                                           |
+| **Git**            | Work with branches, commits, pushes, and pull requests.                                       |
 
-Forkara does not include a model subscription. Install and authenticate at least one supported
-provider — such as Claude Code, Codex, OpenCode, or Cursor — before starting your first task.
-Provider authentication, API keys, model access, and usage limits remain with the provider.
+Split views, browser previews, and device previews keep execution and verification connected to the
+task that produced them.
 
-You can also run Forkara locally from source while the project is still early:
+### Handoffs, delivery, and external MCP
 
-```sh
+Forkara is an MCP-native agent harness in two directions: supported agents running inside Forkara
+automatically receive tools to coordinate Forkara tasks and automations, while Codex, Claude, and
+other local MCP clients can connect through a scoped integration to launch and follow Forkara work.
+
+- **Handoffs and orchestration** — continue a task with another provider while keeping its project
+  context, or schedule recurring agent runs with automations.
+- **Review and delivery** — inspect diffs, run browser verification, commit, push, open pull
+  requests, and use the pull-request workspace to review, comment, and merge without leaving the app.
+- **External MCP** — pair local MCP clients through a scoped, revocable integration. See
+  [External MCP integrations](docs/external-mcp.md) for setup and permission boundaries.
+
+## Installation
+
+Download the desktop app from [Forkara Releases](https://github.com/redxzeta/forkara/releases), or
+run it locally from source:
+
+```console
+git clone https://github.com/redxzeta/forkara.git
+cd forkara
 bun install
 bun run dev
 ```
 
+Forkara does not include a model subscription. Install and authenticate at least one supported
+provider — such as Claude Code, Codex, OpenCode, or Cursor — before starting a session. Provider
+authentication, API keys, model access, and usage limits remain with the provider.
+
 ## Documentation
 
-The full product documentation lives at [trysynara.com/docs](https://www.trysynara.com/docs).
-A few focused guides are also kept in this repository:
+Focused guides in this repository include:
 
-- [Quickstart](docs/quickstart.md) — from installation to your first reviewed change in about five minutes.
-- [Core concepts](docs/core-concepts.md) — projects, tasks, environments, provider sessions, and Git ownership.
-- [Providers](docs/providers.md) — what Forkara manages and what stays provider-owned.
-- [External MCP integrations](docs/external-mcp.md) — pair another local app with a scoped Forkara task surface.
+- [Quickstart](docs/quickstart.md)
+- [Core concepts](docs/core-concepts.md)
+- [Providers](docs/providers.md)
+- [External MCP integrations](docs/external-mcp.md)
 
 ## Privacy
 
 Forkara runs as the workspace layer on your machine. There is no Forkara cloud holding your
-repositories, chats, or project history.
-
-The provider you choose still receives the prompts, file snippets, diffs, terminal output, or tool
-results needed for a session, but that traffic goes to the provider you picked rather than through a
-separate Forkara-hosted workspace.
-
-## Status
-
-Forkara is still very early. Expect bugs, rough edges, and fast-moving internals.
-
-Focused issues and PRs are welcome, especially bug fixes, reliability fixes, and small maintenance
-improvements.
+repositories, chats, or project history. Provider traffic goes directly to the provider you pick.
 
 ## Contributing
 
-Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening an issue or PR.
-
-Need support? [Open a GitHub issue](https://github.com/redxzeta/forkara/issues).
+Bug fixes, reliability improvements, performance work, documentation, and maintenance changes are
+welcome. Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request, or
+[open an issue](https://github.com/redxzeta/forkara/issues) for a reproducible problem.
 
 ## Origins
 
 Forkara began as a clone of [T3Code](https://github.com/pingdotgg/t3code), but it has since become a substantially different product with its own branding, packaging, release system, provider orchestration, desktop app behavior, and product direction.
+
+## License
+
+Forkara is licensed under the [MIT License](./LICENSE).
