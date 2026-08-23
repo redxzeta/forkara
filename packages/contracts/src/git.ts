@@ -141,6 +141,9 @@ export type GitForkHealthInput = typeof GitForkHealthInput.Type;
 export const GitAttributionGuardianInput = GitUpstreamStatusInput;
 export type GitAttributionGuardianInput = typeof GitAttributionGuardianInput.Type;
 
+export const GitForkFamilyTreeInput = GitUpstreamStatusInput;
+export type GitForkFamilyTreeInput = typeof GitForkFamilyTreeInput.Type;
+
 export const GIT_FORK_ARCHAEOLOGY_DEFAULT_PAGE_SIZE = 20;
 export const GIT_FORK_ARCHAEOLOGY_MAX_PAGE_SIZE = 50;
 
@@ -478,6 +481,44 @@ export const GitAttributionGuardianResult = Schema.Struct({
   files: Schema.Array(GitAttributionGuardianFile),
 });
 export type GitAttributionGuardianResult = typeof GitAttributionGuardianResult.Type;
+
+export const GitForkFamilyTreeMetadataState = Schema.Literals([
+  "local_only",
+  "partial",
+  "complete",
+]);
+export type GitForkFamilyTreeMetadataState = typeof GitForkFamilyTreeMetadataState.Type;
+
+export const GitForkFamilyTreeNodeRole = Schema.Literals(["current", "upstream", "github_parent"]);
+export type GitForkFamilyTreeNodeRole = typeof GitForkFamilyTreeNodeRole.Type;
+
+export const GitForkFamilyTreeNode = Schema.Struct({
+  id: TrimmedNonEmptyStringSchema,
+  role: GitForkFamilyTreeNodeRole,
+  name: TrimmedNonEmptyStringSchema,
+  repositoryUrl: Schema.NullOr(TrimmedNonEmptyStringSchema),
+  remoteName: Schema.NullOr(TrimmedNonEmptyStringSchema),
+  defaultBranch: Schema.NullOr(TrimmedNonEmptyStringSchema),
+  aheadCount: Schema.NullOr(NonNegativeInt),
+  behindCount: Schema.NullOr(NonNegativeInt),
+  lastActivityAt: Schema.NullOr(IsoDateTime),
+});
+export type GitForkFamilyTreeNode = typeof GitForkFamilyTreeNode.Type;
+
+export const GitForkFamilyTreeEdge = Schema.Struct({
+  from: TrimmedNonEmptyStringSchema,
+  to: TrimmedNonEmptyStringSchema,
+  relationship: Schema.Literals(["configured_upstream", "github_parent"]),
+});
+export type GitForkFamilyTreeEdge = typeof GitForkFamilyTreeEdge.Type;
+
+export const GitForkFamilyTreeResult = Schema.Struct({
+  metadataState: GitForkFamilyTreeMetadataState,
+  message: TrimmedNonEmptyStringSchema,
+  nodes: Schema.Array(GitForkFamilyTreeNode),
+  edges: Schema.Array(GitForkFamilyTreeEdge),
+});
+export type GitForkFamilyTreeResult = typeof GitForkFamilyTreeResult.Type;
 
 export const GitForkArchaeologyState = Schema.Literals([
   "ready",
