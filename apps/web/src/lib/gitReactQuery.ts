@@ -65,6 +65,7 @@ export const gitQueryKeys = {
   forkHealth: (cwd: string | null) => ["git", "fork-health", cwd] as const,
   attributionGuardian: (cwd: string | null) => ["git", "attribution-guardian", cwd] as const,
   forkFamilyTree: (cwd: string | null) => ["git", "fork-family-tree", cwd] as const,
+  originalityMeter: (cwd: string | null) => ["git", "originality-meter", cwd] as const,
   forkArchaeology: (cwd: string | null) => ["git", "fork-archaeology", cwd] as const,
   branches: (cwd: string | null) => ["git", "branches", cwd] as const,
   pullRequest: (cwd: string | null) => ["git", "pull-request", cwd] as const,
@@ -209,6 +210,11 @@ async function refreshGitAvailability(queryClient: QueryClient, cwd: string): Pr
       refetchType: "none",
     }),
     queryClient.invalidateQueries({
+      queryKey: gitQueryKeys.originalityMeter(cwd),
+      exact: true,
+      refetchType: "none",
+    }),
+    queryClient.invalidateQueries({
       queryKey: gitQueryKeys.forkArchaeology(cwd),
       refetchType: "none",
     }),
@@ -237,6 +243,7 @@ function activeGitDetailQueries(queryClient: QueryClient, cwd: string) {
     ...queryCache.findAll({ queryKey: gitQueryKeys.pullRequest(cwd), type: "active" }),
     ...queryCache.findAll({ queryKey: gitQueryKeys.attributionGuardian(cwd), type: "active" }),
     ...queryCache.findAll({ queryKey: gitQueryKeys.forkFamilyTree(cwd), type: "active" }),
+    ...queryCache.findAll({ queryKey: gitQueryKeys.originalityMeter(cwd), type: "active" }),
     ...queryCache.findAll({ queryKey: gitQueryKeys.forkArchaeology(cwd), type: "active" }),
   ];
   const uniqueQueries = [...new Map(queries.map((query) => [query.queryHash, query])).values()];
@@ -267,6 +274,10 @@ async function refreshActiveGitDetails(queryClient: QueryClient, cwd: string): P
     }),
     queryClient.invalidateQueries({
       queryKey: gitQueryKeys.forkFamilyTree(cwd),
+      refetchType: "none",
+    }),
+    queryClient.invalidateQueries({
+      queryKey: gitQueryKeys.originalityMeter(cwd),
       refetchType: "none",
     }),
     queryClient.invalidateQueries({
@@ -333,6 +344,7 @@ function cachedGitCwds(queryClient: QueryClient): string[] {
     "fork-health",
     "attribution-guardian",
     "fork-family-tree",
+    "originality-meter",
     "fork-archaeology",
     "branches",
     "working-tree-diff",

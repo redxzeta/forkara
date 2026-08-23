@@ -34,6 +34,7 @@ import type {
   GitUpstreamStatusResult,
   GitForkHealthResult,
   GitAttributionGuardianResult,
+  GitOriginalityMeterResult,
   GitForkArchaeologyCommitPageInput,
   GitForkArchaeologyCommitPageResult,
   GitForkArchaeologyFileHistoryInput,
@@ -247,6 +248,11 @@ export interface GitCoreShape {
   readonly attributionGuardian: (
     cwd: string,
   ) => Effect.Effect<GitAttributionGuardianResult, GitCommandError>;
+
+  /** Calculate a deterministic parody score over factual fork-only tree changes. */
+  readonly originalityMeter: (
+    cwd: string,
+  ) => Effect.Effect<GitOriginalityMeterResult, GitCommandError>;
 
   /** Read the exact merge-base and unique commit counts for HEAD and cached upstream. */
   readonly forkArchaeologyOverview: (
