@@ -12,6 +12,7 @@ import type {
   OrchestrationCommand,
   OrchestrationEvent,
   ProviderForkThreadResult,
+  ProviderResponseModifiers,
   ProviderRuntimeEvent,
   ProviderSession,
 } from "@forkara/contracts";
@@ -93,6 +94,7 @@ import {
 import { attachmentRelativePath } from "../../attachmentStore.ts";
 import { resolveProviderAttachmentPath } from "../../provider/providerAttachmentPaths.ts";
 import { PROVIDER_BULLY_MODE_PROMPT_PREFIX } from "../../provider/bullyMode.ts";
+import { PROVIDER_MAKE_NO_MISTAKE_PROMPT_PREFIX } from "../../provider/makeNoMistake.ts";
 import { PROVIDER_DEBUG_MODE_PROMPT_PREFIX } from "../../provider/debugMode.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
 import { checkpointRefForThreadTurn } from "../../checkpointing/Utils.ts";
@@ -2396,6 +2398,40 @@ describe("ProviderCommandReactor", () => {
 
     await waitFor(() => harness.sendTurn.mock.calls.length === 1);
     expect(harness.sendTurn.mock.calls[0]?.[0].input).toBe("Keep the default response style");
+  });
+
+  it("applies a captured Make No Mistake level without mutating user history", async () => {
+    const harness = await createHarness({ bullyModeEnabled: true });
+    const now = new Date().toISOString();
+    const userText = "Explain the queue drain";
+
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-turn-start-make-no-mistake"),
+        threadId: ThreadId.makeUnsafe("thread-1"),
+        message: {
+          messageId: asMessageId("user-message-make-no-mistake"),
+          role: "user",
+          text: userText,
+          attachments: [],
+        },
+        runtimeMode: "approval-required",
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        responseModifiers: { makeNoMistakeLevel: 3 },
+        createdAt: now,
+      }),
+    );
+
+    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+    const providerInput = harness.sendTurn.mock.calls[0]?.[0].input;
+    expect(providerInput).toContain(userText);
+    expect(providerInput).toContain("edge cases");
+    expect(providerInput?.split(PROVIDER_MAKE_NO_MISTAKE_PROMPT_PREFIX)).toHaveLength(2);
+    expect(providerInput?.split(PROVIDER_BULLY_MODE_PROMPT_PREFIX)).toHaveLength(2);
+    expect((await readHarnessThread(harness))?.messages.map((message) => message.text)).toEqual([
+      userText,
+    ]);
   });
 
   it("rejects a provider-max input that cannot also fit Bully Mode", async () => {
@@ -5813,6 +5849,7 @@ describe("ProviderCommandReactor", () => {
       readonly messageId: MessageId;
       readonly text: string;
       readonly attachments?: ReadonlyArray<ChatAttachment>;
+      readonly responseModifiers?: ProviderResponseModifiers;
     },
   ) {
     const now = new Date().toISOString();
@@ -5852,6 +5889,7 @@ describe("ProviderCommandReactor", () => {
         },
         runtimeMode: "approval-required",
         interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        ...(input.responseModifiers ? { responseModifiers: input.responseModifiers } : {}),
         createdAt: now,
       }),
     );
@@ -5895,6 +5933,7 @@ describe("ProviderCommandReactor", () => {
       liveTurnId: asTurnId("turn-running-blocked"),
       messageId: asMessageId("msg-queue-blocked"),
       text: "promote me on the next settle",
+      responseModifiers: { makeNoMistakeLevel: 3 },
     });
 
     // A checkpoint revert in flight blocks promotion and is deliberately not
@@ -5929,10 +5968,11 @@ describe("ProviderCommandReactor", () => {
     });
 
     await waitFor(() => harness.sendTurn.mock.calls.length === 1);
-    expect(harness.sendTurn.mock.calls[0]?.[0]).toMatchObject({
-      threadId: ThreadId.makeUnsafe("thread-1"),
-      input: "promote me on the next settle",
-    });
+    expect(harness.sendTurn.mock.calls[0]?.[0].threadId).toBe(ThreadId.makeUnsafe("thread-1"));
+    const providerInput = harness.sendTurn.mock.calls[0]?.[0].input;
+    expect(providerInput).toContain("promote me on the next settle");
+    expect(providerInput).toContain("failure modes");
+    expect(providerInput?.split(PROVIDER_MAKE_NO_MISTAKE_PROMPT_PREFIX)).toHaveLength(2);
     const promotion = await Effect.runPromise(
       harness.queuedTurnPromotionRepository.getBySequence(queuedSequence),
     );

@@ -13,6 +13,7 @@ import {
   PROVIDER_SEND_TURN_MAX_INPUT_CHARS,
   type ProviderMentionReference,
   type ProviderInteractionMode,
+  type ProviderResponseModifiers,
   type ProviderRuntimeEvent,
   ProviderKind,
   type ProviderReviewTarget,
@@ -387,6 +388,7 @@ function providerPromptOverflowIssue(input: {
   readonly hasGoal: boolean;
   readonly interactionMode?: ProviderInteractionMode | undefined;
   readonly bullyModeEnabled: boolean;
+  readonly makeNoMistakeEnabled: boolean;
 }): string {
   if (input.hasGoal) {
     return "The latest message is too long to include the persistent thread goal. Shorten the message and retry.";
@@ -396,6 +398,9 @@ function providerPromptOverflowIssue(input: {
   }
   if (input.bullyModeEnabled) {
     return "The latest message is too long to include Forkara Bully Mode instructions. Shorten the message and retry.";
+  }
+  if (input.makeNoMistakeEnabled) {
+    return "The latest message is too long to include Make No Mistake instructions. Shorten the message and retry.";
   }
   return "The latest message is too long to include Forkara response instructions. Shorten the message and retry.";
 }
@@ -1437,6 +1442,7 @@ const make = Effect.gen(function* () {
     readonly providerOptions?: ProviderStartOptions;
     readonly runtimeMode?: RuntimeMode;
     readonly interactionMode?: ProviderInteractionMode;
+    readonly responseModifiers?: ProviderResponseModifiers;
     readonly dispatchMode?: "queue" | "steer";
     readonly turnKind?: "user" | "goal-continuation";
     readonly createdAt: string;
@@ -1447,7 +1453,10 @@ const make = Effect.gen(function* () {
     }
     const goal = activeThreadGoal(thread);
     const { bullyModeEnabled } = yield* serverSettings.getSettings;
-    const responseModifiers = { bullyMode: bullyModeEnabled } as const;
+    const responseModifiers = {
+      bullyMode: bullyModeEnabled,
+      makeNoMistakeLevel: input.responseModifiers?.makeNoMistakeLevel ?? 0,
+    } as const;
     const providerPromptOverheadChars = providerResponseInstructionsOverheadChars({
       interactionMode: input.interactionMode,
       goal,
@@ -1457,6 +1466,7 @@ const make = Effect.gen(function* () {
       hasGoal: Boolean(goal?.trim()),
       interactionMode: input.interactionMode,
       bullyModeEnabled,
+      makeNoMistakeEnabled: responseModifiers.makeNoMistakeLevel > 0,
     });
     const threadMentionProjection = yield* resolveThreadMentionPromptProjection({
       mentions: input.mentions,
@@ -2461,6 +2471,9 @@ const make = Effect.gen(function* () {
           ? { reviewTarget: event.payload.reviewTarget }
           : {}),
         interactionMode: event.payload.interactionMode,
+        ...(event.payload.responseModifiers !== undefined
+          ? { responseModifiers: event.payload.responseModifiers }
+          : {}),
         dispatchMode: immediateDispatchMode,
         createdAt: event.payload.createdAt,
       }).pipe(
@@ -2596,6 +2609,9 @@ const make = Effect.gen(function* () {
             : {}),
           runtimeMode: nextQueuedTurn.runtimeMode,
           interactionMode: nextQueuedTurn.interactionMode,
+          ...(nextQueuedTurn.responseModifiers !== undefined
+            ? { responseModifiers: nextQueuedTurn.responseModifiers }
+            : {}),
           ...(nextQueuedTurn.sourceProposedPlan !== undefined
             ? { sourceProposedPlan: nextQueuedTurn.sourceProposedPlan }
             : {}),

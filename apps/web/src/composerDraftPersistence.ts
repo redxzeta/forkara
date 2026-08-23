@@ -4,6 +4,7 @@
 
 import {
   ModelSelection,
+  MakeNoMistakeLevel,
   OrchestrationProposedPlanId,
   OrchestrationThreadPullRequest,
   ProjectId,
@@ -173,6 +174,7 @@ const PersistedQueuedComposerChatTurn = Schema.Struct({
   sourceProposedPlan: Schema.optionalKey(PersistedSourceProposedPlanReference),
   runtimeMode: RuntimeMode,
   interactionMode: ProviderInteractionMode,
+  makeNoMistakeLevel: Schema.optionalKey(MakeNoMistakeLevel),
   envMode: DraftThreadEnvModeSchema,
 });
 
@@ -191,6 +193,7 @@ const PersistedQueuedComposerPlanFollowUp = Schema.Struct({
   modelSelection: ModelSelection,
   providerOptionsForDispatch: Schema.optionalKey(ProviderStartOptions),
   runtimeMode: RuntimeMode,
+  makeNoMistakeLevel: Schema.optionalKey(MakeNoMistakeLevel),
 });
 
 type PersistedQueuedComposerPlanFollowUp = typeof PersistedQueuedComposerPlanFollowUp.Type;
@@ -249,6 +252,7 @@ const PersistedComposerThreadDraftState = Schema.Struct({
   activeProvider: Schema.optionalKey(Schema.NullOr(ProviderKind)),
   runtimeMode: Schema.optionalKey(RuntimeMode),
   interactionMode: Schema.optionalKey(ProviderInteractionMode),
+  makeNoMistakeLevel: Schema.optionalKey(MakeNoMistakeLevel),
 });
 
 type PersistedComposerThreadDraftState = typeof PersistedComposerThreadDraftState.Type;
@@ -560,6 +564,9 @@ function normalizePersistedQueuedTurns(
     const runtimeMode = Schema.is(RuntimeMode)(candidate.runtimeMode)
       ? candidate.runtimeMode
       : null;
+    const makeNoMistakeLevel = Schema.is(MakeNoMistakeLevel)(candidate.makeNoMistakeLevel)
+      ? candidate.makeNoMistakeLevel
+      : 0;
     if (
       id.length === 0 ||
       createdAt.length === 0 ||
@@ -644,6 +651,7 @@ function normalizePersistedQueuedTurns(
         ...(sourceProposedPlan ? { sourceProposedPlan } : {}),
         runtimeMode,
         interactionMode,
+        ...(makeNoMistakeLevel > 0 ? { makeNoMistakeLevel } : {}),
         envMode,
       });
       seenIds.add(id);
@@ -671,6 +679,7 @@ function normalizePersistedQueuedTurns(
         modelSelection,
         ...(providerOptionsForDispatch ? { providerOptionsForDispatch } : {}),
         runtimeMode,
+        ...(makeNoMistakeLevel > 0 ? { makeNoMistakeLevel } : {}),
       });
       seenIds.add(id);
     }
@@ -878,6 +887,9 @@ function normalizePersistedDraftsByThreadId(
     const interactionMode = Schema.is(ProviderInteractionMode)(draftCandidate.interactionMode)
       ? draftCandidate.interactionMode
       : null;
+    const makeNoMistakeLevel = Schema.is(MakeNoMistakeLevel)(draftCandidate.makeNoMistakeLevel)
+      ? draftCandidate.makeNoMistakeLevel
+      : 0;
     const prompt = ensureInlineTerminalContextPlaceholders(
       promptCandidate,
       terminalContexts.length,
@@ -952,7 +964,8 @@ function normalizePersistedDraftsByThreadId(
       restoredSourceProposedPlan === null &&
       !hasModelData &&
       !runtimeMode &&
-      !interactionMode
+      !interactionMode &&
+      makeNoMistakeLevel === 0
     ) {
       continue;
     }
@@ -972,6 +985,7 @@ function normalizePersistedDraftsByThreadId(
       ...(hasModelData ? { modelSelectionByProvider, activeProvider } : {}),
       ...(runtimeMode ? { runtimeMode } : {}),
       ...(interactionMode ? { interactionMode } : {}),
+      ...(makeNoMistakeLevel > 0 ? { makeNoMistakeLevel } : {}),
     };
   }
 
@@ -1071,6 +1085,9 @@ export function partializeComposerDraftStoreState(
             : {}),
           runtimeMode: queuedTurn.runtimeMode,
           interactionMode: queuedTurn.interactionMode,
+          ...(queuedTurn.makeNoMistakeLevel
+            ? { makeNoMistakeLevel: queuedTurn.makeNoMistakeLevel }
+            : {}),
           envMode: queuedTurn.envMode,
         });
         continue;
@@ -1090,6 +1107,9 @@ export function partializeComposerDraftStoreState(
           ? { providerOptionsForDispatch: queuedTurn.providerOptionsForDispatch }
           : {}),
         runtimeMode: queuedTurn.runtimeMode,
+        ...(queuedTurn.makeNoMistakeLevel
+          ? { makeNoMistakeLevel: queuedTurn.makeNoMistakeLevel }
+          : {}),
       });
     }
     const hasModelData =
@@ -1110,7 +1130,8 @@ export function partializeComposerDraftStoreState(
       draft.restoredSourceProposedPlan == null &&
       !hasModelData &&
       draft.runtimeMode === null &&
-      draft.interactionMode === null
+      draft.interactionMode === null &&
+      (draft.makeNoMistakeLevel ?? 0) === 0
     ) {
       continue;
     }
@@ -1246,6 +1267,9 @@ export function partializeComposerDraftStoreState(
         : {}),
       ...(draft.runtimeMode ? { runtimeMode: draft.runtimeMode } : {}),
       ...(draft.interactionMode ? { interactionMode: draft.interactionMode } : {}),
+      ...((draft.makeNoMistakeLevel ?? 0) > 0
+        ? { makeNoMistakeLevel: draft.makeNoMistakeLevel }
+        : {}),
     };
     persistedDraftsByThreadId[threadId as ThreadId] = persistedDraft;
   }
@@ -1421,5 +1445,6 @@ export function toHydratedThreadDraft(
     activeProvider,
     runtimeMode: persistedDraft.runtimeMode ?? null,
     interactionMode: persistedDraft.interactionMode ?? null,
+    makeNoMistakeLevel: persistedDraft.makeNoMistakeLevel ?? 0,
   };
 }

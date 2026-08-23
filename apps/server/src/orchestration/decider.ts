@@ -1738,6 +1738,9 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         dispatchOrigin: command.dispatchOrigin ?? "user",
         runtimeMode: command.runtimeMode,
         interactionMode: command.interactionMode,
+        ...(command.responseModifiers !== undefined
+          ? { responseModifiers: command.responseModifiers }
+          : {}),
         ...(sourceProposedPlan !== undefined ? { sourceProposedPlan } : {}),
         createdAt: command.createdAt,
       } as const;
@@ -1829,6 +1832,9 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           dispatchOrigin: command.dispatchOrigin ?? "user",
           runtimeMode: command.runtimeMode,
           interactionMode: command.interactionMode,
+          ...(command.responseModifiers !== undefined
+            ? { responseModifiers: command.responseModifiers }
+            : {}),
           ...(command.sourceProposedPlan !== undefined
             ? { sourceProposedPlan: command.sourceProposedPlan }
             : {}),
