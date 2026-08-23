@@ -1272,6 +1272,7 @@ const makeWsRpcHandlersLayer = () =>
                     workspaceRoot: normalizedCommand.workspaceRoot,
                     projectId: registration.projectId,
                     checkout: checkout.checkout,
+                    forkCreated: checkout.forkCreated,
                   } as const;
                 }).pipe(
                   Effect.onError(() =>

@@ -8,16 +8,25 @@
 // Exports: ComposerPendingApprovalPanel
 
 import { type ApprovalRequestId, type ProviderApprovalDecision } from "@forkara/contracts";
-import { type KeyboardEvent } from "react";
+import {
+  isLocalAbsolutePath,
+  isWorkspaceRelativePathSafe,
+  workspaceRelativePathOf,
+} from "@forkara/shared/path";
+import { type KeyboardEvent, useState } from "react";
 import { type PendingApproval } from "../../session-logic";
 import { cn } from "~/lib/utils";
 import { ComposerChoiceRow, type ComposerChoiceTone } from "./ComposerChoiceRow";
 import { COMPOSER_INPUT_SURFACE_CLASS_NAME } from "./composerPickerStyles";
+import { Button } from "~/components/ui/button";
+import { ensureNativeApi } from "~/nativeApi";
+import { recordAchievementEvent } from "~/achievements/engine";
 
 interface ComposerPendingApprovalPanelProps {
   approval: PendingApproval;
   pendingCount: number;
   isResponding: boolean;
+  workspaceRoot?: string | null;
   onRespond: (
     requestId: ApprovalRequestId,
     decision: ProviderApprovalDecision,
@@ -80,14 +89,43 @@ export const ComposerPendingApprovalPanel = function ComposerPendingApprovalPane
   approval,
   pendingCount,
   isResponding,
+  workspaceRoot = null,
   onRespond,
 }: ComposerPendingApprovalPanelProps) {
   const parsed = parseApprovalDetail(approval.detail);
+  const licenseChanger = isLicenseChangerApproval(approval);
+  const [licenseContents, setLicenseContents] = useState<string | null>(null);
+  const [licenseError, setLicenseError] = useState<string | null>(null);
+  const [licenseLoading, setLicenseLoading] = useState(false);
   const requestId = approval.requestId;
   const actions =
     approval.sessionApprovalAvailable === false
       ? APPROVAL_ACTIONS.filter((action) => action.decision !== "acceptForSession")
       : APPROVAL_ACTIONS;
+  const respond = async (decision: ProviderApprovalDecision) => {
+    await onRespond(requestId, decision, approval.lifecycleGeneration, approval.requestKind);
+    if (licenseChanger && decision === "cancel") {
+      recordAchievementEvent({ type: "license_changer.cancelled" });
+    }
+  };
+  const readLicense = async () => {
+    if (!workspaceRoot || licenseLoading) return;
+    setLicenseLoading(true);
+    setLicenseError(null);
+    try {
+      const result = await ensureNativeApi().projects.readFile({
+        cwd: workspaceRoot,
+        relativePath: licenseRelativePath(parsed, workspaceRoot),
+        maxBytes: 65_536,
+      });
+      setLicenseContents(result.contents);
+      recordAchievementEvent({ type: "license_changer.license_opened" });
+    } catch (error) {
+      setLicenseError(error instanceof Error ? error.message : "Unable to read LICENSE.");
+    } finally {
+      setLicenseLoading(false);
+    }
+  };
 
   // Digit shortcuts bubble from focused controls inside this card only; a bare
   // number key elsewhere in the app must never approve a tool request.
@@ -106,7 +144,7 @@ export const ComposerPendingApprovalPanel = function ComposerPendingApprovalPane
     const action = actions[digit - 1];
     if (!action) return;
     event.preventDefault();
-    void onRespond(requestId, action.decision, approval.lifecycleGeneration, approval.requestKind);
+    void respond(action.decision);
   };
 
   return (
@@ -116,7 +154,9 @@ export const ComposerPendingApprovalPanel = function ComposerPendingApprovalPane
     >
       <div className="flex items-start justify-between gap-3">
         <p className="min-w-0 text-[13px] font-medium leading-snug text-foreground/90">
-          {KIND_PROMPT[approval.requestKind]}
+          {licenseChanger
+            ? "Review this license-related change carefully."
+            : KIND_PROMPT[approval.requestKind]}
           {parsed.tool ? (
             <span className="ml-1.5 text-[11px] font-normal text-muted-foreground/50">
               {parsed.tool}
@@ -133,6 +173,37 @@ export const ComposerPendingApprovalPanel = function ComposerPendingApprovalPane
         parsed={parsed}
         {...(approval.permissionProfile ? { permissionProfile: approval.permissionProfile } : {})}
       />
+      {licenseChanger ? (
+        <div className="mt-2 rounded-md border border-warning/30 bg-warning/5 p-2.5">
+          <p className="text-[11.5px] leading-snug text-foreground/85">
+            Forkara will not rewrite or approve licensing terms for you. Inspect the repository's
+            current LICENSE and decide explicitly; this is not legal advice.
+          </p>
+          {workspaceRoot ? (
+            <Button
+              className="mt-2"
+              variant="outline"
+              size="sm"
+              disabled={licenseLoading}
+              onClick={() => void readLicense()}
+            >
+              {licenseLoading ? "Reading LICENSE…" : "Read current LICENSE"}
+            </Button>
+          ) : (
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              Workspace unavailable; LICENSE cannot be opened here.
+            </p>
+          )}
+          {licenseError ? (
+            <p className="mt-2 text-[11px] text-destructive">{licenseError}</p>
+          ) : null}
+          {licenseContents !== null ? (
+            <pre className="mt-2 max-h-36 overflow-auto whitespace-pre-wrap rounded-md bg-background/70 p-2 font-mono text-[10.5px] leading-relaxed">
+              <code>{licenseContents}</code>
+            </pre>
+          ) : null}
+        </div>
+      ) : null}
       <div className="mt-2.5 space-y-0.5">
         {actions.map((action, index) => (
           <ComposerChoiceRow
@@ -142,20 +213,44 @@ export const ComposerPendingApprovalPanel = function ComposerPendingApprovalPane
             description={action.description}
             tone={action.tone}
             disabled={isResponding}
-            onSelect={() =>
-              void onRespond(
-                requestId,
-                action.decision,
-                approval.lifecycleGeneration,
-                approval.requestKind,
-              )
-            }
+            onSelect={() => void respond(action.decision)}
           />
         ))}
       </div>
     </div>
   );
 };
+
+function licenseRelativePath(parsed: ParsedApproval, workspaceRoot: string): string {
+  if (!parsed.fileName || !/^licen[cs]e(?:\.[a-z0-9]+)?$/iu.test(parsed.fileName)) {
+    return "LICENSE";
+  }
+  if (!parsed.fileDir) return parsed.fileName;
+  const candidate = `${parsed.fileDir}/${parsed.fileName}`;
+  if (isLocalAbsolutePath(candidate)) {
+    return workspaceRelativePathOf(candidate, workspaceRoot) ?? "LICENSE";
+  }
+  return isWorkspaceRelativePathSafe(candidate) ? candidate : "LICENSE";
+}
+
+export function isLicenseChangerApproval(
+  approval: Pick<PendingApproval, "detail" | "permissionProfile" | "requestKind">,
+): boolean {
+  if (approval.requestKind !== "file-change" && approval.requestKind !== "permissions") {
+    return false;
+  }
+  let serializedProfile = "";
+  try {
+    serializedProfile = approval.permissionProfile
+      ? JSON.stringify(approval.permissionProfile)
+      : "";
+  } catch {
+    // The detail string remains sufficient when a non-JSON-safe provider profile slips through.
+  }
+  return /(?:^|[/\\\s])licen[cs]e(?:\.[a-z0-9]+)?(?:$|[/\\\s"'])/iu.test(
+    `${approval.detail ?? ""} ${serializedProfile}`,
+  );
+}
 
 function ApprovalDetail({
   parsed,

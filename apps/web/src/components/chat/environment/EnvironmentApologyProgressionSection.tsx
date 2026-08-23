@@ -3,7 +3,7 @@
 // Layer: Environment panel parody UI; never publishes or edits repository state.
 
 import type { ProjectId } from "@forkara/contracts";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -26,6 +26,7 @@ import {
 } from "~/lib/apologyProgression";
 import { MessageCircleIcon, RotateCcwIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
+import { recordAchievementEvent } from "~/achievements/engine";
 
 import {
   ENVIRONMENT_ROW_ICON_CLASS_NAME,
@@ -111,6 +112,9 @@ export function EnvironmentApologyProgressionSection({
       ? readApologyStageIndex(projectId, localStorage)
       : 0,
   );
+  useEffect(() => {
+    recordAchievementEvent({ type: "apology.stage_reached", stageIndex });
+  }, [stageIndex]);
   if (!enabled || !projectId) return null;
 
   const updateStage = (nextStageIndex: number) => {

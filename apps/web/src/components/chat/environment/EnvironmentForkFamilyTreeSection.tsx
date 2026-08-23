@@ -4,7 +4,7 @@
 
 import type { GitForkFamilyTreeNode, GitForkFamilyTreeResult } from "@forkara/contracts";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "~/components/ui/button";
 import {
@@ -20,6 +20,7 @@ import { ensureNativeApi } from "~/nativeApi";
 import { GitBranchIcon, GitForkIcon, RefreshCwIcon } from "~/lib/icons";
 import { formatRelativeTime } from "~/lib/relativeTime";
 import { GIT_EXPENSIVE_READ_RETRY_OPTIONS, gitQueryKeys } from "~/lib/gitReactQuery";
+import { recordAchievementEvent } from "~/achievements/engine";
 
 import {
   ENVIRONMENT_ROW_ICON_CLASS_NAME,
@@ -171,6 +172,14 @@ export function EnvironmentForkFamilyTreeSection({
     staleTime: 60_000,
     ...GIT_EXPENSIVE_READ_RETRY_OPTIONS,
   });
+  useEffect(() => {
+    if (treeQuery.data) {
+      recordAchievementEvent({
+        type: "fork_family_tree.viewed",
+        knownGenerationCount: treeQuery.data.nodes.length,
+      });
+    }
+  }, [treeQuery.data]);
   if (!enabled || !gitCwd) return null;
 
   const openUrl = (url: string) => {

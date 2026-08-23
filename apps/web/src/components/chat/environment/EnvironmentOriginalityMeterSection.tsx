@@ -4,7 +4,7 @@
 
 import type { GitOriginalityMeterResult } from "@forkara/contracts";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
@@ -20,6 +20,7 @@ import { RefreshCwIcon, StarIcon } from "~/lib/icons";
 import { GIT_EXPENSIVE_READ_RETRY_OPTIONS, gitQueryKeys } from "~/lib/gitReactQuery";
 import { originalityCertification } from "~/lib/originalityCertification";
 import { ensureNativeApi } from "~/nativeApi";
+import { recordAchievementEvent } from "~/achievements/engine";
 
 import {
   ENVIRONMENT_ROW_ICON_CLASS_NAME,
@@ -161,6 +162,11 @@ export function EnvironmentOriginalityMeterSection({
     staleTime: 60_000,
     ...GIT_EXPENSIVE_READ_RETRY_OPTIONS,
   });
+  useEffect(() => {
+    if (originalityQuery.data) {
+      recordAchievementEvent({ type: "originality_meter.result" });
+    }
+  }, [originalityQuery.data]);
   if (!enabled || !gitCwd) return null;
 
   return (

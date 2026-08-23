@@ -801,6 +801,7 @@ describe("wsNativeApi", () => {
       workspaceRoot: "/projects/codex",
       projectId: input.projectId,
       checkout: "created" as const,
+      forkCreated: true,
     };
     requestMock.mockResolvedValue(result);
     const { createWsNativeApi } = await import("./wsNativeApi");
