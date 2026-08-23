@@ -32,6 +32,7 @@ import type {
   GitUpstreamSyncApplyResult,
   GitUpstreamSyncPreviewResult,
   GitUpstreamStatusResult,
+  GitForkHealthResult,
 } from "@forkara/contracts";
 
 import type { GitCheckoutDirtyWorktreeError, GitCommandError } from "../Errors.ts";
@@ -232,6 +233,9 @@ export interface GitCoreShape {
   readonly applyUpstreamSync: (
     input: GitApplyUpstreamSyncInput,
   ) => Effect.Effect<GitUpstreamSyncApplyResult, GitCommandError>;
+
+  /** Derive factual fork health from cached upstream data and local Git state only. */
+  readonly forkHealth: (cwd: string) => Effect.Effect<GitForkHealthResult, GitCommandError>;
 
   /** Read only branch identity, without diff stats or remote refresh work. */
   readonly readBranchContext: (cwd: string) => Effect.Effect<GitBranchContext, GitCommandError>;

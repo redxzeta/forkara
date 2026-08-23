@@ -194,6 +194,7 @@ export const WS_METHODS = {
   gitStatus: "git.status",
   gitUpstreamStatus: "git.upstreamStatus",
   gitRefreshUpstream: "git.refreshUpstream",
+  gitForkHealth: "git.forkHealth",
   gitPreviewUpstreamSync: "git.previewUpstreamSync",
   gitApplyUpstreamSync: "git.applyUpstreamSync",
   gitReadWorkingTreeDiff: "git.readWorkingTreeDiff",

@@ -82,6 +82,8 @@ import type {
   GitStatusResult,
   GitUpstreamStatusInput,
   GitUpstreamStatusResult,
+  GitForkHealthInput,
+  GitForkHealthResult,
   GitApplyUpstreamSyncInput,
   GitUpstreamSyncApplyResult,
   GitUpstreamSyncPreviewResult,
@@ -716,6 +718,7 @@ export interface NativeApi {
     status: (input: GitStatusInput) => Promise<GitStatusResult>;
     upstreamStatus: (input: GitUpstreamStatusInput) => Promise<GitUpstreamStatusResult>;
     refreshUpstream: (input: GitUpstreamStatusInput) => Promise<GitUpstreamStatusResult>;
+    forkHealth: (input: GitForkHealthInput) => Promise<GitForkHealthResult>;
     previewUpstreamSync: (input: GitUpstreamStatusInput) => Promise<GitUpstreamSyncPreviewResult>;
     applyUpstreamSync: (input: GitApplyUpstreamSyncInput) => Promise<GitUpstreamSyncApplyResult>;
     readWorkingTreeDiff: (

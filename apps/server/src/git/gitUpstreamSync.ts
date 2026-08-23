@@ -13,6 +13,7 @@ import type {
 import { Effect } from "effect";
 
 import { GitCommandError } from "./Errors.ts";
+import { readGitWorktreeSafety } from "./gitWorktreeSafety.ts";
 
 const UPSTREAM_REMOTE_NAME = "upstream";
 const INCOMING_COMMIT_LIMIT = 20;
@@ -220,35 +221,28 @@ export function makeGitUpstreamSync(input: {
       if (currentBranch !== refreshed.localBranch) return empty("branch_mismatch");
 
       const upstreamRef = `refs/remotes/${UPSTREAM_REMOTE_NAME}/${refreshed.upstreamBranch}`;
-      const [localHeadResult, upstreamHeadResult, dirtyResult, unresolvedResult] =
-        yield* Effect.all(
-          [
-            execute("GitCore.upstreamSync.localHead", cwd, ["rev-parse", "--verify", "HEAD"]),
-            execute("GitCore.upstreamSync.upstreamHead", cwd, [
-              "rev-parse",
-              "--verify",
-              upstreamRef,
-            ]),
-            execute("GitCore.upstreamSync.dirty", cwd, ["status", "--porcelain=v1", "-z"]),
-            execute("GitCore.upstreamSync.unresolved", cwd, [
-              "diff",
-              "--name-only",
-              "--diff-filter=U",
-              "-z",
-            ]),
-          ],
-          { concurrency: 4 },
-        );
+      const [localHeadResult, upstreamHeadResult, worktree] = yield* Effect.all(
+        [
+          execute("GitCore.upstreamSync.localHead", cwd, ["rev-parse", "--verify", "HEAD"]),
+          execute("GitCore.upstreamSync.upstreamHead", cwd, ["rev-parse", "--verify", upstreamRef]),
+          readGitWorktreeSafety({
+            execute,
+            cwd,
+            operationPrefix: "GitCore.upstreamSync",
+          }),
+        ],
+        { concurrency: 3 },
+      );
       const localHead = localHeadResult.stdout.trim();
       const upstreamHead = upstreamHeadResult.stdout.trim();
       const incoming = yield* readIncomingCommits(cwd, localHead, upstreamRef);
-      const unresolvedFiles = unresolvedResult.stdout.split("\0").filter(Boolean);
+      const unresolvedFiles = worktree.unresolvedConflictFiles;
 
       let state: GitUpstreamSyncPreviewResult["state"];
       let conflictFiles: ReadonlyArray<string> = unresolvedFiles;
       if (unresolvedFiles.length > 0) {
         state = "conflicts";
-      } else if (dirtyResult.stdout.length > 0) {
+      } else if (worktree.hasWorkingTreeChanges) {
         state = "dirty";
       } else if (refreshed.aheadCount > 0 && refreshed.behindCount > 0) {
         const conflictPreview = yield* readProspectiveConflictFiles(cwd, localHead, upstreamRef);
@@ -304,33 +298,26 @@ export function makeGitUpstreamSync(input: {
       );
       const branch = currentBranch.stdout.trim();
       const upstreamRef = `refs/remotes/${UPSTREAM_REMOTE_NAME}/${cached.upstreamBranch}`;
-      const [localHeadResult, upstreamHeadResult, dirtyResult, unresolvedResult] =
-        yield* Effect.all(
-          [
-            execute("GitCore.upstreamSync.apply.localHead", input.cwd, [
-              "rev-parse",
-              "--verify",
-              "HEAD",
-            ]),
-            execute("GitCore.upstreamSync.apply.upstreamHead", input.cwd, [
-              "rev-parse",
-              "--verify",
-              upstreamRef,
-            ]),
-            execute("GitCore.upstreamSync.apply.dirty", input.cwd, [
-              "status",
-              "--porcelain=v1",
-              "-z",
-            ]),
-            execute("GitCore.upstreamSync.apply.unresolved", input.cwd, [
-              "diff",
-              "--name-only",
-              "--diff-filter=U",
-              "-z",
-            ]),
-          ],
-          { concurrency: 4 },
-        );
+      const [localHeadResult, upstreamHeadResult, worktree] = yield* Effect.all(
+        [
+          execute("GitCore.upstreamSync.apply.localHead", input.cwd, [
+            "rev-parse",
+            "--verify",
+            "HEAD",
+          ]),
+          execute("GitCore.upstreamSync.apply.upstreamHead", input.cwd, [
+            "rev-parse",
+            "--verify",
+            upstreamRef,
+          ]),
+          readGitWorktreeSafety({
+            execute,
+            cwd: input.cwd,
+            operationPrefix: "GitCore.upstreamSync.apply",
+          }),
+        ],
+        { concurrency: 3 },
+      );
       const localHead = localHeadResult.stdout.trim();
       const upstreamHead = upstreamHeadResult.stdout.trim();
       const stale =
@@ -345,7 +332,7 @@ export function makeGitUpstreamSync(input: {
           "Repository state changed after the preview. Preview upstream sync again.",
         );
       }
-      if (dirtyResult.stdout.length > 0 || unresolvedResult.stdout.length > 0) {
+      if (worktree.hasWorkingTreeChanges || worktree.unresolvedConflictFiles.length > 0) {
         return yield* syncError(
           input.cwd,
           "GitCore.upstreamSync.apply",

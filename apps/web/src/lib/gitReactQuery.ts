@@ -62,6 +62,7 @@ export const gitQueryKeys = {
   githubRepository: (cwd: string | null) => ["git", "github-repository", cwd] as const,
   status: (cwd: string | null) => ["git", "status", cwd] as const,
   upstreamStatus: (cwd: string | null) => ["git", "upstream-status", cwd] as const,
+  forkHealth: (cwd: string | null) => ["git", "fork-health", cwd] as const,
   branches: (cwd: string | null) => ["git", "branches", cwd] as const,
   pullRequest: (cwd: string | null) => ["git", "pull-request", cwd] as const,
   workingTreeDiff: (
@@ -190,6 +191,11 @@ async function refreshGitAvailability(queryClient: QueryClient, cwd: string): Pr
       refetchType: "none",
     }),
     queryClient.invalidateQueries({
+      queryKey: gitQueryKeys.forkHealth(cwd),
+      exact: true,
+      refetchType: "none",
+    }),
+    queryClient.invalidateQueries({
       queryKey: gitQueryKeys.branches(cwd),
       exact: true,
       refetchType: "none",
@@ -199,6 +205,7 @@ async function refreshGitAvailability(queryClient: QueryClient, cwd: string): Pr
     refetchFreshGitQueries(queryClient, gitQueryKeys.githubRepository(cwd)),
     refetchFreshGitQueries(queryClient, gitQueryKeys.status(cwd)),
     refetchFreshGitQueries(queryClient, gitQueryKeys.upstreamStatus(cwd)),
+    refetchFreshGitQueries(queryClient, gitQueryKeys.forkHealth(cwd)),
     refetchFreshGitQueries(queryClient, gitQueryKeys.branches(cwd)),
   ]);
 }
@@ -373,6 +380,23 @@ export function gitUpstreamStatusQueryOptions(cwd: string | null, enabled = true
     staleTime: 30_000,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
+    ...GIT_EXPENSIVE_READ_RETRY_OPTIONS,
+  });
+}
+
+export function gitForkHealthQueryOptions(cwd: string | null, enabled = true) {
+  return queryOptions({
+    queryKey: gitQueryKeys.forkHealth(cwd),
+    queryFn: async () => {
+      const api = ensureNativeApi();
+      if (!cwd) throw new Error("Fork health is unavailable.");
+      return api.git.forkHealth({ cwd });
+    },
+    enabled: enabled && cwd !== null,
+    staleTime: 5_000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchInterval: GIT_STATUS_REFETCH_INTERVAL_MS,
     ...GIT_EXPENSIVE_READ_RETRY_OPTIONS,
   });
 }
