@@ -88,7 +88,8 @@ export function AchievementViewer({ snapshot }: { snapshot: AchievementSnapshot 
         ))}
       </ul>
       <p className="text-muted-foreground text-xs">
-        Stored only in this browser. No account sync, network request, or telemetry.
+        Achievements are stored locally. Unlike Git history, you may actually delete these. No
+        account sync, network request, or telemetry.
       </p>
     </div>
   );
@@ -119,7 +120,7 @@ export function EnvironmentAchievementsSection({ enabled }: { enabled: boolean }
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogPopup className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Local achievements</DialogTitle>
+            <DialogTitle>Accomplishments We Definitely Earned</DialogTitle>
             <DialogDescription>
               Receipts for real Forkara actions, plus a few harmless jokes.
             </DialogDescription>
