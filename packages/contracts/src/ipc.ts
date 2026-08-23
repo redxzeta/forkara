@@ -84,6 +84,8 @@ import type {
   GitUpstreamStatusResult,
   GitForkHealthInput,
   GitForkHealthResult,
+  GitAttributionGuardianInput,
+  GitAttributionGuardianResult,
   GitForkArchaeologyOverviewInput,
   GitForkArchaeologyOverviewResult,
   GitForkArchaeologyCommitPageInput,
@@ -725,6 +727,9 @@ export interface NativeApi {
     upstreamStatus: (input: GitUpstreamStatusInput) => Promise<GitUpstreamStatusResult>;
     refreshUpstream: (input: GitUpstreamStatusInput) => Promise<GitUpstreamStatusResult>;
     forkHealth: (input: GitForkHealthInput) => Promise<GitForkHealthResult>;
+    attributionGuardian: (
+      input: GitAttributionGuardianInput,
+    ) => Promise<GitAttributionGuardianResult>;
     forkArchaeologyOverview: (
       input: GitForkArchaeologyOverviewInput,
     ) => Promise<GitForkArchaeologyOverviewResult>;

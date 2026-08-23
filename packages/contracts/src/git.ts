@@ -138,6 +138,9 @@ export type GitUpstreamStatusInput = typeof GitUpstreamStatusInput.Type;
 export const GitForkHealthInput = GitUpstreamStatusInput;
 export type GitForkHealthInput = typeof GitForkHealthInput.Type;
 
+export const GitAttributionGuardianInput = GitUpstreamStatusInput;
+export type GitAttributionGuardianInput = typeof GitAttributionGuardianInput.Type;
+
 export const GIT_FORK_ARCHAEOLOGY_DEFAULT_PAGE_SIZE = 20;
 export const GIT_FORK_ARCHAEOLOGY_MAX_PAGE_SIZE = 50;
 
@@ -440,6 +443,41 @@ export const GitForkHealthResult = Schema.Struct({
   upstream: GitUpstreamStatusResult,
 });
 export type GitForkHealthResult = typeof GitForkHealthResult.Type;
+
+export const GitAttributionGuardianState = Schema.Literals([
+  "ready",
+  "missing_upstream",
+  "incomplete_history",
+]);
+export type GitAttributionGuardianState = typeof GitAttributionGuardianState.Type;
+
+export const GitAttributionGuardianChange = Schema.Literals([
+  "added",
+  "deleted",
+  "modified",
+  "unchanged",
+]);
+export type GitAttributionGuardianChange = typeof GitAttributionGuardianChange.Type;
+
+export const GitAttributionGuardianFile = Schema.Struct({
+  path: TrimmedNonEmptyStringSchema,
+  change: GitAttributionGuardianChange,
+  warning: Schema.Boolean,
+  summary: TrimmedNonEmptyStringSchema,
+  diff: Schema.NullOr(Schema.String),
+  diffTruncated: Schema.Boolean,
+});
+export type GitAttributionGuardianFile = typeof GitAttributionGuardianFile.Type;
+
+export const GitAttributionGuardianResult = Schema.Struct({
+  state: GitAttributionGuardianState,
+  message: TrimmedNonEmptyStringSchema,
+  localRef: TrimmedNonEmptyStringSchema,
+  upstreamRef: TrimmedNonEmptyStringSchema.pipe(Schema.NullOr),
+  warningCount: NonNegativeInt,
+  files: Schema.Array(GitAttributionGuardianFile),
+});
+export type GitAttributionGuardianResult = typeof GitAttributionGuardianResult.Type;
 
 export const GitForkArchaeologyState = Schema.Literals([
   "ready",

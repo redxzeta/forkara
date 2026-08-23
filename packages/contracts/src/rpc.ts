@@ -109,6 +109,8 @@ import {
   GitUpstreamStatusResult,
   GitForkHealthInput,
   GitForkHealthResult,
+  GitAttributionGuardianInput,
+  GitAttributionGuardianResult,
   GitForkArchaeologyOverviewInput,
   GitForkArchaeologyOverviewResult,
   GitForkArchaeologyCommitPageInput,
@@ -684,6 +686,12 @@ export const WsGitRefreshUpstreamRpc = Rpc.make(WS_METHODS.gitRefreshUpstream, {
 export const WsGitForkHealthRpc = Rpc.make(WS_METHODS.gitForkHealth, {
   payload: GitForkHealthInput,
   success: GitForkHealthResult,
+  error: WsRpcError,
+});
+
+export const WsGitAttributionGuardianRpc = Rpc.make(WS_METHODS.gitAttributionGuardian, {
+  payload: GitAttributionGuardianInput,
+  success: GitAttributionGuardianResult,
   error: WsRpcError,
 });
 
@@ -1313,6 +1321,7 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsGitUpstreamStatusRpc,
   WsGitRefreshUpstreamRpc,
   WsGitForkHealthRpc,
+  WsGitAttributionGuardianRpc,
   WsGitForkArchaeologyOverviewRpc,
   WsGitForkArchaeologyCommitPageRpc,
   WsGitForkArchaeologyFileHistoryRpc,

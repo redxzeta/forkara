@@ -3,6 +3,7 @@
 // Layer: Server Git domain helper, executed exclusively through GitCore's command seam.
 
 import type {
+  GitAttributionGuardianResult,
   GitForkHealthAttributionState,
   GitForkHealthResult,
   GitForkHealthState,
@@ -134,26 +135,45 @@ export function deriveForkHealth(facts: ForkHealthFacts): GitForkHealthResult {
 export function makeGitForkHealth(input: {
   readonly execute: Execute;
   readonly upstreamStatus: (cwd: string) => Effect.Effect<GitUpstreamStatusResult, GitCommandError>;
+  readonly attributionGuardian: (
+    cwd: string,
+    upstream: GitUpstreamStatusResult,
+  ) => Effect.Effect<GitAttributionGuardianResult, GitCommandError>;
 }) {
-  const { execute, upstreamStatus } = input;
+  const { attributionGuardian, execute, upstreamStatus } = input;
   const read = (cwd: string): Effect.Effect<GitForkHealthResult, GitCommandError> =>
     Effect.gen(function* () {
-      const [upstream, worktree] = yield* Effect.all(
+      const upstream = yield* upstreamStatus(cwd);
+      const [worktree, attributionResult] = yield* Effect.all(
         [
-          upstreamStatus(cwd),
           readGitWorktreeSafety({ execute, cwd, operationPrefix: "GitCore.forkHealth" }),
+          attributionGuardian(cwd, upstream).pipe(
+            Effect.map((result) => ({ _tag: "available" as const, result })),
+            Effect.catchTag("GitCommandError", () =>
+              Effect.succeed({ _tag: "unavailable" as const }),
+            ),
+          ),
         ],
         { concurrency: 2 },
       );
+      const attribution: ForkHealthFacts["attribution"] =
+        attributionResult._tag === "unavailable"
+          ? {
+              state: "unknown",
+              message:
+                "Attribution comparison could not be completed. Open Attribution Guardian to retry.",
+            }
+          : attributionResult.result.state !== "ready" ||
+              attributionResult.result.files.length === 0
+            ? { state: "unknown", message: attributionResult.result.message }
+            : attributionResult.result.warningCount > 0
+              ? { state: "warning", message: attributionResult.result.message }
+              : { state: "present", message: attributionResult.result.message };
       return deriveForkHealth({
         upstream,
         hasWorkingTreeChanges: worktree.hasWorkingTreeChanges,
         unresolvedConflictFiles: worktree.unresolvedConflictFiles,
-        attribution: {
-          state: "unknown",
-          message:
-            "Attribution has not been evaluated because Attribution Guardian is not available yet.",
-        },
+        attribution,
       });
     });
 

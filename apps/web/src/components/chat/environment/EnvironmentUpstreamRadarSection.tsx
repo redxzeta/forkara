@@ -86,6 +86,10 @@ export function EnvironmentUpstreamRadarSection({
         exact: true,
       });
       void queryClient.invalidateQueries({
+        queryKey: gitQueryKeys.attributionGuardian(gitCwd),
+        exact: true,
+      });
+      void queryClient.invalidateQueries({
         queryKey: gitQueryKeys.forkArchaeology(gitCwd),
       });
     },
@@ -110,6 +114,10 @@ export function EnvironmentUpstreamRadarSection({
         exact: true,
       });
       void queryClient.invalidateQueries({
+        queryKey: gitQueryKeys.attributionGuardian(gitCwd),
+        exact: true,
+      });
+      void queryClient.invalidateQueries({
         queryKey: gitQueryKeys.forkArchaeology(gitCwd),
       });
     },
@@ -130,6 +138,10 @@ export function EnvironmentUpstreamRadarSection({
       void queryClient.invalidateQueries({ queryKey: gitQueryKeys.status(gitCwd), exact: true });
       void queryClient.invalidateQueries({
         queryKey: gitQueryKeys.forkHealth(gitCwd),
+        exact: true,
+      });
+      void queryClient.invalidateQueries({
+        queryKey: gitQueryKeys.attributionGuardian(gitCwd),
         exact: true,
       });
       void queryClient.invalidateQueries({
