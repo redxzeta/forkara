@@ -34,6 +34,7 @@ import { GitCheckoutDirtyWorktreeError, GitCommandError } from "../Errors.ts";
 import { makeGitAttributionGuardian } from "../gitAttributionGuardian.ts";
 import { makeGitForkArchaeology } from "../gitForkArchaeology.ts";
 import { makeGitForkHealth } from "../gitForkHealth.ts";
+import { makeGitOriginalityMeter } from "../gitOriginalityMeter.ts";
 import { makeGitUpstreamRadar } from "../gitUpstreamRadar.ts";
 import { makeGitUpstreamSync } from "../gitUpstreamSync.ts";
 import {
@@ -1143,6 +1144,10 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
       execute: executeGit,
       upstreamStatus: upstreamRadar.status,
     });
+    const originalityMeter = makeGitOriginalityMeter({
+      execute: executeGit,
+      forkArchaeologyOverview: forkArchaeology.overview,
+    });
     const upstreamStatus: GitCoreShape["upstreamStatus"] = upstreamRadar.status;
     const refreshUpstream: GitCoreShape["refreshUpstream"] = upstreamRadar.refresh;
     const previewUpstreamSync: GitCoreShape["previewUpstreamSync"] = upstreamSync.preview;
@@ -1155,6 +1160,7 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
       forkArchaeology.commitPage;
     const readForkArchaeologyFileHistory: GitCoreShape["forkArchaeologyFileHistory"] =
       forkArchaeology.fileHistory;
+    const readOriginalityMeter: GitCoreShape["originalityMeter"] = originalityMeter.read;
 
     const resolvePushRemoteName = (
       cwd: string,
@@ -3351,6 +3357,7 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
       applyUpstreamSync,
       forkHealth: readForkHealth,
       attributionGuardian: readAttributionGuardian,
+      originalityMeter: readOriginalityMeter,
       forkArchaeologyOverview: readForkArchaeologyOverview,
       forkArchaeologyCommitPage: readForkArchaeologyCommitPage,
       forkArchaeologyFileHistory: readForkArchaeologyFileHistory,

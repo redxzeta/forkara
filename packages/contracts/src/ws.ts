@@ -197,6 +197,7 @@ export const WS_METHODS = {
   gitForkHealth: "git.forkHealth",
   gitAttributionGuardian: "git.attributionGuardian",
   gitForkFamilyTree: "git.forkFamilyTree",
+  gitOriginalityMeter: "git.originalityMeter",
   gitForkArchaeologyOverview: "git.forkArchaeologyOverview",
   gitForkArchaeologyCommitPage: "git.forkArchaeologyCommitPage",
   gitForkArchaeologyFileHistory: "git.forkArchaeologyFileHistory",
