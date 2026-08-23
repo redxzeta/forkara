@@ -8,6 +8,7 @@ import {
   WsFeatureRpcGroup,
   WsProjectsDiscoverScriptsRpc,
   WsProjectsProvisionFromGitHubRpc,
+  WsPullRequestsMergedTodayRpc,
   WsPullRequestsReviewRequestCountRpc,
   WsRpcError,
   WsRpcGroup,
@@ -45,5 +46,7 @@ describe("WS RPC contracts", () => {
 
   it("exports the count-only pull request review RPC", () => {
     expect(WsPullRequestsReviewRequestCountRpc).toBeDefined();
+    expect(WsPullRequestsMergedTodayRpc).toBeDefined();
+    expect(WsFeatureRpcGroup.requests.has("pullRequests.mergedToday")).toBe(true);
   });
 });

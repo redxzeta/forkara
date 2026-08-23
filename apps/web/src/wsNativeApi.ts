@@ -634,6 +634,7 @@ export function createWsNativeApi(): NativeApi {
     },
     pullRequests: {
       list: (input) => transport.request(WS_METHODS.pullRequestsList, input),
+      mergedToday: (input) => transport.request(WS_METHODS.pullRequestsMergedToday, input),
       reviewRequestCount: (input) =>
         transport.request(WS_METHODS.pullRequestsReviewRequestCount, input),
       detail: (input) => transport.request(WS_METHODS.pullRequestsDetail, input),

@@ -102,7 +102,78 @@ function makeDependencies(input: {
   };
 }
 
+function makeMergedReceipt(number: number) {
+  return {
+    number,
+    title: `Merged PR ${number}`,
+    url: `https://github.com/acme/widgets/pull/${number}`,
+    repository: "acme/widgets",
+    repositoryVisibility: "public" as const,
+    authorLogin: "octocat",
+    mergedAt: `2026-08-23T1${number}:00:00.000Z`,
+  };
+}
+
 describe("PullRequestService", () => {
+  it("returns zero, one, and many factual authored merge receipts without local heuristics", async () => {
+    const base = createGitHubCliWithFakeGh({ viewerLogin: "octocat" }).service;
+    const batches = [[], [makeMergedReceipt(1)], [makeMergedReceipt(1), makeMergedReceipt(2)]];
+    let searchIndex = 0;
+    const github: GitHubCliShape = {
+      ...base,
+      searchMergedPullRequests: () =>
+        Effect.succeed({ entries: batches[searchIndex++] ?? [], incomplete: false }),
+    };
+
+    const results = await Effect.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const service = yield* makePullRequestService(
+            makeDependencies({ projects: [], repositories: new Map(), github }),
+          );
+          const input = {
+            date: "2026-08-23" as const,
+            startedAt: "2026-08-23T07:00:00.000Z",
+            endedAt: "2026-08-24T07:00:00.000Z",
+            scope: { type: "all" as const },
+          };
+          return [
+            yield* service.mergedToday(input),
+            yield* service.mergedToday(input),
+            yield* service.mergedToday(input),
+          ];
+        }),
+      ),
+    );
+
+    expect(results.map((result) => result.count)).toEqual([0, 1, 2]);
+    expect(results[2]?.receipts).toHaveLength(2);
+    expect(results[2]?.viewer).toBe("octocat");
+  });
+
+  it("passes the selected repository scope to the GitHub receipts search", async () => {
+    const { service: github, ghCalls } = createGitHubCliWithFakeGh({ viewerLogin: "octocat" });
+    await Effect.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const service = yield* makePullRequestService(
+            makeDependencies({ projects: [], repositories: new Map(), github }),
+          );
+          yield* service.mergedToday({
+            date: "2026-08-23",
+            startedAt: "2026-08-23T07:00:00.000Z",
+            endedAt: "2026-08-24T07:00:00.000Z",
+            scope: { type: "repository", repository: "acme/widgets" },
+          });
+        }),
+      ),
+    );
+
+    expect(ghCalls).toContain(
+      "search merged prs --author octocat --started-at 2026-08-23T07:00:00.000Z --ended-at 2026-08-24T07:00:00.000Z --repo acme/widgets",
+    );
+  });
+
   it("returns one repository-level row for projects sharing a repository", async () => {
     const projectA = makeProject("project-list-a", "List A", "/tmp/list-a");
     const projectB = makeProject("project-list-b", "feature-1", "/tmp/list-b");

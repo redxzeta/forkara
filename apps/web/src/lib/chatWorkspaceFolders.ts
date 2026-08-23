@@ -5,12 +5,10 @@
 
 import { workspaceRootsEqual } from "@forkara/shared/threadWorkspace";
 
+import { formatLocalCalendarDate } from "./localCalendarDay";
+
 const FALLBACK_CHAT_WORKSPACE_SLUG = "new-thread";
 const MAX_CHAT_WORKSPACE_SLUG_LENGTH = 72;
-
-function padDatePart(value: number): string {
-  return value.toString().padStart(2, "0");
-}
 
 function trimTrailingPathSeparators(path: string): string {
   return path.replace(/[\\/]+$/g, "");
@@ -27,9 +25,7 @@ function joinWorkspacePath(root: string, ...segments: readonly string[]): string
 
 // Uses the user's local calendar day, matching the date-bucketed folders Codex creates.
 export function formatChatWorkspaceDate(date: Date): string {
-  return [date.getFullYear(), padDatePart(date.getMonth() + 1), padDatePart(date.getDate())].join(
-    "-",
-  );
+  return formatLocalCalendarDate(date);
 }
 
 export function slugifyChatWorkspaceSeed(seed: string): string {

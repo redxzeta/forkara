@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { Schema } from "effect";
 
 import {
+  MergeFlexReceiptsInput,
+  MergeFlexReceiptsResult,
   PullRequestCommentInput,
   PullRequestActionResult,
   PullRequestDetail,
@@ -18,6 +20,8 @@ const decodeReviewRequestCountResult = Schema.decodeUnknownSync(
   PullRequestReviewRequestCountResult,
 );
 const decodeActionResult = Schema.decodeUnknownSync(PullRequestActionResult);
+const decodeMergeFlexInput = Schema.decodeUnknownSync(MergeFlexReceiptsInput);
+const decodeMergeFlexResult = Schema.decodeUnknownSync(MergeFlexReceiptsResult);
 
 function listEntry() {
   return {
@@ -67,6 +71,59 @@ describe("PullRequestListEntry", () => {
         },
       }).stack,
     ).toEqual({ number: 8, size: 3, position: 2, baseBranch: "main" });
+  });
+});
+
+describe("Merge Flex receipts", () => {
+  it("decodes an explicit local-day interval and repository scope", () => {
+    expect(
+      decodeMergeFlexInput({
+        date: "2026-08-23",
+        startedAt: "2026-08-23T07:00:00.000Z",
+        endedAt: "2026-08-24T07:00:00.000Z",
+        scope: { type: "repository", repository: "redxzeta/forkara" },
+      }).scope,
+    ).toEqual({ type: "repository", repository: "redxzeta/forkara" });
+    expect(() =>
+      decodeMergeFlexInput({
+        date: "08/23/2026",
+        startedAt: "2026-08-23T07:00:00.000Z",
+        endedAt: "2026-08-24T07:00:00.000Z",
+        scope: { type: "all" },
+      }),
+    ).toThrow();
+    expect(() =>
+      decodeMergeFlexInput({
+        date: "2026-02-31",
+        startedAt: "2026-02-28T08:00:00.000Z",
+        endedAt: "2026-03-01T08:00:00.000Z",
+        scope: { type: "all" },
+      }),
+    ).toThrow();
+  });
+
+  it("retains repository visibility needed for privacy-safe sharing", () => {
+    const decoded = decodeMergeFlexResult({
+      date: "2026-08-23",
+      startedAt: "2026-08-23T07:00:00.000Z",
+      endedAt: "2026-08-24T07:00:00.000Z",
+      scope: { type: "all" },
+      viewer: "redxzeta",
+      count: 1,
+      receipts: [
+        {
+          number: 96,
+          title: "Ship factual receipts",
+          url: "https://github.com/redxzeta/forkara/pull/96",
+          repository: "redxzeta/forkara",
+          repositoryVisibility: "private",
+          authorLogin: "redxzeta",
+          mergedAt: "2026-08-23T13:07:27.000Z",
+        },
+      ],
+      incomplete: false,
+    });
+    expect(decoded.receipts[0]?.repositoryVisibility).toBe("private");
   });
 });
 

@@ -133,6 +133,8 @@ import {
   GitUnstageFilesResult,
 } from "./git";
 import {
+  MergeFlexReceiptsInput,
+  MergeFlexReceiptsResult,
   PullRequestActionInput,
   PullRequestCommentInput,
   PullRequestActionResult,
@@ -815,6 +817,12 @@ export const WsPullRequestsListRpc = Rpc.make(WS_METHODS.pullRequestsList, {
   error: PullRequestsRpcError,
 });
 
+export const WsPullRequestsMergedTodayRpc = Rpc.make(WS_METHODS.pullRequestsMergedToday, {
+  payload: MergeFlexReceiptsInput,
+  success: MergeFlexReceiptsResult,
+  error: PullRequestsRpcError,
+});
+
 export const WsPullRequestsReviewRequestCountRpc = Rpc.make(
   WS_METHODS.pullRequestsReviewRequestCount,
   {
@@ -1363,6 +1371,7 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsGitPullRequestSnapshotRpc,
   WsGitPreparePullRequestThreadRpc,
   WsPullRequestsListRpc,
+  WsPullRequestsMergedTodayRpc,
   WsPullRequestsReviewRequestCountRpc,
   WsPullRequestsDetailRpc,
   WsPullRequestsDiffRpc,

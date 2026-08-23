@@ -112,6 +112,8 @@ import type {
   GitHubProjectProvisionResult,
 } from "./githubProjectProvisioning";
 import type {
+  MergeFlexReceiptsInput,
+  MergeFlexReceiptsResult,
   PullRequestActionInput,
   PullRequestActionResult,
   PullRequestCommentInput,
@@ -765,6 +767,7 @@ export interface NativeApi {
   };
   pullRequests: {
     list: (input: PullRequestsListInput) => Promise<PullRequestsListResult>;
+    mergedToday: (input: MergeFlexReceiptsInput) => Promise<MergeFlexReceiptsResult>;
     reviewRequestCount: (
       input: PullRequestReviewRequestCountInput,
     ) => Promise<PullRequestReviewRequestCountResult>;
