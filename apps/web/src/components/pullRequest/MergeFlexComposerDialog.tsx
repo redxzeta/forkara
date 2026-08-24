@@ -22,13 +22,17 @@ import { Spinner } from "~/components/ui/spinner";
 import { Textarea } from "~/components/ui/textarea";
 import {
   composeMergeFlexFactualDraft,
+  composeMergeFlexParodyDraft,
   countUnicodeCharacters,
   createMergeFlexPostGate,
   factualShareableRepository,
+  finalizeMergeFlexParodyPost,
   MERGE_FLEX_FACTUAL_TEMPLATES,
   type MergeFlexFactualTemplateId,
+  type MergeFlexParodyTemplateId,
   mergeFlexErrorMessage,
   mergeFlexScopeLabel,
+  parseMergeFlexParodyCount,
   startExplicitMergeFlexPost,
 } from "~/lib/mergeFlexComposer";
 import { xConnectionStatusQueryOptions, xPostQueryKeys } from "~/lib/xPostReactQuery";
@@ -39,6 +43,9 @@ import {
   PR_META_TEXT_CLASS_NAME,
   PR_QUIET_INK_CLASS_NAME,
 } from "./pullRequestText";
+import { MergeFlexParodyPanel } from "./MergeFlexParodyPanel";
+
+type MergeFlexSourceMode = "factual" | "parody";
 
 export interface MergeFlexComposerDialogProps {
   readonly open: boolean;
@@ -92,9 +99,12 @@ function beginConnectionLabel(status: XConnectionStatus | null): string {
 
 export function MergeFlexComposerDialog(props: MergeFlexComposerDialogProps) {
   const repositoryOption = factualShareableRepository(props.result);
-  const [templateId, setTemplateId] = useState<MergeFlexFactualTemplateId>("receipts");
+  const [sourceMode, setSourceMode] = useState<MergeFlexSourceMode>("factual");
+  const [factualTemplateId, setFactualTemplateId] =
+    useState<MergeFlexFactualTemplateId>("receipts");
+  const [parodyTemplateId, setParodyTemplateId] = useState<MergeFlexParodyTemplateId>("accounting");
   const [includeRepository, setIncludeRepository] = useState(false);
-  const initialDraft = useMemo(
+  const initialFactualDraft = useMemo(
     () =>
       composeMergeFlexFactualDraft("receipts", {
         count: props.result.count,
@@ -104,7 +114,12 @@ export function MergeFlexComposerDialog(props: MergeFlexComposerDialogProps) {
       }),
     [props.result.count, props.result.date, props.result.incomplete],
   );
-  const [draft, setDraft] = useState(initialDraft);
+  const [factualDraft, setFactualDraft] = useState(initialFactualDraft);
+  const [parodyCountInput, setParodyCountInput] = useState("42");
+  const [parodyCount, setParodyCount] = useState(42);
+  const [parodyDraft, setParodyDraft] = useState(() =>
+    composeMergeFlexParodyDraft("accounting", { count: 42, date: props.result.date }),
+  );
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionActionError, setConnectionActionError] = useState<string | null>(null);
   const [isPosting, setIsPosting] = useState(false);
@@ -120,13 +135,19 @@ export function MergeFlexComposerDialog(props: MergeFlexComposerDialogProps) {
     return () => window.cancelAnimationFrame(frame);
   }, [props.open]);
 
-  const replaceFromTemplate = (
+  const clearPostFeedback = () => {
+    setPostError(null);
+    setPostResult(null);
+    setOpenPostError(null);
+  };
+
+  const replaceFromFactualTemplate = (
     nextTemplateId: MergeFlexFactualTemplateId,
     nextIncludeRepository: boolean,
   ) => {
-    setTemplateId(nextTemplateId);
+    setFactualTemplateId(nextTemplateId);
     setIncludeRepository(nextIncludeRepository);
-    setDraft(
+    setFactualDraft(
       composeMergeFlexFactualDraft(nextTemplateId, {
         count: props.result.count,
         date: props.result.date,
@@ -134,9 +155,37 @@ export function MergeFlexComposerDialog(props: MergeFlexComposerDialogProps) {
         repository: nextIncludeRepository ? repositoryOption : null,
       }),
     );
-    setPostError(null);
-    setPostResult(null);
-    setOpenPostError(null);
+    clearPostFeedback();
+  };
+
+  const replaceFromParodyTemplate = (nextTemplateId: MergeFlexParodyTemplateId, count: number) => {
+    setParodyTemplateId(nextTemplateId);
+    setParodyDraft(composeMergeFlexParodyDraft(nextTemplateId, { count, date: props.result.date }));
+    clearPostFeedback();
+  };
+
+  const setParodyCountFromPreset = (count: number) => {
+    setParodyCountInput(String(count));
+    setParodyCount(count);
+    replaceFromParodyTemplate(parodyTemplateId, count);
+  };
+
+  const updateParodyCount = (value: string) => {
+    setParodyCountInput(value);
+    const count = parseMergeFlexParodyCount(value);
+    if (count === null) {
+      clearPostFeedback();
+      return;
+    }
+    setParodyCount(count);
+    replaceFromParodyTemplate(parodyTemplateId, count);
+  };
+
+  const switchSourceMode = (mode: MergeFlexSourceMode) => {
+    if (isPosting || mode === sourceMode) return;
+    setSourceMode(mode);
+    clearPostFeedback();
+    window.requestAnimationFrame(() => editorRef.current?.focus());
   };
 
   const beginConnection = async () => {
@@ -168,7 +217,7 @@ export function MergeFlexComposerDialog(props: MergeFlexComposerDialogProps) {
   const submit = async () => {
     const submission = startExplicitMergeFlexPost(
       postingGateRef.current,
-      { connected: props.connectionStatus?.state === "connected", text: draft },
+      { connected: props.connectionStatus?.state === "connected", text: finalPreview },
       props.onPost,
     );
     if (!submission) return;
@@ -197,9 +246,18 @@ export function MergeFlexComposerDialog(props: MergeFlexComposerDialogProps) {
     }
   };
 
+  const parodyCountValid = parseMergeFlexParodyCount(parodyCountInput) !== null;
+  const activeDraft = sourceMode === "factual" ? factualDraft : parodyDraft;
+  const finalPreview =
+    sourceMode === "factual" ? factualDraft : finalizeMergeFlexParodyPost(parodyDraft);
   const connected = props.connectionStatus?.state === "connected";
-  const canPost = connected && draft.trim().length > 0 && !isPosting && postResult === null;
-  const characterCount = countUnicodeCharacters(draft);
+  const canPost =
+    connected &&
+    activeDraft.trim().length > 0 &&
+    (sourceMode === "factual" || parodyCountValid) &&
+    !isPosting &&
+    postResult === null;
+  const characterCount = countUnicodeCharacters(finalPreview);
 
   return (
     <Dialog
@@ -211,23 +269,61 @@ export function MergeFlexComposerDialog(props: MergeFlexComposerDialogProps) {
       <DialogPopup className="max-w-2xl" showCloseButton={!isPosting}>
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <Badge variant="success">FACTUAL RECEIPTS</Badge>
+            <Badge variant={sourceMode === "factual" ? "success" : "warning"}>
+              {sourceMode === "factual" ? "FACTUAL RECEIPTS" : "PARODY · SOURCE: VIBES"}
+            </Badge>
             <span className={cn(PR_FINE_TEXT_CLASS_NAME, PR_QUIET_INK_CLASS_NAME)}>
-              @{props.result.viewer}
+              {sourceMode === "factual" ? `@${props.result.viewer}` : "PR Inflation Department"}
             </span>
           </div>
           <DialogTitle>Flex on X</DialogTitle>
           <DialogDescription>
-            Review the exact public text below. Opening this composer never posts anything.
+            Review the exact public text and its source mode below. Opening this composer never
+            posts anything.
           </DialogDescription>
         </DialogHeader>
 
         <DialogPanel className="space-y-4">
+          <div
+            role="radiogroup"
+            aria-label="Merge Flex source mode"
+            className="grid grid-cols-2 gap-2 rounded-xl border border-border/60 bg-muted/20 p-1"
+          >
+            <Button
+              type="button"
+              role="radio"
+              aria-checked={sourceMode === "factual"}
+              variant={sourceMode === "factual" ? "secondary" : "ghost"}
+              disabled={isPosting}
+              onClick={() => switchSourceMode("factual")}
+            >
+              Receipts · factual
+            </Button>
+            <Button
+              type="button"
+              role="radio"
+              aria-checked={sourceMode === "parody"}
+              variant={sourceMode === "parody" ? "secondary" : "ghost"}
+              disabled={isPosting}
+              onClick={() => switchSourceMode("parody")}
+            >
+              Resume-Driven Development
+            </Button>
+          </div>
+
           <dl className="grid grid-cols-2 gap-2 rounded-xl border border-border/60 bg-muted/20 p-3 text-sm sm:grid-cols-3">
             <div>
-              <dt className={cn(PR_FINE_TEXT_CLASS_NAME, PR_QUIET_INK_CLASS_NAME)}>Merged</dt>
+              <dt className={cn(PR_FINE_TEXT_CLASS_NAME, PR_QUIET_INK_CLASS_NAME)}>
+                {sourceMode === "factual" ? "Merged" : "Alleged"}
+              </dt>
               <dd className="font-heading text-lg font-semibold tabular-nums">
-                {props.result.incomplete ? `${props.result.count}+` : props.result.count}
+                {sourceMode === "factual"
+                  ? props.result.incomplete
+                    ? `${props.result.count}+`
+                    : props.result.count
+                  : parodyCountValid
+                    ? parodyCount
+                    : "—"}
               </dd>
             </div>
             <div>
@@ -235,51 +331,73 @@ export function MergeFlexComposerDialog(props: MergeFlexComposerDialogProps) {
               <dd className={PR_META_TEXT_CLASS_NAME}>{props.result.date}</dd>
             </div>
             <div className="col-span-2 sm:col-span-1">
-              <dt className={cn(PR_FINE_TEXT_CLASS_NAME, PR_QUIET_INK_CLASS_NAME)}>Scope</dt>
-              <dd className={PR_META_TEXT_CLASS_NAME}>{mergeFlexScopeLabel(props.result)}</dd>
+              <dt className={cn(PR_FINE_TEXT_CLASS_NAME, PR_QUIET_INK_CLASS_NAME)}>Source</dt>
+              <dd className={PR_META_TEXT_CLASS_NAME}>
+                {sourceMode === "factual" ? mergeFlexScopeLabel(props.result) : "Simulated locally"}
+              </dd>
             </div>
           </dl>
 
-          <fieldset className="space-y-2" disabled={isPosting}>
-            <legend className={cn(PR_META_TEXT_CLASS_NAME, "font-medium")}>Copy template</legend>
-            <div className="flex flex-wrap gap-2">
-              {MERGE_FLEX_FACTUAL_TEMPLATES.map((template) => (
-                <Button
-                  key={template.id}
-                  type="button"
-                  size="sm"
-                  variant={templateId === template.id ? "secondary" : "outline"}
-                  aria-pressed={templateId === template.id}
-                  onClick={() => replaceFromTemplate(template.id, includeRepository)}
-                >
-                  {template.label}
-                </Button>
-              ))}
-            </div>
-          </fieldset>
+          {sourceMode === "factual" ? (
+            <>
+              <fieldset className="space-y-2" disabled={isPosting}>
+                <legend className={cn(PR_META_TEXT_CLASS_NAME, "font-medium")}>
+                  Copy template
+                </legend>
+                <div className="flex flex-wrap gap-2">
+                  {MERGE_FLEX_FACTUAL_TEMPLATES.map((template) => (
+                    <Button
+                      key={template.id}
+                      type="button"
+                      size="sm"
+                      variant={factualTemplateId === template.id ? "secondary" : "outline"}
+                      aria-pressed={factualTemplateId === template.id}
+                      onClick={() => replaceFromFactualTemplate(template.id, includeRepository)}
+                    >
+                      {template.label}
+                    </Button>
+                  ))}
+                </div>
+              </fieldset>
 
-          {repositoryOption ? (
-            <label className="flex items-start gap-2 rounded-lg border border-border/60 p-3">
-              <Checkbox
-                checked={includeRepository}
-                disabled={isPosting}
-                onCheckedChange={(checked) => replaceFromTemplate(templateId, checked)}
-              />
-              <span>
-                <span className={cn(PR_META_TEXT_CLASS_NAME, "block font-medium")}>
-                  Include {repositoryOption}
-                </span>
-                <span className={cn(PR_FINE_TEXT_CLASS_NAME, PR_QUIET_INK_CLASS_NAME, "block")}>
-                  Optional. GitHub classified this current repository as public; it is excluded by
-                  default.
-                </span>
-              </span>
-            </label>
+              {repositoryOption ? (
+                <label className="flex items-start gap-2 rounded-lg border border-border/60 p-3">
+                  <Checkbox
+                    checked={includeRepository}
+                    disabled={isPosting}
+                    onCheckedChange={(checked) =>
+                      replaceFromFactualTemplate(factualTemplateId, checked)
+                    }
+                  />
+                  <span>
+                    <span className={cn(PR_META_TEXT_CLASS_NAME, "block font-medium")}>
+                      Include {repositoryOption}
+                    </span>
+                    <span className={cn(PR_FINE_TEXT_CLASS_NAME, PR_QUIET_INK_CLASS_NAME, "block")}>
+                      Optional. GitHub classified this current repository as public; it is excluded
+                      by default.
+                    </span>
+                  </span>
+                </label>
+              ) : (
+                <p className={cn(PR_FINE_TEXT_CLASS_NAME, PR_QUIET_INK_CLASS_NAME)}>
+                  Repository names, PR titles, URLs, organizations, and branches are excluded from
+                  this public draft.
+                </p>
+              )}
+            </>
           ) : (
-            <p className={cn(PR_FINE_TEXT_CLASS_NAME, PR_QUIET_INK_CLASS_NAME)}>
-              Repository names, PR titles, URLs, organizations, and branches are excluded from this
-              public draft.
-            </p>
+            <MergeFlexParodyPanel
+              count={parodyCount}
+              countInput={parodyCountInput}
+              countValid={parodyCountValid}
+              date={props.result.date}
+              disabled={isPosting}
+              templateId={parodyTemplateId}
+              onCountInputChange={updateParodyCount}
+              onPreset={setParodyCountFromPreset}
+              onTemplateChange={(templateId) => replaceFromParodyTemplate(templateId, parodyCount)}
+            />
           )}
 
           <div className="space-y-1.5">
@@ -300,29 +418,35 @@ export function MergeFlexComposerDialog(props: MergeFlexComposerDialogProps) {
             <Textarea
               id="merge-flex-x-draft"
               ref={editorRef}
-              value={draft}
+              value={activeDraft}
               disabled={isPosting}
               aria-describedby="merge-flex-x-length-note"
               className="[&_[data-slot=textarea]]:min-h-28 [&_[data-slot=textarea]]:resize-y"
               onChange={(event) => {
-                setDraft(event.target.value);
-                setPostError(null);
-                setPostResult(null);
-                setOpenPostError(null);
+                if (sourceMode === "factual") {
+                  setFactualDraft(event.target.value);
+                } else {
+                  setParodyDraft(event.target.value);
+                }
+                clearPostFeedback();
               }}
             />
             <p
               id="merge-flex-x-length-note"
               className={cn(PR_FINE_TEXT_CLASS_NAME, PR_QUIET_INK_CLASS_NAME)}
             >
-              X applies its own weighted-length validation when you explicitly post.
+              {sourceMode === "factual"
+                ? "X applies its own weighted-length validation when you explicitly post."
+                : "The final parody marker is appended outside this editor and cannot be removed."}
             </p>
           </div>
 
           <div className="space-y-1.5">
-            <p className={cn(PR_META_TEXT_CLASS_NAME, "font-medium")}>Final preview</p>
+            <p className={cn(PR_META_TEXT_CLASS_NAME, "font-medium")}>
+              Final preview · {sourceMode === "factual" ? "factual receipts" : "parody"}
+            </p>
             <blockquote className="whitespace-pre-wrap break-words rounded-xl border border-border/60 bg-muted/20 p-3 text-sm leading-relaxed">
-              {draft.length > 0 ? draft : "Your preview will appear here."}
+              {activeDraft.length > 0 ? finalPreview : "Your preview will appear here."}
             </blockquote>
           </div>
 
@@ -388,7 +512,9 @@ export function MergeFlexComposerDialog(props: MergeFlexComposerDialogProps) {
           ) : null}
           {postResult ? (
             <div role="status" className="rounded-xl border border-success/30 bg-success/5 p-3">
-              <p className={cn(PR_META_TEXT_CLASS_NAME, "font-medium text-success")}>Posted to X</p>
+              <p className={cn(PR_META_TEXT_CLASS_NAME, "font-medium text-success")}>
+                {sourceMode === "factual" ? "Posted to X" : "Posted parody to X"}
+              </p>
               <Button
                 type="button"
                 size="sm"
@@ -418,7 +544,13 @@ export function MergeFlexComposerDialog(props: MergeFlexComposerDialogProps) {
           </Button>
           <Button type="button" disabled={!canPost} onClick={() => void submit()}>
             {isPosting ? <Spinner /> : null}
-            {isPosting ? "Posting…" : postResult ? "Posted" : "Post to X"}
+            {isPosting
+              ? "Posting…"
+              : postResult
+                ? "Posted"
+                : sourceMode === "factual"
+                  ? "Post to X"
+                  : "Post parody to X"}
           </Button>
         </DialogFooter>
       </DialogPopup>

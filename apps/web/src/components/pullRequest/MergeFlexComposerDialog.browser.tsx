@@ -6,6 +6,7 @@ import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 
+import { MERGE_FLEX_PARODY_MARKER } from "~/lib/mergeFlexComposer";
 import { MergeFlexComposerDialog } from "./MergeFlexComposerDialog";
 
 function factualResult(
@@ -221,5 +222,57 @@ describe("MergeFlexComposerDialog", () => {
 
     await page.getByRole("button", { name: "Retry connection status" }).click();
     expect(retryStatus).toHaveBeenCalledOnce();
+  });
+
+  it("isolates factual and parody drafts while enforcing the final parody payload", async () => {
+    const onPost = vi.fn().mockImplementation(async (text: string) => ({
+      id: "456",
+      text,
+      url: "https://x.com/i/web/status/456",
+    }));
+    await render(
+      <MergeFlexComposerDialog
+        open
+        result={factualResult()}
+        connectionStatus={connectedStatus()}
+        authorizationUrl={null}
+        onOpenChange={vi.fn()}
+        onBeginConnect={vi.fn().mockResolvedValue(undefined)}
+        onRetryConnectionStatus={vi.fn().mockResolvedValue(undefined)}
+        onOpenAuthorization={vi.fn().mockResolvedValue(undefined)}
+        onPost={onPost}
+        onOpenPost={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+    const editor = page.getByLabelText("Post text");
+    await editor.fill("Edited factual receipt");
+    await page.getByRole("radio", { name: "Resume-Driven Development" }).click();
+    await expect.element(page.getByText("PARODY · SOURCE: VIBES")).toBeInTheDocument();
+
+    const allegedCount = page.getByLabelText("Alleged PRs merged today");
+    await allegedCount.fill("1000000");
+    await expect.element(page.getByRole("alert")).toHaveTextContent("Enter a whole number");
+    expect(
+      (page.getByRole("button", { name: "Post parody to X" }).element() as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+
+    await page.getByRole("button", { name: "42", exact: true }).click();
+    expect((allegedCount.element() as HTMLInputElement).value).toBe("42");
+    await editor.fill("Custom boast with no disclaimer");
+    await expect.element(page.getByText(MERGE_FLEX_PARODY_MARKER)).toBeInTheDocument();
+
+    await page.getByRole("radio", { name: "Receipts · factual" }).click();
+    expect((editor.element() as HTMLTextAreaElement).value).toBe("Edited factual receipt");
+    await page.getByRole("radio", { name: "Resume-Driven Development" }).click();
+    expect((editor.element() as HTMLTextAreaElement).value).toBe("Custom boast with no disclaimer");
+
+    await page.getByRole("button", { name: "Post parody to X" }).click();
+    await vi.waitFor(() => expect(onPost).toHaveBeenCalledOnce());
+    expect(onPost).toHaveBeenCalledWith(
+      `Custom boast with no disclaimer\n\n${MERGE_FLEX_PARODY_MARKER}`,
+    );
+    await expect.element(page.getByRole("status")).toHaveTextContent("Posted parody to X");
   });
 });
