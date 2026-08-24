@@ -48,6 +48,19 @@ function placeholderMessage(action: ResetDepartmentAction): string {
   return `${action.title} is coming soon. No reset operation ran.`;
 }
 
+interface ResetDepartmentOutcome {
+  readonly actionId: "oracle" | "quota";
+  readonly message: string;
+}
+
+function ResetDepartmentResult({ message }: { readonly message: string }) {
+  return (
+    <blockquote className="mt-3 rounded-lg border bg-background/60 px-3 py-2 text-center text-sm font-medium text-foreground">
+      {message}
+    </blockquote>
+  );
+}
+
 export function ResetDepartmentSettingsPanel({
   active,
   random = Math.random,
@@ -56,7 +69,7 @@ export function ResetDepartmentSettingsPanel({
   readonly random?: () => number;
 }) {
   const [status, setStatus] = useState<string | null>(null);
-  const [oracleResponse, setOracleResponse] = useState<string | null>(null);
+  const [outcome, setOutcome] = useState<ResetDepartmentOutcome | null>(null);
   if (!active) return null;
 
   return (
@@ -70,6 +83,7 @@ export function ResetDepartmentSettingsPanel({
           {RESET_DEPARTMENT_ACTIONS.map((action) => {
             const danger = action.risk === "DANGER";
             const oracle = action.id === "oracle";
+            const quota = action.id === "quota";
             const descriptionId = `reset-department-${action.id}-description`;
             return (
               <article
@@ -103,35 +117,43 @@ export function ResetDepartmentSettingsPanel({
                 >
                   {action.description}
                 </p>
-                {oracleResponse && oracle ? (
-                  <blockquote className="mt-3 rounded-lg border bg-background/60 px-3 py-2 text-center text-sm font-medium text-foreground">
-                    {oracleResponse}
-                  </blockquote>
+                {outcome?.actionId === action.id ? (
+                  <ResetDepartmentResult message={outcome.message} />
                 ) : null}
                 <Button
                   type="button"
                   size="sm"
                   variant={danger ? "destructive-outline" : "outline"}
                   className="mt-4 w-full"
-                  data-reset-placeholder={oracle ? undefined : "true"}
+                  data-reset-placeholder={oracle || quota ? undefined : "true"}
                   data-reset-oracle={oracle ? "true" : undefined}
+                  data-reset-quota-parody={quota ? "true" : undefined}
                   aria-describedby={descriptionId}
                   aria-label={
                     oracle
                       ? `${action.title} — ${action.risk}`
-                      : `${action.title} — ${action.risk} placeholder`
+                      : quota
+                        ? `${action.title} — ${action.risk} parody`
+                        : `${action.title} — ${action.risk} placeholder`
                   }
                   onClick={() => {
                     if (oracle) {
                       const result = selectResetOracleResponse(random);
-                      setOracleResponse(result.response);
+                      setOutcome({ actionId: "oracle", message: result.response });
                       setStatus(`The Reset Oracle says: ${result.response}`);
+                      return;
+                    }
+                    if (quota) {
+                      const message =
+                        "Request submitted to the universe. This is a parody; no Codex quota or account state changed.";
+                      setOutcome({ actionId: "quota", message });
+                      setStatus(message);
                       return;
                     }
                     setStatus(placeholderMessage(action));
                   }}
                 >
-                  {oracle ? "Ask Oracle" : "Coming soon"}
+                  {oracle ? "Ask Oracle" : quota ? "Pretend to reset" : "Coming soon"}
                 </Button>
               </article>
             );
@@ -140,7 +162,8 @@ export function ResetDepartmentSettingsPanel({
       </SettingsSectionShell>
 
       <p className="min-h-5 text-xs text-muted-foreground" role="status" aria-live="polite">
-        {status ?? "The Oracle is harmless. Every other control is a non-operational placeholder."}
+        {status ??
+          "The Oracle and quota parody are harmless. Destructive controls are non-operational placeholders."}
       </p>
     </div>
   );

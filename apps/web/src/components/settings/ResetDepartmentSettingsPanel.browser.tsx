@@ -14,7 +14,7 @@ describe("ResetDepartmentSettingsPanel", () => {
     document.body.innerHTML = "";
   });
 
-  it("keeps the Oracle and every placeholder keyboard reachable", async () => {
+  it("keeps every action keyboard reachable and identifies the quota ritual as parody", async () => {
     await render(<ResetDepartmentSettingsPanel active />);
 
     const oracle = page.getByRole("button", { name: "Ask the Reset Oracle — SAFE" });
@@ -24,7 +24,7 @@ describe("ResetDepartmentSettingsPanel", () => {
     const hardReset = page.getByRole("button", {
       name: "git reset --hard — DANGER placeholder",
     });
-    const quota = page.getByRole("button", { name: "Reset Codex Quota — LOL placeholder" });
+    const quota = page.getByRole("button", { name: "Reset Codex Quota — LOL parody" });
 
     oracle.element().focus();
     await userEvent.keyboard("{Tab}");
@@ -36,7 +36,9 @@ describe("ResetDepartmentSettingsPanel", () => {
 
     await userEvent.keyboard("{Enter}");
     await vi.waitFor(() =>
-      expect(page.getByRole("status").element().textContent).toContain("No reset operation ran."),
+      expect(page.getByRole("status").element().textContent).toContain(
+        "This is a parody; no Codex quota or account state changed.",
+      ),
     );
   });
 
