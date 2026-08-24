@@ -96,6 +96,30 @@ it.effect("accepts explicit local-day Merge Flex receipt requests", () =>
   }),
 );
 
+it.effect("accepts bounded explicit X post requests", () =>
+  Effect.gen(function* () {
+    const parsed = yield* decode(WebSocketRequest, {
+      id: "req-x-post-1",
+      body: {
+        _tag: WS_METHODS.xCreatePost,
+        text: "User-reviewed draft",
+      },
+    });
+    assert.strictEqual(parsed.body._tag, WS_METHODS.xCreatePost);
+
+    const oversized = yield* Effect.exit(
+      decode(WebSocketRequest, {
+        id: "req-x-post-oversized",
+        body: {
+          _tag: WS_METHODS.xCreatePost,
+          text: "x".repeat(10_001),
+        },
+      }),
+    );
+    assert.strictEqual(oversized._tag, "Failure");
+  }),
+);
+
 it.effect("accepts project script discovery requests", () =>
   Effect.gen(function* () {
     const parsed = yield* decode(WebSocketRequest, {

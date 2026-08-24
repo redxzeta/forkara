@@ -80,6 +80,7 @@ Focused guides in this repository include:
 - [Core concepts](docs/core-concepts.md)
 - [Providers](docs/providers.md)
 - [External MCP integrations](docs/external-mcp.md)
+- [X integration](docs/x-integration.md)
 
 ## Privacy
 

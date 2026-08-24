@@ -150,6 +150,13 @@ import {
   PullRequestsUnavailableError,
 } from "./pullRequests";
 import {
+  XBeginConnectResult,
+  XConnectionStatus,
+  XCreatePostInput,
+  XCreatePostResult,
+  XPostError,
+} from "./xPost";
+import {
   ClientOrchestrationCommand,
   ORCHESTRATION_WS_METHODS,
   OrchestrationEvent,
@@ -819,6 +826,7 @@ export const WsGitPreparePullRequestThreadRpc = Rpc.make(WS_METHODS.gitPreparePu
 });
 
 const PullRequestsRpcError = Schema.Union([PullRequestsUnavailableError, WsRpcError]);
+const XPostRpcError = Schema.Union([XPostError, WsRpcError]);
 
 export const WsPullRequestsListRpc = Rpc.make(WS_METHODS.pullRequestsList, {
   payload: PullRequestsListInput,
@@ -871,6 +879,30 @@ export const WsPullRequestsSetPinnedRpc = Rpc.make(WS_METHODS.pullRequestsSetPin
   payload: PullRequestSetPinnedInput,
   success: PullRequestSetPinnedResult,
   error: WsRpcError,
+});
+
+export const WsXGetConnectionStatusRpc = Rpc.make(WS_METHODS.xGetConnectionStatus, {
+  payload: Schema.Struct({}),
+  success: XConnectionStatus,
+  error: XPostRpcError,
+});
+
+export const WsXBeginConnectRpc = Rpc.make(WS_METHODS.xBeginConnect, {
+  payload: Schema.Struct({}),
+  success: XBeginConnectResult,
+  error: XPostRpcError,
+});
+
+export const WsXDisconnectRpc = Rpc.make(WS_METHODS.xDisconnect, {
+  payload: Schema.Struct({}),
+  success: XConnectionStatus,
+  error: XPostRpcError,
+});
+
+export const WsXCreatePostRpc = Rpc.make(WS_METHODS.xCreatePost, {
+  payload: XCreatePostInput,
+  success: XCreatePostResult,
+  error: XPostRpcError,
 });
 
 export const WsGitListBranchesRpc = Rpc.make(WS_METHODS.gitListBranches, {
@@ -1388,6 +1420,10 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsPullRequestsActionRpc,
   WsPullRequestsCommentRpc,
   WsPullRequestsSetPinnedRpc,
+  WsXGetConnectionStatusRpc,
+  WsXBeginConnectRpc,
+  WsXDisconnectRpc,
+  WsXCreatePostRpc,
   WsGitListBranchesRpc,
   WsGitCreateWorktreeRpc,
   WsGitCreateDetachedWorktreeRpc,

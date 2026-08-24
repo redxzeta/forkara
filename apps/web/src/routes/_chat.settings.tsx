@@ -48,6 +48,7 @@ import { KeyboardShortcutsSettingsPanel } from "../components/settings/KeyboardS
 import { ProfileSettingsPanel } from "../components/settings/ProfileSettingsPanel";
 import { ProviderUsageSettingsPanel } from "../components/settings/ProviderUsageSettingsPanel";
 import { ExternalMcpSettingsPanel } from "../components/settings/ExternalMcpSettingsPanel";
+import { XIntegrationSettingsPanel } from "../components/settings/XIntegrationSettingsPanel";
 import {
   SettingResetButton,
   SettingsSegmentedControl,
@@ -1333,6 +1334,7 @@ function SettingsRouteView() {
                   resetEpoch={resetEpoch}
                 />
                 <ExternalMcpSettingsPanel active={activeSection === "integrations"} />
+                <XIntegrationSettingsPanel active={activeSection === "social"} />
                 <AdvancedSettingsPanel
                   active={activeSection === "advanced"}
                   onOpenReleaseHistory={() => setReleaseHistoryOpen(true)}

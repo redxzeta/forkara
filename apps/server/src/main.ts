@@ -158,6 +158,10 @@ const CliEnvConfig = Config.all({
     Config.option,
     Config.map(Option.getOrUndefined),
   ),
+  xClientId: Config.string("SYNARA_X_CLIENT_ID").pipe(
+    Config.option,
+    Config.map(Option.getOrUndefined),
+  ),
   desktopShutdownToken: Config.string("SYNARA_DESKTOP_SHUTDOWN_TOKEN").pipe(
     Config.option,
     Config.map(Option.getOrUndefined),
@@ -227,6 +231,7 @@ const ServerConfigLive = (input: CliInput) =>
       });
       const noBrowser = resolveBooleanConfig(input.noBrowser, env.noBrowser, mode === "desktop");
       const authToken = Option.getOrUndefined(input.authToken) ?? env.authToken;
+      const xClientId = env.xClientId?.trim() || undefined;
       const desktopShutdownToken = env.desktopShutdownToken ?? liveProcessDesktopShutdownToken;
       const autoBootstrapProjectFromCwd = resolveBooleanConfig(
         input.autoBootstrapProjectFromCwd,
@@ -284,6 +289,7 @@ const ServerConfigLive = (input: CliInput) =>
         allowInsecureRemote,
         noBrowser,
         authToken,
+        xClientId,
         desktopShutdownToken,
         autoBootstrapProjectFromCwd,
         logProviderEvents,
@@ -322,6 +328,7 @@ const LayerLive = (input: CliInput) => {
 export function makeServerStartupLogData(config: ServerConfigShape): Record<string, unknown> {
   const safeConfig: Record<string, unknown> = { ...config };
   delete safeConfig.authToken;
+  delete safeConfig.xClientId;
   delete safeConfig.desktopShutdownToken;
   delete safeConfig.devUrl;
 

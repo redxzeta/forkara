@@ -17,6 +17,7 @@ import {
   WsFeatureRpcGroup,
   WsRpcError,
   PullRequestsUnavailableError,
+  XPostError,
   type DeviceEvent,
   type GitActionProgressEvent,
   type GitHubProjectProvisionProgressEvent,
@@ -154,6 +155,7 @@ import {
   makeResnapshotEscalationTracker,
 } from "./wsSnapshotLiveStream";
 import { PullRequestService } from "./pullRequests/Services/PullRequestService";
+import { XPostService } from "./xPost/Services/XPostService";
 import { resolveGitHubRepository } from "./pullRequests/repositoryResolution";
 import {
   GitHubProjectProvisioningError,
@@ -368,6 +370,7 @@ const makeWsRpcHandlersLayer = () =>
       const workspaceEntries = yield* WorkspaceEntries;
       const workspaceFileSystem = yield* WorkspaceFileSystem;
       const threadDiagnostics = yield* ThreadDiagnosticsQuery;
+      const xPostService = yield* XPostService;
       // Optional so route-level tests and non-macOS builds can mount the RPC
       // group without a device engine; the handlers below then refuse cleanly
       // with the same unsupported-platform answer the backend would give.
@@ -498,6 +501,12 @@ const makeWsRpcHandlersLayer = () =>
         effect: Effect.Effect<A, E, R>,
         fallbackMessage: string,
       ) => effect.pipe(Effect.mapError((cause) => toPullRequestsRpcError(cause, fallbackMessage)));
+      const xPostEffect = <A, E, R>(effect: Effect.Effect<A, E, R>, fallbackMessage: string) =>
+        effect.pipe(
+          Effect.mapError((cause) =>
+            Schema.is(XPostError)(cause) ? cause : toWsRpcError(cause, fallbackMessage),
+          ),
+        );
       const canonicalizeProjectWorkspaceRoot = Effect.fnUntraced(function* (
         workspaceRoot: string,
         options: { readonly createIfMissing?: boolean } = {},
@@ -1493,6 +1502,14 @@ const makeWsRpcHandlersLayer = () =>
           pullRequestsEffect(pullRequests.comment(input), "Could not post the comment"),
         [WS_METHODS.pullRequestsSetPinned]: (input) =>
           rpcEffect(pullRequests.setPinned(input), "Failed to update pull request pin"),
+        [WS_METHODS.xGetConnectionStatus]: () =>
+          xPostEffect(xPostService.getConnectionStatus, "Failed to load X connection status"),
+        [WS_METHODS.xBeginConnect]: () =>
+          xPostEffect(xPostService.beginConnect, "Failed to begin X connection"),
+        [WS_METHODS.xDisconnect]: () =>
+          xPostEffect(xPostService.disconnect, "Failed to disconnect X account"),
+        [WS_METHODS.xCreatePost]: (input) =>
+          xPostEffect(xPostService.createPost(input), "Failed to create X post"),
         [WS_METHODS.gitListBranches]: (input) =>
           rpcEffect(git.listBranches(input), "Failed to list branches"),
         [WS_METHODS.gitCreateWorktree]: (input) =>

@@ -53,6 +53,7 @@ import { ProviderRuntimeEventRepositoryLive } from "./persistence/Layers/Provide
 import { ThreadDiagnosticsQueryLive } from "./diagnostics/Layers/ThreadDiagnosticsQuery";
 import { ManagedAttachmentCleanupLive } from "./managedAttachmentCleanup";
 import { PullRequestServiceLive } from "./pullRequests/Layers/PullRequestService";
+import { XPostServiceLive } from "./xPost/Layers/XPostService";
 import { ProviderHealthLive } from "./provider/Layers/ProviderHealth";
 import { makeServerProviderLayer } from "./provider/runtimeLayer";
 
@@ -211,6 +212,7 @@ export function makeServerRuntimeServicesLayer(
     Layer.provideMerge(ProjectPullRequestPinsLive),
     Layer.provideMerge(OrchestrationLayerLive),
   );
+  const xPostServiceLayer = XPostServiceLive.pipe(Layer.provide(ServerSecretStoreLive));
 
   return Layer.mergeAll(
     agentGatewayCredentialsLayer,
@@ -228,6 +230,7 @@ export function makeServerRuntimeServicesLayer(
     providerHealthLayer,
     ProjectPullRequestPinsLive,
     pullRequestServiceLayer,
+    xPostServiceLayer,
     orchestrationReactorLayer,
     providerCommandReactorLayer,
     threadGitMetadataReactorLayer,

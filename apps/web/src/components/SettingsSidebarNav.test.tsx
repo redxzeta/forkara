@@ -60,14 +60,20 @@ describe("rankSettingsSearchEntries", () => {
     expect(rankSettingsSearchEntries("e", 3)).toHaveLength(3);
   });
 
-  it("derives a deep-link anchor target from each entry's title", () => {
+  it("derives or explicitly maps a valid deep-link anchor target for each entry", () => {
     const themeEntry = SETTINGS_SEARCH_ENTRIES.find((entry) => entry.id === "appearance:theme")!;
+    const xEntry = SETTINGS_SEARCH_ENTRIES.find((entry) => entry.id === "social:x-account")!;
     expect(settingsSearchEntryTarget(themeEntry)).toBe("setting-theme");
+    expect(settingsSearchEntryTarget(xEntry)).toBe("setting-x");
     for (const entry of SETTINGS_SEARCH_ENTRIES) {
       if (entry.target === null) {
         expect(settingsSearchEntryTarget(entry)).toBeNull();
       } else {
-        expect(settingsSearchEntryTarget(entry)).toBe(settingRowAnchorId(entry.title));
+        if (entry.target === undefined) {
+          expect(settingsSearchEntryTarget(entry)).toBe(settingRowAnchorId(entry.title));
+        } else {
+          expect(settingsSearchEntryTarget(entry)).toBe(entry.target);
+        }
         expect(settingsSearchEntryTarget(entry)?.startsWith("setting-")).toBe(true);
       }
     }

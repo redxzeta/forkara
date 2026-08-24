@@ -430,6 +430,14 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
       "Pair Codex Claude and other local MCP clients with scoped project access. revoke credential task create wait read worktree approval",
   },
   {
+    id: "social:x-account",
+    section: "social",
+    title: "Connect X account",
+    keywords:
+      "OAuth social posting Twitter connect disconnect PKCE reviewed posts Merge Flex credentials",
+    target: settingRowAnchorId("X"),
+  },
+  {
     id: "advanced:version",
     section: "advanced",
     title: "Version",
