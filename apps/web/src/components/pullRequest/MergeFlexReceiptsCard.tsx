@@ -27,6 +27,7 @@ import {
   PR_META_TEXT_CLASS_NAME,
   PR_QUIET_INK_CLASS_NAME,
 } from "./pullRequestText";
+import { FactualMergeFlexComposer } from "./MergeFlexComposerDialog";
 
 type MergeFlexScopeChoice = "all" | "repository";
 
@@ -77,10 +78,12 @@ export function MergeFlexReceiptsContent({
   result,
   receiptsOpen,
   onReceiptsOpenChange,
+  onFlexOnX,
 }: {
   result: MergeFlexReceiptsResult;
   receiptsOpen: boolean;
   onReceiptsOpenChange: (open: boolean) => void;
+  onFlexOnX?: () => void;
 }) {
   const countLabel = result.incomplete ? `${result.count}+` : String(result.count);
   return (
@@ -99,15 +102,22 @@ export function MergeFlexReceiptsContent({
           </p>
         </div>
         {result.count > 0 ? (
-          <Button
-            size="sm"
-            variant="ghost"
-            aria-expanded={receiptsOpen}
-            onClick={() => onReceiptsOpenChange(!receiptsOpen)}
-          >
-            Receipts
-            <DisclosureChevron open={receiptsOpen} />
-          </Button>
+          <div className="flex shrink-0 items-center gap-1">
+            {onFlexOnX ? (
+              <Button size="sm" variant="outline" onClick={onFlexOnX}>
+                Flex on X
+              </Button>
+            ) : null}
+            <Button
+              size="sm"
+              variant="ghost"
+              aria-expanded={receiptsOpen}
+              onClick={() => onReceiptsOpenChange(!receiptsOpen)}
+            >
+              Receipts
+              <DisclosureChevron open={receiptsOpen} />
+            </Button>
+          </div>
         ) : null}
       </div>
 
@@ -172,6 +182,7 @@ export function MergeFlexReceiptsCard({ repository }: { repository: string | nul
   const [requestedScope, setRequestedScope] = useState<MergeFlexScopeChoice>("all");
   const [day, setDay] = useState(() => localCalendarDayRange());
   const [receiptsOpen, setReceiptsOpen] = useState(false);
+  const [composerOpen, setComposerOpen] = useState(false);
   const scope: MergeFlexScopeChoice = repository ? requestedScope : "all";
   const input = useMemo<MergeFlexReceiptsInput>(
     () => ({
@@ -192,6 +203,7 @@ export function MergeFlexReceiptsCard({ repository }: { repository: string | nul
       nextDay.startedAt !== day.startedAt ||
       nextDay.endedAt !== day.endedAt
     ) {
+      setComposerOpen(false);
       setDay(nextDay);
       return;
     }
@@ -224,6 +236,7 @@ export function MergeFlexReceiptsCard({ repository }: { repository: string | nul
             onChange={(nextScope) => {
               setRequestedScope(nextScope);
               setReceiptsOpen(false);
+              setComposerOpen(false);
             }}
           />
           <Button
@@ -261,6 +274,7 @@ export function MergeFlexReceiptsCard({ repository }: { repository: string | nul
           result={query.data}
           receiptsOpen={receiptsOpen}
           onReceiptsOpenChange={setReceiptsOpen}
+          onFlexOnX={() => setComposerOpen(true)}
         />
       ) : null}
 
@@ -273,6 +287,14 @@ export function MergeFlexReceiptsCard({ repository }: { repository: string | nul
         Share defaults use only the aggregate count. Repository names, titles, and links stay local
         unless you explicitly include them.
       </p>
+      {query.data && composerOpen ? (
+        <FactualMergeFlexComposer
+          key={`${query.data.date}:${query.data.viewer}:${query.data.scope.type}:${query.data.scope.type === "repository" ? query.data.scope.repository : "all"}:${query.data.count}:${query.data.incomplete}:${query.data.receipts.map((receipt) => `${receipt.repository}:${receipt.repositoryVisibility}`).join(",")}`}
+          open={composerOpen}
+          result={query.data}
+          onOpenChange={setComposerOpen}
+        />
+      ) : null}
     </section>
   );
 }

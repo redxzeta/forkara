@@ -78,4 +78,29 @@ describe("MergeFlexReceiptsContent", () => {
     expect(markup).toContain("No pull requests authored by @octocat were merged");
     expect(markup).not.toContain("Receipts</button>");
   });
+
+  it("offers an explicit factual X composer action only when there are receipts", () => {
+    const factualResult = result([
+      {
+        number: 42,
+        title: "Ship evidence-backed receipts",
+        url: "https://github.com/acme/widgets/pull/42",
+        repository: "acme/widgets",
+        repositoryVisibility: "public",
+        authorLogin: "octocat",
+        mergedAt: "2026-08-23T18:00:00.000Z",
+      },
+    ]);
+    const markup = renderToStaticMarkup(
+      <MergeFlexReceiptsContent
+        result={factualResult}
+        receiptsOpen={false}
+        onReceiptsOpenChange={vi.fn()}
+        onFlexOnX={vi.fn()}
+      />,
+    );
+
+    expect(markup).toContain("Flex on X");
+    expect(markup).toContain("Authored by @octocat");
+  });
 });
