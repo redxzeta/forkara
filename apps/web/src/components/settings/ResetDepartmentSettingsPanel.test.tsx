@@ -10,7 +10,7 @@ import {
 } from "./ResetDepartmentSettingsPanel";
 
 describe("ResetDepartmentSettingsPanel", () => {
-  it("renders the Oracle and quota parody without enabling destructive tools", () => {
+  it("renders harmless tools, guarded dependency preview, and a disabled hard-reset placeholder", () => {
     const markup = renderToStaticMarkup(<ResetDepartmentSettingsPanel active />);
 
     for (const action of RESET_DEPARTMENT_ACTIONS) {
@@ -21,10 +21,12 @@ describe("ResetDepartmentSettingsPanel", () => {
           ? `${action.title} — ${action.risk}`
           : action.id === "quota"
             ? `${action.title} — ${action.risk} parody`
-            : `${action.title} — ${action.risk} placeholder`,
+            : action.id === "hard-reset"
+              ? `${action.title} — ${action.risk} placeholder`
+              : `Preview ${action.title} — ${action.risk}`,
       );
     }
-    expect(markup.match(/data-reset-placeholder="true"/gu)).toHaveLength(2);
+    expect(markup.match(/data-reset-placeholder="true"/gu)).toHaveLength(1);
     expect(markup).toContain('data-reset-oracle="true"');
     expect(markup).toContain('data-reset-quota-parody="true"');
     expect(markup).toContain("Pretend to reset");
@@ -32,6 +34,7 @@ describe("ResetDepartmentSettingsPanel", () => {
     expect(markup).toContain('data-risk="DANGER"');
     expect(markup).toContain("border-destructive/60");
     expect(markup).toContain("The Oracle and quota parody are harmless.");
+    expect(markup).toContain("Open a project to choose its dependency directory.");
   });
 
   it("renders nothing while another settings section is active", () => {

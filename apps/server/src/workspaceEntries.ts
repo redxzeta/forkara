@@ -30,6 +30,7 @@ import {
 } from "@forkara/contracts";
 import { isExplicitRelativePath, isWindowsAbsolutePath } from "@forkara/shared/path";
 import { normalizeWorkspaceEntrySearchQuery } from "@forkara/shared/searchQuery";
+import { commandForPackageScript, detectProjectPackageManager } from "./projectPackageManager";
 import { resolveRealPathWithinRoot } from "./workspace/realPathContainment";
 
 const WORKSPACE_CACHE_TTL_MS = 15_000;
@@ -258,48 +259,9 @@ function isPathInIgnoredDirectory(relativePath: string): boolean {
   return IGNORED_DIRECTORY_NAMES.has(firstSegment);
 }
 
-type ProjectPackageManager = "bun" | "pnpm" | "yarn" | "npm";
-
-const PROJECT_PACKAGE_MANAGER_LOCKFILES: ReadonlyArray<{
-  readonly manager: ProjectPackageManager;
-  readonly filenames: readonly string[];
-}> = [
-  { manager: "bun", filenames: ["bun.lock", "bun.lockb"] },
-  { manager: "pnpm", filenames: ["pnpm-lock.yaml"] },
-  { manager: "yarn", filenames: ["yarn.lock"] },
-  { manager: "npm", filenames: ["package-lock.json", "npm-shrinkwrap.json"] },
-];
-
 function normalizeDiscoveryDepth(input: ProjectDiscoverScriptsInput): number {
   const rawDepth = input.depth ?? PROJECT_SCRIPT_DISCOVERY_DEFAULT_DEPTH;
   return Math.max(0, Math.min(3, Math.floor(rawDepth)));
-}
-
-async function pathExists(absolutePath: string): Promise<boolean> {
-  try {
-    await fs.access(absolutePath);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function detectPackageManager(packageDir: string): Promise<ProjectPackageManager> {
-  for (const candidate of PROJECT_PACKAGE_MANAGER_LOCKFILES) {
-    for (const filename of candidate.filenames) {
-      if (await pathExists(path.join(packageDir, filename))) {
-        return candidate.manager;
-      }
-    }
-  }
-  return "npm";
-}
-
-function commandForPackageScript(manager: ProjectPackageManager, scriptName: string): string {
-  if (manager === "yarn") {
-    return `yarn ${scriptName}`;
-  }
-  return `${manager} run ${scriptName}`;
 }
 
 async function collectPackageJsonCandidates(
@@ -396,7 +358,7 @@ async function readDiscoveredPackageTarget(input: {
     return null;
   }
 
-  const manager = await detectPackageManager(input.cwd);
+  const manager = (await detectProjectPackageManager(input.cwd)) ?? "npm";
   const scripts = Object.entries(rawScripts)
     .flatMap(([name, command]) =>
       typeof command === "string" && name.trim().length > 0 && command.trim().length > 0

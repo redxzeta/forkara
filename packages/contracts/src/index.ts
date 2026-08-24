@@ -31,6 +31,7 @@ export * from "./git";
 export * from "./githubProjectProvisioning";
 export * from "./pullRequests";
 export * from "./xPost";
+export * from "./resetDepartment";
 export * from "./orchestration";
 export * from "./editor";
 export * from "./environment";
