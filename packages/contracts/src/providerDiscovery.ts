@@ -56,6 +56,8 @@ export const ProviderComposerCapabilities = Schema.Struct({
   supportsPluginMentions: Schema.Boolean,
   supportsPluginDiscovery: Schema.Boolean,
   supportsRuntimeModelList: Schema.Boolean,
+  /** True only when this runtime can emit durable `image_generation` artifacts. */
+  supportsImageGeneration: Schema.optional(Schema.Boolean),
   supportsThreadCompaction: Schema.optional(Schema.Boolean),
   supportsThreadImport: Schema.optional(Schema.Boolean),
 });

@@ -6,6 +6,7 @@ import {
   AddPlusIcon,
   ArchiveIcon,
   BookIcon,
+  CameraIcon,
   ChatBubbleIcon,
   CircleQuestionIcon,
   ClockIcon,
@@ -211,6 +212,7 @@ import {
 } from "./SidebarThreadRowContent";
 import { RenameDialog } from "./RenameDialog";
 import { RenameThreadDialog } from "./RenameThreadDialog";
+import { LogoRebrandWizard } from "./LogoRebrandWizard";
 import ReleaseHistoryDialog from "./ReleaseHistoryDialog";
 import { WHATS_NEW_ENTRIES } from "../whatsNew/entries";
 import { sortEntriesByVersionDesc } from "../whatsNew/logic";
@@ -482,6 +484,7 @@ type ProjectContextMenuId =
   | "start-dev"
   | "stop-dev"
   | "open-dev-server"
+  | "rebrand-logo"
   | "rename"
   | "toggle-pin"
   | "archive-threads"
@@ -1557,6 +1560,7 @@ export default function Sidebar() {
   const projectAdditionLockRef = useRef(false);
   const [renameDialogThreadId, setRenameDialogThreadId] = useState<ThreadId | null>(null);
   const [renameProjectDialogId, setRenameProjectDialogId] = useState<ProjectId | null>(null);
+  const [logoRebrandProjectId, setLogoRebrandProjectId] = useState<ProjectId | null>(null);
   const [projectContextMenuState, setProjectContextMenuState] =
     useState<ProjectContextMenuState | null>(null);
   // "Show more" paging state: extra pages of THREAD_PREVIEW_PAGE_SIZE rows per project cwd.
@@ -3494,6 +3498,10 @@ export default function Sidebar() {
       }
       if (clicked === "open-dev-server") {
         await handleOpenProjectRunServer(projectId);
+        return;
+      }
+      if (clicked === "rebrand-logo") {
+        setLogoRebrandProjectId(projectId);
         return;
       }
       if (clicked === "rename") {
@@ -5726,6 +5734,19 @@ export default function Sidebar() {
   const projectContextMenuProject = projectContextMenuState
     ? (projectById.get(projectContextMenuState.projectId) ?? null)
     : null;
+  const logoRebrandProject = logoRebrandProjectId
+    ? (projectById.get(logoRebrandProjectId) ?? null)
+    : null;
+  const logoRebrandFallbackModel = getDefaultModel(appSettings.defaultProvider);
+  const logoRebrandModelSelection =
+    logoRebrandProject?.defaultModelSelection ??
+    (logoRebrandFallbackModel
+      ? { provider: appSettings.defaultProvider, model: logoRebrandFallbackModel }
+      : null);
+  const logoGenerationModelSelection = {
+    provider: "codex" as const,
+    model: getDefaultModel("codex"),
+  };
   const projectContextMenuThreads = useMemo(
     () =>
       projectContextMenuState
@@ -6488,6 +6509,18 @@ export default function Sidebar() {
               <MenuItem
                 className={PROJECT_CONTEXT_MENU_ITEM_CLASS_NAME}
                 onClick={() =>
+                  void handleProjectContextMenuAction(
+                    projectContextMenuState.projectId,
+                    "rebrand-logo",
+                  )
+                }
+              >
+                <ProjectContextMenuIcon icon={CameraIcon} />
+                <span>Rebrand Logo…</span>
+              </MenuItem>
+              <MenuItem
+                className={PROJECT_CONTEXT_MENU_ITEM_CLASS_NAME}
+                onClick={() =>
                   void handleProjectContextMenuAction(projectContextMenuState.projectId, "rename")
                 }
               >
@@ -6550,6 +6583,20 @@ export default function Sidebar() {
             </MenuGroup>
           </ComposerPickerMenuPopup>
         </Menu>
+      ) : null}
+
+      {logoRebrandProject && logoRebrandModelSelection ? (
+        <LogoRebrandWizard
+          open={logoRebrandProjectId !== null}
+          onOpenChange={(open) => {
+            if (!open) setLogoRebrandProjectId(null);
+          }}
+          projectId={logoRebrandProject.id}
+          projectName={logoRebrandProject.name}
+          cwd={logoRebrandProject.cwd}
+          modelSelection={logoRebrandModelSelection}
+          generationModelSelection={logoGenerationModelSelection}
+        />
       ) : null}
 
       <Dialog

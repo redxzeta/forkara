@@ -15,6 +15,16 @@ import type {
   AuthWebSocketTokenResult,
 } from "./auth";
 import type {
+  BrandingGenerationCapability,
+  BrandingGenerationCapabilityInput,
+  BrandingGenerationResult,
+  BrandingGenerationResultInput,
+  BrandingImportGeneratedAssetInput,
+  BrandingImportGeneratedAssetResult,
+  BrandingInspectionInput,
+  BrandingInspectionResult,
+} from "./branding";
+import type {
   ExternalMcpCreateIntegrationInput,
   ExternalMcpCreateIntegrationResult,
   ExternalMcpIntegration,
@@ -733,6 +743,18 @@ export interface NativeApi {
     onProvisionProgress: (
       callback: (event: GitHubProjectProvisionProgressEvent) => void,
     ) => () => void;
+  };
+  branding?: {
+    inspect: (input: BrandingInspectionInput) => Promise<BrandingInspectionResult>;
+    getGenerationCapability: (
+      input: BrandingGenerationCapabilityInput,
+    ) => Promise<BrandingGenerationCapability>;
+    getGenerationResult: (
+      input: BrandingGenerationResultInput,
+    ) => Promise<BrandingGenerationResult>;
+    importGeneratedAsset: (
+      input: BrandingImportGeneratedAssetInput,
+    ) => Promise<BrandingImportGeneratedAssetResult>;
   };
   filesystem: {
     browse: (input: FilesystemBrowseInput) => Promise<FilesystemBrowseResult>;
