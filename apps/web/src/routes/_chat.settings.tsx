@@ -49,6 +49,7 @@ import { ProfileSettingsPanel } from "../components/settings/ProfileSettingsPane
 import { ProviderUsageSettingsPanel } from "../components/settings/ProviderUsageSettingsPanel";
 import { ExternalMcpSettingsPanel } from "../components/settings/ExternalMcpSettingsPanel";
 import { XIntegrationSettingsPanel } from "../components/settings/XIntegrationSettingsPanel";
+import { ResetDepartmentSettingsPanel } from "../components/settings/ResetDepartmentSettingsPanel";
 import {
   SettingResetButton,
   SettingsSegmentedControl,
@@ -1305,6 +1306,7 @@ function SettingsRouteView() {
               {/* These workflow owners stay mounted so drafts, request guards, and pending
                   mutations retain route lifetime while inactive panels render no DOM. */}
               <div className="contents">
+                <ResetDepartmentSettingsPanel active={activeSection === "reset"} />
                 <NotificationsSettingsPanel
                   active={activeSection === "notifications"}
                   settings={settings}

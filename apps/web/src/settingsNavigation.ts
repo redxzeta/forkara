@@ -19,6 +19,7 @@ export const SETTINGS_SECTION_IDS = [
   "skills",
   "usage",
   "integrations",
+  "reset",
   "advanced",
 ] as const;
 
@@ -168,6 +169,14 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
     description: "Review and clean up isolated workspaces created by Synara.",
     icon: "branch-simple",
     eyebrow: "Workspace management",
+  },
+  {
+    id: "reset",
+    group: "system",
+    label: "Reset Department",
+    description: "Inspect four increasingly questionable ways to start over.",
+    icon: "arrow-rotate-clockwise",
+    eyebrow: "Troubleshooting theater",
   },
   {
     id: "advanced",

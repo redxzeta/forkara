@@ -32,6 +32,32 @@ export function settingsSearchEntryTarget(entry: SettingsSearchEntry): string | 
 // null while inactive, so the sidebar cannot read every row at runtime; keep this list in sync
 // when rows are added, renamed, hidden conditionally, or represented as panel-level results.
 export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
+  // ── Reset Department ─────────────────────────────────────────────────────
+  {
+    id: "reset:oracle",
+    section: "reset",
+    title: "Ask the Reset Oracle",
+    keywords: "safe magic 8 ball advice reset department",
+  },
+  {
+    id: "reset:dependencies",
+    section: "reset",
+    title: "Delete node_modules",
+    keywords: "low risk dependency cleanup exorcism package manager reset department",
+  },
+  {
+    id: "reset:hard-reset",
+    section: "reset",
+    title: "git reset --hard",
+    keywords: "danger destructive git hard reset department",
+  },
+  {
+    id: "reset:quota",
+    section: "reset",
+    title: "Reset Codex Quota",
+    keywords: "lol fictional provider limits reset department",
+  },
+
   // ── General ────────────────────────────────────────────────────────────────
   {
     id: "general:default-provider",

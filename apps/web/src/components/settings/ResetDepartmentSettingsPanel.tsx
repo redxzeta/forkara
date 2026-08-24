@@ -1,0 +1,120 @@
+// FILE: ResetDepartmentSettingsPanel.tsx
+// Purpose: Non-operational Reset Department shell and accessible risk-tier menu.
+// Layer: Settings UI component
+
+import { useState } from "react";
+
+import { cn } from "~/lib/utils";
+import { settingRowAnchorId } from "~/settingsNavigation";
+
+import { Button } from "../ui/button";
+import { SettingsSectionShell } from "./SettingsPanelPrimitives";
+
+export const RESET_DEPARTMENT_ACTIONS = [
+  {
+    id: "oracle",
+    icon: "🎱",
+    title: "Ask the Reset Oracle",
+    risk: "SAFE",
+    description: "Seek dubious wisdom without touching your project, account, or filesystem.",
+  },
+  {
+    id: "dependencies",
+    icon: "🧹",
+    title: "Delete node_modules",
+    risk: "LOW RISK",
+    description: "A future cleanup tool for dependencies in the active workspace only.",
+  },
+  {
+    id: "hard-reset",
+    icon: "☢️",
+    title: "git reset --hard",
+    risk: "DANGER",
+    description: "A future guarded reset flow. It cannot run from this placeholder.",
+  },
+  {
+    id: "quota",
+    icon: "♻️",
+    title: "Reset Codex Quota",
+    risk: "LOL",
+    description: "A fictional quota reset. No provider or account state is connected.",
+  },
+] as const;
+
+type ResetDepartmentAction = (typeof RESET_DEPARTMENT_ACTIONS)[number];
+
+function placeholderMessage(action: ResetDepartmentAction): string {
+  return `${action.title} is coming soon. No reset operation ran.`;
+}
+
+export function ResetDepartmentSettingsPanel({ active }: { readonly active: boolean }) {
+  const [status, setStatus] = useState<string | null>(null);
+  if (!active) return null;
+
+  return (
+    <div className="space-y-5">
+      <p className="text-sm leading-relaxed text-muted-foreground">
+        Sometimes the solution is starting over. Sometimes that&apos;s an absolutely terrible idea.
+      </p>
+
+      <SettingsSectionShell title="Choose your level of regret">
+        <div className="grid gap-3 sm:grid-cols-2" aria-label="Reset Department actions">
+          {RESET_DEPARTMENT_ACTIONS.map((action) => {
+            const danger = action.risk === "DANGER";
+            const descriptionId = `reset-department-${action.id}-description`;
+            return (
+              <article
+                id={settingRowAnchorId(action.title)}
+                key={action.id}
+                data-risk={action.risk}
+                className={cn(
+                  "flex min-h-52 flex-col rounded-xl border bg-[var(--color-background-elevated-primary-opaque)] p-4",
+                  danger && "border-destructive/60 bg-destructive/4",
+                )}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <span className="text-2xl" aria-hidden="true">
+                    {action.icon}
+                  </span>
+                  <span
+                    className={cn(
+                      "rounded-full border px-2 py-0.5 text-[10px] font-semibold tracking-wide",
+                      danger
+                        ? "border-destructive/50 bg-destructive/8 text-destructive"
+                        : "border-border text-muted-foreground",
+                    )}
+                  >
+                    {action.risk}
+                  </span>
+                </div>
+                <h3 className="mt-4 text-sm font-medium text-foreground">{action.title}</h3>
+                <p
+                  id={descriptionId}
+                  className="mt-1.5 flex-1 text-xs leading-relaxed text-muted-foreground"
+                >
+                  {action.description}
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={danger ? "destructive-outline" : "outline"}
+                  className="mt-4 w-full"
+                  data-reset-placeholder="true"
+                  aria-describedby={descriptionId}
+                  aria-label={`${action.title} — ${action.risk} placeholder`}
+                  onClick={() => setStatus(placeholderMessage(action))}
+                >
+                  Coming soon
+                </Button>
+              </article>
+            );
+          })}
+        </div>
+      </SettingsSectionShell>
+
+      <p className="min-h-5 text-xs text-muted-foreground" role="status" aria-live="polite">
+        {status ?? "Every control is a non-operational placeholder."}
+      </p>
+    </div>
+  );
+}
