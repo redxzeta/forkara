@@ -25,6 +25,11 @@ import type {
   BrandingInspectionResult,
 } from "./branding";
 import type {
+  DependencyCleanupInput,
+  DependencyCleanupPreview,
+  DependencyCleanupResult,
+} from "./resetDepartment";
+import type {
   ExternalMcpCreateIntegrationInput,
   ExternalMcpCreateIntegrationResult,
   ExternalMcpIntegration,
@@ -755,6 +760,10 @@ export interface NativeApi {
     importGeneratedAsset: (
       input: BrandingImportGeneratedAssetInput,
     ) => Promise<BrandingImportGeneratedAssetResult>;
+  };
+  resetDepartment?: {
+    previewDependencyCleanup: (input: DependencyCleanupInput) => Promise<DependencyCleanupPreview>;
+    executeDependencyCleanup: (input: DependencyCleanupInput) => Promise<DependencyCleanupResult>;
   };
   filesystem: {
     browse: (input: FilesystemBrowseInput) => Promise<FilesystemBrowseResult>;

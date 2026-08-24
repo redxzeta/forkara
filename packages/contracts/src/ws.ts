@@ -6,6 +6,7 @@ import {
   BrandingImportGeneratedAssetInput,
   BrandingInspectionInput,
 } from "./branding";
+import { DependencyCleanupInput } from "./resetDepartment";
 
 import {
   AutomationCancelRunInput,
@@ -192,6 +193,10 @@ export const WS_METHODS = {
   brandingGetGenerationCapability: "branding.getGenerationCapability",
   brandingGetGenerationResult: "branding.getGenerationResult",
   brandingImportGeneratedAsset: "branding.importGeneratedAsset",
+
+  // Reset Department
+  resetPreviewDependencyCleanup: "reset.previewDependencyCleanup",
+  resetExecuteDependencyCleanup: "reset.executeDependencyCleanup",
 
   // Studio methods
   studioListThreadOutputs: "studio.listThreadOutputs",
@@ -401,6 +406,10 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.brandingGetGenerationCapability, BrandingGenerationCapabilityInput),
   tagRequestBody(WS_METHODS.brandingGetGenerationResult, BrandingGenerationResultInput),
   tagRequestBody(WS_METHODS.brandingImportGeneratedAsset, BrandingImportGeneratedAssetInput),
+
+  // Reset Department
+  tagRequestBody(WS_METHODS.resetPreviewDependencyCleanup, DependencyCleanupInput),
+  tagRequestBody(WS_METHODS.resetExecuteDependencyCleanup, DependencyCleanupInput),
 
   // Filesystem browse
   // Studio

@@ -17,6 +17,7 @@ import {
   WsFeatureRpcGroup,
   WsRpcError,
   PullRequestsUnavailableError,
+  ResetDepartmentError,
   XPostError,
   type DeviceEvent,
   type GitActionProgressEvent,
@@ -163,6 +164,7 @@ import {
 } from "./wsSnapshotLiveStream";
 import { PullRequestService } from "./pullRequests/Services/PullRequestService";
 import { XPostService } from "./xPost/Services/XPostService";
+import { ResetDepartmentService } from "./resetDepartment/Services/ResetDepartmentService";
 import { resolveGitHubRepository } from "./pullRequests/repositoryResolution";
 import {
   GitHubProjectProvisioningError,
@@ -379,6 +381,7 @@ const makeWsRpcHandlersLayer = () =>
       const workspaceFileSystem = yield* WorkspaceFileSystem;
       const threadDiagnostics = yield* ThreadDiagnosticsQuery;
       const xPostService = yield* XPostService;
+      const resetDepartmentService = yield* ResetDepartmentService;
       // Optional so route-level tests and non-macOS builds can mount the RPC
       // group without a device engine; the handlers below then refuse cleanly
       // with the same unsupported-platform answer the backend would give.
@@ -513,6 +516,15 @@ const makeWsRpcHandlersLayer = () =>
         effect.pipe(
           Effect.mapError((cause) =>
             Schema.is(XPostError)(cause) ? cause : toWsRpcError(cause, fallbackMessage),
+          ),
+        );
+      const resetDepartmentEffect = <A, E, R>(
+        effect: Effect.Effect<A, E, R>,
+        fallbackMessage: string,
+      ) =>
+        effect.pipe(
+          Effect.mapError((cause) =>
+            Schema.is(ResetDepartmentError)(cause) ? cause : toWsRpcError(cause, fallbackMessage),
           ),
         );
       const canonicalizeProjectWorkspaceRoot = Effect.fnUntraced(function* (
@@ -1607,6 +1619,16 @@ const makeWsRpcHandlersLayer = () =>
           xPostEffect(xPostService.disconnect, "Failed to disconnect X account"),
         [WS_METHODS.xCreatePost]: (input) =>
           xPostEffect(xPostService.createPost(input), "Failed to create X post"),
+        [WS_METHODS.resetPreviewDependencyCleanup]: (input) =>
+          resetDepartmentEffect(
+            resetDepartmentService.previewDependencyCleanup(input),
+            "Failed to inspect dependency cleanup",
+          ),
+        [WS_METHODS.resetExecuteDependencyCleanup]: (input) =>
+          resetDepartmentEffect(
+            resetDepartmentService.executeDependencyCleanup(input),
+            "Failed to clean dependencies",
+          ),
         [WS_METHODS.gitListBranches]: (input) =>
           rpcEffect(git.listBranches(input), "Failed to list branches"),
         [WS_METHODS.gitCreateWorktree]: (input) =>

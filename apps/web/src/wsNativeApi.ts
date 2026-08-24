@@ -553,6 +553,12 @@ export function createWsNativeApi(): NativeApi {
       importGeneratedAsset: (input) =>
         transport.request(WS_METHODS.brandingImportGeneratedAsset, input),
     },
+    resetDepartment: {
+      previewDependencyCleanup: (input) =>
+        transport.request(WS_METHODS.resetPreviewDependencyCleanup, input),
+      executeDependencyCleanup: (input) =>
+        transport.request(WS_METHODS.resetExecuteDependencyCleanup, input),
+    },
     filesystem: {
       browse: (input) => transport.request(WS_METHODS.filesystemBrowse, input),
     },

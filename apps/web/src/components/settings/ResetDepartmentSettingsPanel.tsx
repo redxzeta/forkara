@@ -8,6 +8,8 @@ import { cn } from "~/lib/utils";
 import { settingRowAnchorId } from "~/settingsNavigation";
 
 import { Button } from "../ui/button";
+import type { NativeApi } from "@forkara/contracts";
+import { DependencyExorcismControl } from "./DependencyExorcismControl";
 import { SettingsSectionShell } from "./SettingsPanelPrimitives";
 import { selectResetOracleResponse } from "./resetOracle";
 
@@ -24,7 +26,8 @@ export const RESET_DEPARTMENT_ACTIONS = [
     icon: "🧹",
     title: "Delete node_modules",
     risk: "LOW RISK",
-    description: "A future cleanup tool for dependencies in the active workspace only.",
+    description:
+      "Remove dependencies from exactly the active workspace, after an exact-path preview.",
   },
   {
     id: "hard-reset",
@@ -64,9 +67,13 @@ function ResetDepartmentResult({ message }: { readonly message: string }) {
 export function ResetDepartmentSettingsPanel({
   active,
   random = Math.random,
+  resetApi = null,
+  workspaceRoot = null,
 }: {
   readonly active: boolean;
   readonly random?: () => number;
+  readonly resetApi?: NonNullable<NativeApi["resetDepartment"]> | null;
+  readonly workspaceRoot?: string | null;
 }) {
   const [status, setStatus] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<ResetDepartmentOutcome | null>(null);
@@ -84,6 +91,7 @@ export function ResetDepartmentSettingsPanel({
             const danger = action.risk === "DANGER";
             const oracle = action.id === "oracle";
             const quota = action.id === "quota";
+            const dependencies = action.id === "dependencies";
             const descriptionId = `reset-department-${action.id}-description`;
             return (
               <article
@@ -120,41 +128,49 @@ export function ResetDepartmentSettingsPanel({
                 {outcome?.actionId === action.id ? (
                   <ResetDepartmentResult message={outcome.message} />
                 ) : null}
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={danger ? "destructive-outline" : "outline"}
-                  className="mt-4 w-full"
-                  data-reset-placeholder={oracle || quota ? undefined : "true"}
-                  data-reset-oracle={oracle ? "true" : undefined}
-                  data-reset-quota-parody={quota ? "true" : undefined}
-                  aria-describedby={descriptionId}
-                  aria-label={
-                    oracle
-                      ? `${action.title} — ${action.risk}`
-                      : quota
-                        ? `${action.title} — ${action.risk} parody`
-                        : `${action.title} — ${action.risk} placeholder`
-                  }
-                  onClick={() => {
-                    if (oracle) {
-                      const result = selectResetOracleResponse(random);
-                      setOutcome({ actionId: "oracle", message: result.response });
-                      setStatus(`The Reset Oracle says: ${result.response}`);
-                      return;
+                {dependencies ? (
+                  <DependencyExorcismControl
+                    api={resetApi}
+                    workspaceRoot={workspaceRoot}
+                    onStatus={setStatus}
+                  />
+                ) : (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={danger ? "destructive-outline" : "outline"}
+                    className="mt-4 w-full"
+                    data-reset-placeholder={oracle || quota ? undefined : "true"}
+                    data-reset-oracle={oracle ? "true" : undefined}
+                    data-reset-quota-parody={quota ? "true" : undefined}
+                    aria-describedby={descriptionId}
+                    aria-label={
+                      oracle
+                        ? `${action.title} — ${action.risk}`
+                        : quota
+                          ? `${action.title} — ${action.risk} parody`
+                          : `${action.title} — ${action.risk} placeholder`
                     }
-                    if (quota) {
-                      const message =
-                        "Request submitted to the universe. This is a parody; no Codex quota or account state changed.";
-                      setOutcome({ actionId: "quota", message });
-                      setStatus(message);
-                      return;
-                    }
-                    setStatus(placeholderMessage(action));
-                  }}
-                >
-                  {oracle ? "Ask Oracle" : quota ? "Pretend to reset" : "Coming soon"}
-                </Button>
+                    onClick={() => {
+                      if (oracle) {
+                        const result = selectResetOracleResponse(random);
+                        setOutcome({ actionId: "oracle", message: result.response });
+                        setStatus(`The Reset Oracle says: ${result.response}`);
+                        return;
+                      }
+                      if (quota) {
+                        const message =
+                          "Request submitted to the universe. This is a parody; no Codex quota or account state changed.";
+                        setOutcome({ actionId: "quota", message });
+                        setStatus(message);
+                        return;
+                      }
+                      setStatus(placeholderMessage(action));
+                    }}
+                  >
+                    {oracle ? "Ask Oracle" : quota ? "Pretend to reset" : "Coming soon"}
+                  </Button>
+                )}
               </article>
             );
           })}
@@ -163,7 +179,7 @@ export function ResetDepartmentSettingsPanel({
 
       <p className="min-h-5 text-xs text-muted-foreground" role="status" aria-live="polite">
         {status ??
-          "The Oracle and quota parody are harmless. Destructive controls are non-operational placeholders."}
+          "The Oracle and quota parody are harmless. Dependency cleanup requires a preview; hard reset remains a placeholder."}
       </p>
     </div>
   );

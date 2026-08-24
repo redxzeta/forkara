@@ -102,6 +102,9 @@ import {
   isWindowsPlatform,
 } from "../lib/utils";
 import { ensureNativeApi, readNativeApi } from "../nativeApi";
+import { useLatestProjectStore } from "../latestProjectStore";
+import { useStore } from "../store";
+import { createProjectSelector } from "../storeSelectors";
 import { sameProviderOrder } from "../providerOrdering";
 import {
   normalizeSettingsSection,
@@ -202,6 +205,11 @@ function SettingsRouteView() {
   const activeSection = normalizeSettingsSection(routeSearch.section);
   const settingsTarget = typeof routeSearch.target === "string" ? routeSearch.target : null;
   const activeSectionItem = SETTINGS_NAV_ITEMS.find((item) => item.id === activeSection)!;
+  const latestProjectId = useLatestProjectStore((state) => state.latestProjectId);
+  const latestProject = useStore(
+    useMemo(() => createProjectSelector(latestProjectId), [latestProjectId]),
+  );
+  const resetWorkspaceRoot = latestProject?.kind === "project" ? latestProject.cwd : null;
 
   const {
     isDefaultActiveTheme,
@@ -1306,7 +1314,11 @@ function SettingsRouteView() {
               {/* These workflow owners stay mounted so drafts, request guards, and pending
                   mutations retain route lifetime while inactive panels render no DOM. */}
               <div className="contents">
-                <ResetDepartmentSettingsPanel active={activeSection === "reset"} />
+                <ResetDepartmentSettingsPanel
+                  active={activeSection === "reset"}
+                  workspaceRoot={resetWorkspaceRoot}
+                  resetApi={readNativeApi()?.resetDepartment ?? null}
+                />
                 <NotificationsSettingsPanel
                   active={activeSection === "notifications"}
                   settings={settings}

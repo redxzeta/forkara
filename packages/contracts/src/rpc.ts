@@ -11,6 +11,12 @@ import {
   BrandingInspectionInput,
   BrandingInspectionResult,
 } from "./branding";
+import {
+  DependencyCleanupInput,
+  DependencyCleanupPreview,
+  DependencyCleanupResult,
+  ResetDepartmentError,
+} from "./resetDepartment";
 
 import {
   AutomationCancelRunInput,
@@ -288,6 +294,8 @@ export class WsRpcError extends Schema.TaggedErrorClass<WsRpcError>()("WsRpcErro
   retryAfterMs: Schema.optional(Schema.Number),
 }) {}
 
+const ResetDepartmentRpcError = Schema.Union([ResetDepartmentError, WsRpcError]);
+
 export const WsBootstrapNegotiateRpc = Rpc.make(WS_BOOTSTRAP_METHOD, {
   payload: WsBootstrapNegotiateInput,
   success: WsBootstrapNegotiateResult,
@@ -559,6 +567,24 @@ export const WsBrandingImportGeneratedAssetRpc = Rpc.make(WS_METHODS.brandingImp
   success: BrandingImportGeneratedAssetResult,
   error: WsRpcError,
 });
+
+export const WsResetPreviewDependencyCleanupRpc = Rpc.make(
+  WS_METHODS.resetPreviewDependencyCleanup,
+  {
+    payload: DependencyCleanupInput,
+    success: DependencyCleanupPreview,
+    error: ResetDepartmentRpcError,
+  },
+);
+
+export const WsResetExecuteDependencyCleanupRpc = Rpc.make(
+  WS_METHODS.resetExecuteDependencyCleanup,
+  {
+    payload: DependencyCleanupInput,
+    success: DependencyCleanupResult,
+    error: ResetDepartmentRpcError,
+  },
+);
 
 export const WsStudioListThreadOutputsRpc = Rpc.make(WS_METHODS.studioListThreadOutputs, {
   payload: StudioListThreadOutputsInput,
@@ -1428,6 +1454,8 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsBrandingGetGenerationCapabilityRpc,
   WsBrandingGetGenerationResultRpc,
   WsBrandingImportGeneratedAssetRpc,
+  WsResetPreviewDependencyCleanupRpc,
+  WsResetExecuteDependencyCleanupRpc,
   WsStudioListThreadOutputsRpc,
   WsFilesystemBrowseRpc,
   WsShellOpenInEditorRpc,
