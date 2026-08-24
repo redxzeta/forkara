@@ -10,18 +10,23 @@ import {
 } from "./ResetDepartmentSettingsPanel";
 
 describe("ResetDepartmentSettingsPanel", () => {
-  it("renders every textual risk tier as an explicit placeholder", () => {
+  it("renders every textual risk tier with only the Oracle enabled", () => {
     const markup = renderToStaticMarkup(<ResetDepartmentSettingsPanel active />);
 
     for (const action of RESET_DEPARTMENT_ACTIONS) {
       expect(markup).toContain(action.title);
       expect(markup).toContain(action.risk);
-      expect(markup).toContain(`${action.title} — ${action.risk} placeholder`);
+      expect(markup).toContain(
+        action.id === "oracle"
+          ? `${action.title} — ${action.risk}`
+          : `${action.title} — ${action.risk} placeholder`,
+      );
     }
-    expect(markup.match(/data-reset-placeholder="true"/gu)).toHaveLength(4);
+    expect(markup.match(/data-reset-placeholder="true"/gu)).toHaveLength(3);
+    expect(markup).toContain('data-reset-oracle="true"');
     expect(markup).toContain('data-risk="DANGER"');
     expect(markup).toContain("border-destructive/60");
-    expect(markup).toContain("Every control is a non-operational placeholder.");
+    expect(markup).toContain("The Oracle is harmless.");
   });
 
   it("renders nothing while another settings section is active", () => {

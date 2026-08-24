@@ -14,10 +14,10 @@ describe("ResetDepartmentSettingsPanel", () => {
     document.body.innerHTML = "";
   });
 
-  it("keeps every placeholder keyboard reachable and non-operational", async () => {
+  it("keeps the Oracle and every placeholder keyboard reachable", async () => {
     await render(<ResetDepartmentSettingsPanel active />);
 
-    const oracle = page.getByRole("button", { name: "Ask the Reset Oracle — SAFE placeholder" });
+    const oracle = page.getByRole("button", { name: "Ask the Reset Oracle — SAFE" });
     const dependencies = page.getByRole("button", {
       name: "Delete node_modules — LOW RISK placeholder",
     });
@@ -38,5 +38,18 @@ describe("ResetDepartmentSettingsPanel", () => {
     await vi.waitFor(() =>
       expect(page.getByRole("status").element().textContent).toContain("No reset operation ran."),
     );
+  });
+
+  it("invokes the Oracle from the keyboard with a deterministic rare result", async () => {
+    await render(<ResetDepartmentSettingsPanel active random={() => 0} />);
+
+    const oracle = page.getByRole("button", { name: "Ask the Reset Oracle — SAFE" });
+    oracle.element().focus();
+    await userEvent.keyboard("{Enter}");
+
+    await vi.waitFor(() =>
+      expect(page.getByRole("status").element().textContent).toContain("DO NOT RESET ANYTHING."),
+    );
+    expect(document.body.textContent).toContain("DO NOT RESET ANYTHING.");
   });
 });
