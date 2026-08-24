@@ -9,6 +9,7 @@ import { settingRowAnchorId } from "~/settingsNavigation";
 
 import { Button } from "../ui/button";
 import { SettingsSectionShell } from "./SettingsPanelPrimitives";
+import { selectResetOracleResponse } from "./resetOracle";
 
 export const RESET_DEPARTMENT_ACTIONS = [
   {
@@ -47,8 +48,15 @@ function placeholderMessage(action: ResetDepartmentAction): string {
   return `${action.title} is coming soon. No reset operation ran.`;
 }
 
-export function ResetDepartmentSettingsPanel({ active }: { readonly active: boolean }) {
+export function ResetDepartmentSettingsPanel({
+  active,
+  random = Math.random,
+}: {
+  readonly active: boolean;
+  readonly random?: () => number;
+}) {
   const [status, setStatus] = useState<string | null>(null);
+  const [oracleResponse, setOracleResponse] = useState<string | null>(null);
   if (!active) return null;
 
   return (
@@ -61,6 +69,7 @@ export function ResetDepartmentSettingsPanel({ active }: { readonly active: bool
         <div className="grid gap-3 sm:grid-cols-2" aria-label="Reset Department actions">
           {RESET_DEPARTMENT_ACTIONS.map((action) => {
             const danger = action.risk === "DANGER";
+            const oracle = action.id === "oracle";
             const descriptionId = `reset-department-${action.id}-description`;
             return (
               <article
@@ -94,17 +103,35 @@ export function ResetDepartmentSettingsPanel({ active }: { readonly active: bool
                 >
                   {action.description}
                 </p>
+                {oracleResponse && oracle ? (
+                  <blockquote className="mt-3 rounded-lg border bg-background/60 px-3 py-2 text-center text-sm font-medium text-foreground">
+                    {oracleResponse}
+                  </blockquote>
+                ) : null}
                 <Button
                   type="button"
                   size="sm"
                   variant={danger ? "destructive-outline" : "outline"}
                   className="mt-4 w-full"
-                  data-reset-placeholder="true"
+                  data-reset-placeholder={oracle ? undefined : "true"}
+                  data-reset-oracle={oracle ? "true" : undefined}
                   aria-describedby={descriptionId}
-                  aria-label={`${action.title} — ${action.risk} placeholder`}
-                  onClick={() => setStatus(placeholderMessage(action))}
+                  aria-label={
+                    oracle
+                      ? `${action.title} — ${action.risk}`
+                      : `${action.title} — ${action.risk} placeholder`
+                  }
+                  onClick={() => {
+                    if (oracle) {
+                      const result = selectResetOracleResponse(random);
+                      setOracleResponse(result.response);
+                      setStatus(`The Reset Oracle says: ${result.response}`);
+                      return;
+                    }
+                    setStatus(placeholderMessage(action));
+                  }}
                 >
-                  Coming soon
+                  {oracle ? "Ask Oracle" : "Coming soon"}
                 </Button>
               </article>
             );
@@ -113,7 +140,7 @@ export function ResetDepartmentSettingsPanel({ active }: { readonly active: bool
       </SettingsSectionShell>
 
       <p className="min-h-5 text-xs text-muted-foreground" role="status" aria-live="polite">
-        {status ?? "Every control is a non-operational placeholder."}
+        {status ?? "The Oracle is harmless. Every other control is a non-operational placeholder."}
       </p>
     </div>
   );
