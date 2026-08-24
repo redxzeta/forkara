@@ -81,6 +81,7 @@ Focused guides in this repository include:
 - [Providers](docs/providers.md)
 - [External MCP integrations](docs/external-mcp.md)
 - [X integration](docs/x-integration.md)
+- [Downstream rebrand guide](docs/rebrand-checklist.md)
 
 ## Privacy
 
