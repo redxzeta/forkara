@@ -376,6 +376,7 @@ it.layer(testLayer)("server CLI command", (it) => {
         SYNARA_NO_BROWSER: "true",
         SYNARA_AUTH_TOKEN: "env-token",
         SYNARA_DESKTOP_SHUTDOWN_TOKEN: "shutdown-token",
+        SYNARA_X_CLIENT_ID: "x-public-client-id",
       });
 
       assert.equal(start.mock.calls.length, 1);
@@ -388,6 +389,7 @@ it.layer(testLayer)("server CLI command", (it) => {
       assert.equal(resolvedConfig?.noBrowser, true);
       assert.equal(resolvedConfig?.authToken, "env-token");
       assert.equal(resolvedConfig?.desktopShutdownToken, "shutdown-token");
+      assert.equal(resolvedConfig?.xClientId, "x-public-client-id");
       assert.equal(resolvedConfig?.autoBootstrapProjectFromCwd, false);
       assert.equal(resolvedConfig?.logProviderEvents, false);
       assert.equal(resolvedConfig?.logWebSocketEvents, false);
@@ -527,6 +529,7 @@ it.layer(testLayer)("server CLI command", (it) => {
       yield* runCli([], {
         SYNARA_AUTH_TOKEN: "browser-secret",
         SYNARA_DESKTOP_SHUTDOWN_TOKEN: "shutdown-secret",
+        SYNARA_X_CLIENT_ID: "x-public-client-id",
       });
       const config = resolvedConfig;
       if (!config) throw new Error("Expected resolved server config");
@@ -534,9 +537,11 @@ it.layer(testLayer)("server CLI command", (it) => {
       const logData = makeServerStartupLogData(config);
       assert.equal(Object.hasOwn(logData, "authToken"), false);
       assert.equal(Object.hasOwn(logData, "desktopShutdownToken"), false);
+      assert.equal(Object.hasOwn(logData, "xClientId"), false);
       assert.equal(logData.authEnabled, true);
       assert.notInclude(JSON.stringify(logData), "browser-secret");
       assert.notInclude(JSON.stringify(logData), "shutdown-secret");
+      assert.notInclude(JSON.stringify(logData), "x-public-client-id");
     }),
   );
 

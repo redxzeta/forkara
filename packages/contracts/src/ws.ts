@@ -150,6 +150,7 @@ import {
   PullRequestSetPinnedInput,
   PullRequestsListInput,
 } from "./pullRequests";
+import { XCreatePostInput } from "./xPost";
 import {
   ExternalMcpCreateIntegrationInput,
   ExternalMcpRefreshPairingInput,
@@ -236,6 +237,12 @@ export const WS_METHODS = {
   pullRequestsAction: "pullRequests.action",
   pullRequestsComment: "pullRequests.comment",
   pullRequestsSetPinned: "pullRequests.setPinned",
+
+  // X account and posting methods
+  xGetConnectionStatus: "x.getConnectionStatus",
+  xBeginConnect: "x.beginConnect",
+  xDisconnect: "x.disconnect",
+  xCreatePost: "x.createPost",
 
   // Terminal methods
   terminalOpen: "terminal.open",
@@ -443,6 +450,12 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.pullRequestsAction, PullRequestActionInput),
   tagRequestBody(WS_METHODS.pullRequestsComment, PullRequestCommentInput),
   tagRequestBody(WS_METHODS.pullRequestsSetPinned, PullRequestSetPinnedInput),
+
+  // X account and posting
+  tagRequestBody(WS_METHODS.xGetConnectionStatus, Schema.Struct({})),
+  tagRequestBody(WS_METHODS.xBeginConnect, Schema.Struct({})),
+  tagRequestBody(WS_METHODS.xDisconnect, Schema.Struct({})),
+  tagRequestBody(WS_METHODS.xCreatePost, XCreatePostInput),
 
   // Terminal methods
   tagRequestBody(WS_METHODS.terminalOpen, TerminalOpenInput),

@@ -29,6 +29,7 @@ export * from "./settings";
 export * from "./git";
 export * from "./githubProjectProvisioning";
 export * from "./pullRequests";
+export * from "./xPost";
 export * from "./orchestration";
 export * from "./editor";
 export * from "./environment";

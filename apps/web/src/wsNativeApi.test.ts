@@ -489,6 +489,24 @@ describe("wsNativeApi", () => {
     expect(onAutomationEvent).toHaveBeenCalledWith(event);
   });
 
+  it("forwards X connection and explicit post requests through typed websocket methods", async () => {
+    requestMock.mockResolvedValue(undefined);
+    const { createWsNativeApi } = await import("./wsNativeApi");
+    const api = createWsNativeApi();
+
+    await api.x.getConnectionStatus();
+    await api.x.beginConnect();
+    await api.x.disconnect();
+    await api.x.createPost({ text: "User-reviewed draft" });
+
+    expect(requestMock).toHaveBeenNthCalledWith(1, WS_METHODS.xGetConnectionStatus);
+    expect(requestMock).toHaveBeenNthCalledWith(2, WS_METHODS.xBeginConnect);
+    expect(requestMock).toHaveBeenNthCalledWith(3, WS_METHODS.xDisconnect);
+    expect(requestMock).toHaveBeenNthCalledWith(4, WS_METHODS.xCreatePost, {
+      text: "User-reviewed draft",
+    });
+  });
+
   it("wraps orchestration dispatch commands in the command envelope", async () => {
     requestMock.mockResolvedValue(undefined);
     const { createWsNativeApi } = await import("./wsNativeApi");

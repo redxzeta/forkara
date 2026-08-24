@@ -105,6 +105,8 @@ export interface ServerConfigShape extends ServerDerivedPaths {
   readonly allowInsecureRemote: boolean;
   readonly noBrowser: boolean;
   readonly authToken: string | undefined;
+  /** Public OAuth client id for the optional X integration. Tokens live in ServerSecretStore. */
+  readonly xClientId?: string | undefined;
   readonly desktopShutdownToken?: string | undefined;
   readonly autoBootstrapProjectFromCwd: boolean;
   readonly logProviderEvents: boolean;

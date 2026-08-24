@@ -644,6 +644,12 @@ export function createWsNativeApi(): NativeApi {
       comment: (input) => transport.request(WS_METHODS.pullRequestsComment, input),
       setPinned: (input) => transport.request(WS_METHODS.pullRequestsSetPinned, input),
     },
+    x: {
+      getConnectionStatus: () => transport.request(WS_METHODS.xGetConnectionStatus),
+      beginConnect: () => transport.request(WS_METHODS.xBeginConnect),
+      disconnect: () => transport.request(WS_METHODS.xDisconnect),
+      createPost: (input) => transport.request(WS_METHODS.xCreatePost, input),
+    },
     contextMenu: {
       show: async <T extends string>(
         items: readonly ContextMenuItem<T>[],

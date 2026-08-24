@@ -128,6 +128,12 @@ import type {
   PullRequestsListResult,
 } from "./pullRequests";
 import type {
+  XBeginConnectResult,
+  XConnectionStatus,
+  XCreatePostInput,
+  XCreatePostResult,
+} from "./xPost";
+import type {
   ProjectCreateLocalFilePreviewGrantInput,
   ProjectCreateLocalFilePreviewGrantResult,
   ProjectDevServerEvent,
@@ -814,6 +820,12 @@ export interface NativeApi {
     action: (input: PullRequestActionInput) => Promise<PullRequestActionResult>;
     comment: (input: PullRequestCommentInput) => Promise<PullRequestActionResult>;
     setPinned: (input: PullRequestSetPinnedInput) => Promise<PullRequestSetPinnedResult>;
+  };
+  x: {
+    getConnectionStatus: () => Promise<XConnectionStatus>;
+    beginConnect: () => Promise<XBeginConnectResult>;
+    disconnect: () => Promise<XConnectionStatus>;
+    createPost: (input: XCreatePostInput) => Promise<XCreatePostResult>;
   };
   contextMenu: {
     show: <T extends string>(

@@ -50,6 +50,8 @@ import { recoverGitHandoffOperations } from "./gitHandoffOperations";
 import { externalMcpRouteLayer } from "./externalMcp/httpRoute";
 import { ExternalMcpGateway } from "./externalMcp/Services/ExternalMcpGateway";
 import { ExternalMcpService } from "./externalMcp/Services/ExternalMcpService";
+import { xPostRouteLayer } from "./xPost/httpRoute";
+import { XPostService } from "./xPost/Services/XPostService";
 
 export interface ServerShape {
   readonly start: Effect.Effect<
@@ -60,6 +62,7 @@ export interface ServerShape {
     | AgentGatewayCredentials
     | ExternalMcpGateway
     | ExternalMcpService
+    | XPostService
     | FileSystem.FileSystem
     | Path.Path
     | Keybindings
@@ -137,6 +140,7 @@ export const createEffectServer = Effect.fn(function* (
   const runtimeStartup = yield* ServerRuntimeStartup;
   const serverSettings = yield* ServerSettingsService;
   const threadDeletionReactor = yield* ThreadDeletionReactor;
+  const xPostService = yield* XPostService;
   const readiness = yield* makeServerReadiness;
 
   yield* keybindings.syncDefaultKeybindingsOnStartup.pipe(
@@ -169,6 +173,7 @@ export const createEffectServer = Effect.fn(function* (
     websocketRpcRouteLayer,
     agentGatewayRouteLayer,
     externalMcpRouteLayer,
+    xPostRouteLayer,
   );
   const httpApp = yield* HttpRouter.toHttpEffect(routesLayer);
   yield* httpServer
@@ -182,6 +187,7 @@ export const createEffectServer = Effect.fn(function* (
     config.port,
   );
   agentGatewayCredentials.setListeningPort(listeningPort);
+  xPostService.setListeningPort(listeningPort);
   yield* persistServerRuntimeState({
     path: config.serverRuntimeStatePath,
     state: makePersistedServerRuntimeState({

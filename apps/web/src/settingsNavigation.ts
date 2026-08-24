@@ -10,6 +10,7 @@ export const SETTINGS_SECTION_IDS = [
   "notifications",
   "behavior",
   "appsnap",
+  "social",
   "shortcuts",
   "worktrees",
   "archived",
@@ -119,6 +120,14 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
     description: "Capture another app's frontmost window directly into a task.",
     icon: "screen-capture",
     eyebrow: "Screen capture",
+  },
+  {
+    id: "social",
+    group: "integrations",
+    label: "Social accounts",
+    description: "Connect X for user-reviewed public posts and disconnect it locally.",
+    icon: "twitter",
+    eyebrow: "Public sharing",
   },
   {
     id: "integrations",
