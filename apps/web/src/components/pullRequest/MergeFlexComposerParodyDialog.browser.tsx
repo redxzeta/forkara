@@ -68,7 +68,7 @@ describe("MergeFlexComposerDialog parody mode", () => {
     await page.getByRole("radio", { name: "Resume-Driven Development" }).click();
     await expect.element(page.getByText("PARODY · SOURCE: VIBES")).toBeInTheDocument();
 
-    const allegedCount = page.getByLabelText("Alleged PRs merged today");
+    const allegedCount = page.getByRole("spinbutton", { name: "Alleged PRs merged today" });
     await allegedCount.fill("1000000");
     await expect.element(page.getByRole("alert")).toHaveTextContent("Enter a whole number");
     expect(
