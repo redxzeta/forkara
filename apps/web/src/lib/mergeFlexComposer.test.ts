@@ -3,10 +3,19 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   composeMergeFlexFactualDraft,
+  composeMergeFlexParodyDraft,
   countUnicodeCharacters,
   createMergeFlexPostGate,
   factualShareableRepository,
+  finalizeMergeFlexParodyPost,
+  hasMergeFlexParodyMarker,
+  makeMergeFlexMockAgentPrompt,
+  makeMockMergeReceipts,
+  MERGE_FLEX_PARODY_COUNT_MAX,
+  MERGE_FLEX_PARODY_MARKER,
+  MERGE_FLEX_PARODY_PRESETS,
   mergeFlexScopeLabel,
+  parseMergeFlexParodyCount,
   startExplicitMergeFlexPost,
 } from "./mergeFlexComposer";
 
@@ -146,5 +155,66 @@ describe("Merge Flex factual composer helpers", () => {
 
     await expect(submission).resolves.toMatchObject({ status: "error" });
     expect(draft).toBe("Keep this exact draft");
+  });
+
+  it("composes deterministic parody copy and enforces a non-editable final marker", () => {
+    const draft = composeMergeFlexParodyDraft("resume", {
+      count: 1,
+      date: "2026-08-24",
+    });
+    expect(draft).toBe("Resume-Driven Development is going great: 1 alleged merge on 2026-08-24.");
+    expect(draft).not.toContain(MERGE_FLEX_PARODY_MARKER);
+
+    const editedDraft = "Totally authentic, trust me";
+    const finalPost = finalizeMergeFlexParodyPost(editedDraft);
+    expect(finalPost).toBe(`${editedDraft}\n\n${MERGE_FLEX_PARODY_MARKER}`);
+    expect(hasMergeFlexParodyMarker(finalPost)).toBe(true);
+    expect(hasMergeFlexParodyMarker(editedDraft)).toBe(false);
+  });
+
+  it("accepts only bounded whole-number parody counts and exposes deterministic presets", () => {
+    expect(parseMergeFlexParodyCount("0")).toBe(0);
+    expect(parseMergeFlexParodyCount(String(MERGE_FLEX_PARODY_COUNT_MAX))).toBe(
+      MERGE_FLEX_PARODY_COUNT_MAX,
+    );
+    expect(parseMergeFlexParodyCount("-1")).toBeNull();
+    expect(parseMergeFlexParodyCount("1.5")).toBeNull();
+    expect(parseMergeFlexParodyCount("1000000")).toBeNull();
+    expect(MERGE_FLEX_PARODY_PRESETS.map((preset) => preset.count)).toEqual([
+      7,
+      42,
+      69,
+      100,
+      MERGE_FLEX_PARODY_COUNT_MAX,
+    ]);
+  });
+
+  it("generates stable seeded in-memory receipts using the existing receipt shape", () => {
+    const first = makeMockMergeReceipts({ count: 4, date: "2026-08-24", seed: 17 });
+    const repeated = makeMockMergeReceipts({ count: 4, date: "2026-08-24", seed: 17 });
+    const different = makeMockMergeReceipts({ count: 4, date: "2026-08-24", seed: 18 });
+
+    expect(first).toEqual(repeated);
+    expect(first).not.toEqual(different);
+    expect(first).toHaveLength(4);
+    expect(first.map((receipt) => receipt.repositoryVisibility)).toEqual([
+      "public",
+      "private",
+      "internal",
+      "unknown",
+    ]);
+    expect(first.every((receipt) => receipt.title.startsWith("[Mock]"))).toBe(true);
+    expect(first.every((receipt) => receipt.url.includes(".invalid/"))).toBe(true);
+    expect(first.every((receipt) => !receipt.url.includes("github.com"))).toBe(true);
+    expect(makeMockMergeReceipts({ count: 0, date: "2026-08-24" })).toEqual([]);
+    expect(() => makeMockMergeReceipts({ count: -1, date: "2026-08-24" })).toThrow(RangeError);
+  });
+
+  it("builds the required local-only agent prompt with runtime count and date", () => {
+    const prompt = makeMergeFlexMockAgentPrompt({ count: 42, date: "2026-08-24" });
+    expect(prompt).toContain("Create exactly 42 mock pull-request receipt records for 2026-08-24");
+    expect(prompt).toContain("Do not run `gh pr create`, `gh api` mutations, `git push`");
+    expect(prompt).toContain("Do not create commits or branches solely for this task");
+    expect(prompt).toContain("confirm that no GitHub or Git write operation was performed");
   });
 });
