@@ -20,6 +20,7 @@ import {
 } from "~/components/ui/dialog";
 import { Spinner } from "~/components/ui/spinner";
 import { Textarea } from "~/components/ui/textarea";
+import { projectFactualMergeFlexCard, projectParodyMergeFlexCard } from "~/lib/mergeFlexCard";
 import {
   composeMergeFlexFactualDraft,
   composeMergeFlexParodyDraft,
@@ -44,6 +45,7 @@ import {
   PR_QUIET_INK_CLASS_NAME,
 } from "./pullRequestText";
 import { MergeFlexParodyPanel } from "./MergeFlexParodyPanel";
+import { MergeFlexShareCardPanel } from "./MergeFlexShareCard";
 
 type MergeFlexSourceMode = "factual" | "parody";
 
@@ -250,6 +252,15 @@ export function MergeFlexComposerDialog(props: MergeFlexComposerDialogProps) {
   const activeDraft = sourceMode === "factual" ? factualDraft : parodyDraft;
   const finalPreview =
     sourceMode === "factual" ? factualDraft : finalizeMergeFlexParodyPost(parodyDraft);
+  const cardModel = useMemo(
+    () =>
+      sourceMode === "factual"
+        ? projectFactualMergeFlexCard(props.result)
+        : parodyCountValid
+          ? projectParodyMergeFlexCard({ count: parodyCount, date: props.result.date })
+          : null,
+    [parodyCount, parodyCountValid, props.result, sourceMode],
+  );
   const connected = props.connectionStatus?.state === "connected";
   const canPost =
     connected &&
@@ -449,6 +460,8 @@ export function MergeFlexComposerDialog(props: MergeFlexComposerDialogProps) {
               {activeDraft.length > 0 ? finalPreview : "Your preview will appear here."}
             </blockquote>
           </div>
+
+          <MergeFlexShareCardPanel model={cardModel} disabled={isPosting} />
 
           <section
             className="space-y-2 rounded-xl border border-border/60 p-3"

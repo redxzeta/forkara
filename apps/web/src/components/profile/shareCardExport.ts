@@ -4,8 +4,10 @@
 // opening a social composer is an explicit, user-initiated action.
 // Layer: web profile feature.
 
-import { toBlob } from "html-to-image";
-import { copyPngBlobToDesktopClipboard } from "~/lib/desktopClipboard";
+import {
+  copyPngBlobToClipboard,
+  renderNodeToPngBlob as renderLocalNodeToPngBlob,
+} from "~/lib/localPngExport";
 import { readNativeApi } from "~/nativeApi";
 
 export { downloadBlob } from "~/lib/browserDownload";
@@ -23,32 +25,19 @@ export async function renderNodeToPngBlob(
   node: HTMLElement,
   size?: { width: number; height: number },
 ): Promise<Blob | null> {
-  try {
-    return await toBlob(node, {
-      pixelRatio: 2,
-      cacheBust: true,
-      backgroundColor: "#ffffff",
-      ...(size ? { width: size.width, height: size.height } : {}),
-    });
-  } catch {
-    return null;
-  }
+  const width = size?.width ?? node.offsetWidth;
+  const height = size?.height ?? node.offsetHeight;
+  if (width <= 0 || height <= 0) return null;
+  return renderLocalNodeToPngBlob(node, {
+    width,
+    height,
+    pixelRatio: 2,
+    backgroundColor: "#ffffff",
+  });
 }
 
 export async function copyImageToClipboard(blob: Blob): Promise<boolean> {
-  if (await copyPngBlobToDesktopClipboard(blob)) {
-    return true;
-  }
-
-  try {
-    if (typeof ClipboardItem === "undefined" || !navigator.clipboard?.write) {
-      return false;
-    }
-    await navigator.clipboard.write([new ClipboardItem({ [blob.type || "image/png"]: blob })]);
-    return true;
-  } catch {
-    return false;
-  }
+  return copyPngBlobToClipboard(blob);
 }
 
 // Opens an external URL via the desktop shell when available, else a new browser tab.

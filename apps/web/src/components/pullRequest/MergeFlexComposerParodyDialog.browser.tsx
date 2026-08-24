@@ -57,6 +57,12 @@ describe("MergeFlexComposerDialog parody mode", () => {
       />,
     );
 
+    const factualCard = page.getByLabelText(/FACTUAL RECEIPTS: 1 your prs merged today/i);
+    await expect.element(factualCard).toBeInTheDocument();
+    const factualCardElement = factualCard.element() as HTMLElement;
+    expect(factualCardElement.offsetWidth).toBe(1200);
+    expect(factualCardElement.offsetHeight).toBe(675);
+    expect(factualCardElement.textContent).toContain("FACTUAL RECEIPTS");
     const editor = page.getByLabelText("Post text");
     await editor.fill("Edited factual receipt");
     await page.getByRole("radio", { name: "Resume-Driven Development" }).click();
@@ -72,6 +78,11 @@ describe("MergeFlexComposerDialog parody mode", () => {
 
     await page.getByRole("button", { name: "42", exact: true }).click();
     expect((allegedCount.element() as HTMLInputElement).value).toBe("42");
+    const parodyCard = page.getByLabelText(/PARODY: 42 alleged prs merged today/i);
+    await expect.element(parodyCard).toBeInTheDocument();
+    const parodyCardText = (parodyCard.element() as HTMLElement).textContent;
+    expect(parodyCardText).toContain("RESUME-DRIVEN DEVELOPMENT");
+    expect(parodyCardText).toContain("PARODY");
     await editor.fill("Custom boast with no disclaimer");
     await expect.element(page.getByText(MERGE_FLEX_PARODY_MARKER)).toBeInTheDocument();
 
