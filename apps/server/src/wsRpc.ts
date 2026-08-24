@@ -49,6 +49,12 @@ import {
 } from "./auth/Services/ServerAuth";
 import { SessionCredentialService } from "./auth/Services/SessionCredentialService";
 import { CheckpointDiffQuery } from "./checkpointing/Services/CheckpointDiffQuery";
+import {
+  brandingGenerationResultFromThread,
+  inspectBrandingEntries,
+  resolveBrandingGenerationCapability,
+  stageGeneratedBrandingAsset,
+} from "./branding/brandingService";
 import { resolveThreadWorkspaceCwd } from "./checkpointing/Utils";
 import { ServerConfig, type ServerConfigShape } from "./config";
 import { realpathNearestExisting } from "./realpathNearestExisting";
@@ -80,7 +86,7 @@ import {
   recordGitHandoffResult,
 } from "./gitHandoffOperations";
 import { Keybindings } from "./keybindings";
-import { createLocalPreviewGrant } from "./localImageFiles";
+import { createLocalPreviewGrant, resolveAllowedLocalPreviewFile } from "./localImageFiles";
 import { listLocalServers, stopLocalServer } from "./localServerMonitor";
 import { listManagedWorktrees, pruneProjectedArchivedManagedWorktrees } from "./managedWorktrees";
 import {
@@ -95,6 +101,7 @@ import { makeImportThreadHandler } from "./orchestration/importThreadRoute";
 import { OrchestrationEngineService } from "./orchestration/Services/OrchestrationEngine";
 import { ProviderCommandReactor } from "./orchestration/Services/ProviderCommandReactor";
 import { ProjectionStateIncompleteError } from "./persistence/Errors";
+import { ManagedAttachmentRepository } from "./persistence/Services/ManagedAttachments";
 import { ProjectionSnapshotQuery } from "./orchestration/Services/ProjectionSnapshotQuery";
 import { shouldPublishThreadShellForEvent } from "./orchestration/threadShellEvents";
 import { ProviderDiscoveryService } from "./provider/Services/ProviderDiscoveryService";
@@ -350,6 +357,7 @@ const makeWsRpcHandlersLayer = () =>
       const gitManager = yield* GitManager;
       const gitStatusBroadcaster = yield* GitStatusBroadcaster;
       const keybindings = yield* Keybindings;
+      const managedAttachmentRepository = yield* ManagedAttachmentRepository;
       const open = yield* Open;
       const orchestrationEngine = yield* OrchestrationEngineService;
       const providerCommandReactor = yield* ProviderCommandReactor;
@@ -1327,6 +1335,95 @@ const makeWsRpcHandlersLayer = () =>
               ),
             ),
             { label: "projects.github-provision" },
+          ),
+        [WS_METHODS.brandingInspect]: (input) =>
+          rpcEffect(
+            Effect.gen(function* () {
+              const canonicalCwd = yield* canonicalizeProjectWorkspaceRoot(input.cwd);
+              const inventory = yield* workspaceEntries.listDirectories({
+                cwd: canonicalCwd,
+                depth: 12,
+                includeFiles: true,
+              });
+              return inspectBrandingEntries({
+                projectId: input.projectId,
+                canonicalCwd,
+                projectName: path.basename(canonicalCwd),
+                entries: inventory.entries,
+              });
+            }),
+            "Failed to inspect project branding",
+          ),
+        [WS_METHODS.brandingGetGenerationCapability]: (input) =>
+          rpcEffect(
+            Effect.all({
+              capabilities: providerDiscoveryService.getComposerCapabilities(input),
+              statuses: providerHealth.getStatuses,
+            }).pipe(
+              Effect.map(({ capabilities, statuses }) =>
+                resolveBrandingGenerationCapability({
+                  capabilities,
+                  status: statuses.find((status) => status.provider === input.provider) ?? null,
+                }),
+              ),
+            ),
+            "Failed to inspect image generation capability",
+          ),
+        [WS_METHODS.brandingGetGenerationResult]: (input) =>
+          rpcEffect(
+            projectionReadModelQuery
+              .getThreadDetailById(input.generationThreadId)
+              .pipe(
+                Effect.map((thread) =>
+                  brandingGenerationResultFromThread(Option.getOrNull(thread)),
+                ),
+              ),
+            "Failed to read logo generation result",
+          ),
+        [WS_METHODS.brandingImportGeneratedAsset]: (input) =>
+          rpcEffect(
+            Effect.gen(function* () {
+              const thread = yield* projectionReadModelQuery.getThreadDetailById(
+                input.generationThreadId,
+              );
+              const result = brandingGenerationResultFromThread(Option.getOrNull(thread));
+              if (result.status !== "ready") {
+                return yield* new WsRpcError({
+                  message: "The selected generation thread has no completed image artifact.",
+                  code: "BRANDING_GENERATED_ASSET_NOT_READY",
+                  retryable: true,
+                });
+              }
+              const source = result.artifacts[input.artifactIndex];
+              if (!source) {
+                return yield* new WsRpcError({
+                  message: "The selected generated image no longer exists.",
+                  code: "BRANDING_GENERATED_ASSET_NOT_FOUND",
+                  retryable: false,
+                });
+              }
+              const resolved = yield* Effect.tryPromise(() =>
+                resolveAllowedLocalPreviewFile({ requestedPath: source.path, cwd: null }),
+              );
+              if (!resolved) {
+                return yield* new WsRpcError({
+                  message: "The generated image is outside the provider artifact allowlist.",
+                  code: "BRANDING_GENERATED_ASSET_UNSAFE",
+                  retryable: false,
+                });
+              }
+              const principal = yield* CurrentManagedAttachmentPrincipal;
+              const attachment = yield* stageGeneratedBrandingAsset({
+                source,
+                resolvedPath: resolved.path,
+                applicationThreadId: input.applicationThreadId,
+                attachmentsDir: config.attachmentsDir,
+                principal,
+                repository: managedAttachmentRepository,
+              });
+              return { attachment, source };
+            }),
+            "Failed to import generated logo",
           ),
         [WS_METHODS.studioListThreadOutputs]: (input) =>
           rpcEffect(

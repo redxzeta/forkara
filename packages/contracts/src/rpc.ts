@@ -1,6 +1,16 @@
 import { Schema } from "effect";
 import * as Rpc from "effect/unstable/rpc/Rpc";
 import * as RpcGroup from "effect/unstable/rpc/RpcGroup";
+import {
+  BrandingGenerationCapability,
+  BrandingGenerationCapabilityInput,
+  BrandingGenerationResult,
+  BrandingGenerationResultInput,
+  BrandingImportGeneratedAssetInput,
+  BrandingImportGeneratedAssetResult,
+  BrandingInspectionInput,
+  BrandingInspectionResult,
+} from "./branding";
 
 import {
   AutomationCancelRunInput,
@@ -521,6 +531,33 @@ export const WsProjectsProvisionFromGitHubRpc = Rpc.make(WS_METHODS.projectsProv
   success: GitHubProjectProvisionProgressEvent,
   error: WsRpcError,
   stream: true,
+});
+
+export const WsBrandingInspectRpc = Rpc.make(WS_METHODS.brandingInspect, {
+  payload: BrandingInspectionInput,
+  success: BrandingInspectionResult,
+  error: WsRpcError,
+});
+
+export const WsBrandingGetGenerationCapabilityRpc = Rpc.make(
+  WS_METHODS.brandingGetGenerationCapability,
+  {
+    payload: BrandingGenerationCapabilityInput,
+    success: BrandingGenerationCapability,
+    error: WsRpcError,
+  },
+);
+
+export const WsBrandingGetGenerationResultRpc = Rpc.make(WS_METHODS.brandingGetGenerationResult, {
+  payload: BrandingGenerationResultInput,
+  success: BrandingGenerationResult,
+  error: WsRpcError,
+});
+
+export const WsBrandingImportGeneratedAssetRpc = Rpc.make(WS_METHODS.brandingImportGeneratedAsset, {
+  payload: BrandingImportGeneratedAssetInput,
+  success: BrandingImportGeneratedAssetResult,
+  error: WsRpcError,
 });
 
 export const WsStudioListThreadOutputsRpc = Rpc.make(WS_METHODS.studioListThreadOutputs, {
@@ -1387,6 +1424,10 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsProjectsListDevServersRpc,
   WsSubscribeProjectDevServerEventsRpc,
   WsProjectsProvisionFromGitHubRpc,
+  WsBrandingInspectRpc,
+  WsBrandingGetGenerationCapabilityRpc,
+  WsBrandingGetGenerationResultRpc,
+  WsBrandingImportGeneratedAssetRpc,
   WsStudioListThreadOutputsRpc,
   WsFilesystemBrowseRpc,
   WsShellOpenInEditorRpc,

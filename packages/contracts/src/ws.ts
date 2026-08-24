@@ -1,5 +1,11 @@
 import { Schema, Struct } from "effect";
 import { NonNegativeInt, ProjectId, ThreadId, TrimmedNonEmptyString } from "./baseSchemas";
+import {
+  BrandingGenerationCapabilityInput,
+  BrandingGenerationResultInput,
+  BrandingImportGeneratedAssetInput,
+  BrandingInspectionInput,
+} from "./branding";
 
 import {
   AutomationCancelRunInput,
@@ -180,6 +186,12 @@ export const WS_METHODS = {
   projectsListDevServers: "projects.listDevServers",
   subscribeProjectDevServerEvents: "projects.subscribeDevServerEvents",
   projectsProvisionFromGitHub: "projects.provisionFromGitHub",
+
+  // Project logo rebrand workflow
+  brandingInspect: "branding.inspect",
+  brandingGetGenerationCapability: "branding.getGenerationCapability",
+  brandingGetGenerationResult: "branding.getGenerationResult",
+  brandingImportGeneratedAsset: "branding.importGeneratedAsset",
 
   // Studio methods
   studioListThreadOutputs: "studio.listThreadOutputs",
@@ -383,6 +395,12 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.projectsListDevServers, Schema.Struct({})),
   tagRequestBody(WS_METHODS.subscribeProjectDevServerEvents, Schema.Struct({})),
   tagRequestBody(WS_METHODS.projectsProvisionFromGitHub, GitHubProjectProvisionInput),
+
+  // Project logo rebrand workflow
+  tagRequestBody(WS_METHODS.brandingInspect, BrandingInspectionInput),
+  tagRequestBody(WS_METHODS.brandingGetGenerationCapability, BrandingGenerationCapabilityInput),
+  tagRequestBody(WS_METHODS.brandingGetGenerationResult, BrandingGenerationResultInput),
+  tagRequestBody(WS_METHODS.brandingImportGeneratedAsset, BrandingImportGeneratedAssetInput),
 
   // Filesystem browse
   // Studio

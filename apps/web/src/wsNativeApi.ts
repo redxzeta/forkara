@@ -544,6 +544,15 @@ export function createWsNativeApi(): NativeApi {
         }),
       onProvisionProgress: projectProvisionProgressListeners.subscribe,
     },
+    branding: {
+      inspect: (input) => transport.request(WS_METHODS.brandingInspect, input),
+      getGenerationCapability: (input) =>
+        transport.request(WS_METHODS.brandingGetGenerationCapability, input),
+      getGenerationResult: (input) =>
+        transport.request(WS_METHODS.brandingGetGenerationResult, input),
+      importGeneratedAsset: (input) =>
+        transport.request(WS_METHODS.brandingImportGeneratedAsset, input),
+    },
     filesystem: {
       browse: (input) => transport.request(WS_METHODS.filesystemBrowse, input),
     },
