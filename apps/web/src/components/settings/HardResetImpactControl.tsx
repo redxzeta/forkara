@@ -126,6 +126,7 @@ export function HardResetGuardPanel({
     snapshot.repositoryIdentity !== null &&
     snapshot.head !== null &&
     snapshot.fingerprint !== null;
+  const shouldRefresh = requiresRefresh || snapshot !== null;
 
   return (
     <div className="mt-3 space-y-2">
@@ -215,14 +216,10 @@ export function HardResetGuardPanel({
         variant="destructive-outline"
         className="w-full"
         disabled={busy !== null || unavailableMessage !== null}
-        aria-label="Inspect git reset --hard impact — DANGER"
+        aria-label={`${shouldRefresh ? "Refresh" : "Inspect"} git reset --hard impact — DANGER`}
         onClick={() => void inspect()}
       >
-        {busy === "inspect"
-          ? "Inspecting…"
-          : requiresRefresh || snapshot
-            ? "Refresh impact"
-            : "Inspect impact"}
+        {busy === "inspect" ? "Inspecting…" : shouldRefresh ? "Refresh impact" : "Inspect impact"}
       </Button>
     </div>
   );

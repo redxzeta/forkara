@@ -152,7 +152,9 @@ describe("ResetDepartmentSettingsPanel", () => {
     await expect
       .element(page.getByRole("button", { name: "Stash Changes Instead" }))
       .not.toBeInTheDocument();
-    await expect.element(page.getByRole("button", { name: "Refresh impact" })).toBeVisible();
+    await expect
+      .element(page.getByRole("button", { name: "Refresh git reset --hard impact — DANGER" }))
+      .toBeVisible();
   });
 
   it("requires an exact-path preview before executing cleanup", async () => {
