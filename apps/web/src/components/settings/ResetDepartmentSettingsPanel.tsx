@@ -10,6 +10,7 @@ import { settingRowAnchorId } from "~/settingsNavigation";
 import { Button } from "../ui/button";
 import type { NativeApi } from "@forkara/contracts";
 import { DependencyExorcismControl } from "./DependencyExorcismControl";
+import { HardResetImpactControl } from "./HardResetImpactControl";
 import { SettingsSectionShell } from "./SettingsPanelPrimitives";
 import { selectResetOracleResponse } from "./resetOracle";
 
@@ -34,7 +35,8 @@ export const RESET_DEPARTMENT_ACTIONS = [
     icon: "☢️",
     title: "git reset --hard",
     risk: "DANGER",
-    description: "A future guarded reset flow. It cannot run from this placeholder.",
+    description:
+      "Inspect exactly what a future guarded reset would affect. Inspection is read-only.",
   },
   {
     id: "quota",
@@ -44,12 +46,6 @@ export const RESET_DEPARTMENT_ACTIONS = [
     description: "A fictional quota reset. No provider or account state is connected.",
   },
 ] as const;
-
-type ResetDepartmentAction = (typeof RESET_DEPARTMENT_ACTIONS)[number];
-
-function placeholderMessage(action: ResetDepartmentAction): string {
-  return `${action.title} is coming soon. No reset operation ran.`;
-}
 
 interface ResetDepartmentOutcome {
   readonly actionId: "oracle" | "quota";
@@ -92,6 +88,7 @@ export function ResetDepartmentSettingsPanel({
             const oracle = action.id === "oracle";
             const quota = action.id === "quota";
             const dependencies = action.id === "dependencies";
+            const hardReset = action.id === "hard-reset";
             const descriptionId = `reset-department-${action.id}-description`;
             return (
               <article
@@ -134,22 +131,25 @@ export function ResetDepartmentSettingsPanel({
                     workspaceRoot={workspaceRoot}
                     onStatus={setStatus}
                   />
+                ) : hardReset ? (
+                  <HardResetImpactControl
+                    api={resetApi}
+                    workspaceRoot={workspaceRoot}
+                    onStatus={setStatus}
+                  />
                 ) : (
                   <Button
                     type="button"
                     size="sm"
                     variant={danger ? "destructive-outline" : "outline"}
                     className="mt-4 w-full"
-                    data-reset-placeholder={oracle || quota ? undefined : "true"}
                     data-reset-oracle={oracle ? "true" : undefined}
                     data-reset-quota-parody={quota ? "true" : undefined}
                     aria-describedby={descriptionId}
                     aria-label={
                       oracle
                         ? `${action.title} — ${action.risk}`
-                        : quota
-                          ? `${action.title} — ${action.risk} parody`
-                          : `${action.title} — ${action.risk} placeholder`
+                        : `${action.title} — ${action.risk} parody`
                     }
                     onClick={() => {
                       if (oracle) {
@@ -165,10 +165,9 @@ export function ResetDepartmentSettingsPanel({
                         setStatus(message);
                         return;
                       }
-                      setStatus(placeholderMessage(action));
                     }}
                   >
-                    {oracle ? "Ask Oracle" : quota ? "Pretend to reset" : "Coming soon"}
+                    {oracle ? "Ask Oracle" : "Pretend to reset"}
                   </Button>
                 )}
               </article>
@@ -179,7 +178,7 @@ export function ResetDepartmentSettingsPanel({
 
       <p className="min-h-5 text-xs text-muted-foreground" role="status" aria-live="polite">
         {status ??
-          "The Oracle and quota parody are harmless. Dependency cleanup requires a preview; hard reset remains a placeholder."}
+          "The Oracle and quota parody are harmless. Dependency cleanup requires a preview; Git impact inspection is read-only."}
       </p>
     </div>
   );

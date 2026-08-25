@@ -25,10 +25,41 @@ export const DependencyCleanupResult = Schema.Struct({
 });
 export type DependencyCleanupResult = typeof DependencyCleanupResult.Type;
 
+const Sha256Hex = Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/));
+const GitPath = Schema.NonEmptyString;
+
+export const HardResetImpactInput = DependencyCleanupInput;
+export type HardResetImpactInput = typeof HardResetImpactInput.Type;
+
+export const HardResetOperationState = Schema.Literals(["none", "merge", "rebase", "unknown"]);
+export type HardResetOperationState = typeof HardResetOperationState.Type;
+
+export const HardResetImpactSnapshot = Schema.Struct({
+  repositoryState: Schema.Literals(["ready", "not-repository"]),
+  workspaceRoot: TrimmedNonEmptyString,
+  repositoryRoot: Schema.NullOr(TrimmedNonEmptyString),
+  repositoryIdentity: Schema.NullOr(Sha256Hex),
+  branch: Schema.NullOr(TrimmedNonEmptyString),
+  detached: Schema.NullOr(Schema.Boolean),
+  head: Schema.NullOr(TrimmedNonEmptyString),
+  stagedTracked: Schema.NullOr(Schema.Array(GitPath)),
+  unstagedTracked: Schema.NullOr(Schema.Array(GitPath)),
+  untracked: Schema.NullOr(Schema.Array(GitPath)),
+  conflicts: Schema.NullOr(Schema.Array(GitPath)),
+  operationState: HardResetOperationState,
+  fingerprint: Schema.NullOr(Sha256Hex),
+});
+export type HardResetImpactSnapshot = typeof HardResetImpactSnapshot.Type;
+
 export class ResetDepartmentError extends Schema.TaggedErrorClass<ResetDepartmentError>()(
   "ResetDepartmentError",
   {
-    reason: Schema.Literals(["workspace-unavailable", "unsafe-target", "cleanup-failed"]),
+    reason: Schema.Literals([
+      "workspace-unavailable",
+      "unsafe-target",
+      "cleanup-failed",
+      "inspection-failed",
+    ]),
     message: TrimmedNonEmptyString,
     retryable: Schema.Boolean,
   },

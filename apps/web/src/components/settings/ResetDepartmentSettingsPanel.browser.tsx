@@ -26,6 +26,21 @@ function resetApi() {
       installCommand: "bun install",
       removed: true,
     })),
+    inspectHardResetImpact: vi.fn(async () => ({
+      repositoryState: "ready" as const,
+      workspaceRoot: "/workspace",
+      repositoryRoot: "/workspace",
+      repositoryIdentity: "a".repeat(64),
+      branch: "main",
+      detached: false,
+      head: "0123456789abcdef",
+      stagedTracked: ["staged.txt"],
+      unstagedTracked: ["dirty.txt"],
+      untracked: ["untracked.txt"],
+      conflicts: [],
+      operationState: "none" as const,
+      fingerprint: "b".repeat(64),
+    })),
   };
 }
 
@@ -44,7 +59,7 @@ describe("ResetDepartmentSettingsPanel", () => {
       name: "Preview Delete node_modules — LOW RISK",
     });
     const hardReset = page.getByRole("button", {
-      name: "git reset --hard — DANGER placeholder",
+      name: "Inspect git reset --hard impact — DANGER",
     });
     const quota = page.getByRole("button", { name: "Reset Codex Quota — LOL parody" });
 
@@ -62,6 +77,23 @@ describe("ResetDepartmentSettingsPanel", () => {
         "This is a parody; no Codex quota or account state changed.",
       ),
     );
+  });
+
+  it("shows factual tracked and untracked reset impact without exposing execution", async () => {
+    const api = resetApi();
+    await render(<ResetDepartmentSettingsPanel active workspaceRoot="/workspace" resetApi={api} />);
+
+    await userEvent.click(
+      page.getByRole("button", { name: "Inspect git reset --hard impact — DANGER" }),
+    );
+    await vi.waitFor(() =>
+      expect(api.inspectHardResetImpact).toHaveBeenCalledWith({ cwd: "/workspace" }),
+    );
+    expect(document.body.textContent).toContain("Staged tracked: 1");
+    expect(document.body.textContent).toContain("Unstaged tracked: 1");
+    expect(document.body.textContent).toContain("Untracked: 1");
+    expect(document.body.textContent).toContain("Untracked files would remain.");
+    expect(document.body.textContent).not.toContain("git has receipts");
   });
 
   it("requires an exact-path preview before executing cleanup", async () => {

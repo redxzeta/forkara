@@ -1629,6 +1629,11 @@ const makeWsRpcHandlersLayer = () =>
             resetDepartmentService.executeDependencyCleanup(input),
             "Failed to clean dependencies",
           ),
+        [WS_METHODS.resetInspectHardResetImpact]: (input) =>
+          resetDepartmentEffect(
+            resetDepartmentService.inspectHardResetImpact(input),
+            "Failed to inspect hard-reset impact",
+          ),
         [WS_METHODS.gitListBranches]: (input) =>
           rpcEffect(git.listBranches(input), "Failed to list branches"),
         [WS_METHODS.gitCreateWorktree]: (input) =>

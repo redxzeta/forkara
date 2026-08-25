@@ -28,6 +28,8 @@ import type {
   DependencyCleanupInput,
   DependencyCleanupPreview,
   DependencyCleanupResult,
+  HardResetImpactInput,
+  HardResetImpactSnapshot,
 } from "./resetDepartment";
 import type {
   ExternalMcpCreateIntegrationInput,
@@ -764,6 +766,7 @@ export interface NativeApi {
   resetDepartment?: {
     previewDependencyCleanup: (input: DependencyCleanupInput) => Promise<DependencyCleanupPreview>;
     executeDependencyCleanup: (input: DependencyCleanupInput) => Promise<DependencyCleanupResult>;
+    inspectHardResetImpact: (input: HardResetImpactInput) => Promise<HardResetImpactSnapshot>;
   };
   filesystem: {
     browse: (input: FilesystemBrowseInput) => Promise<FilesystemBrowseResult>;
