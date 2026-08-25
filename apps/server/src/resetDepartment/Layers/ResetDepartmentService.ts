@@ -18,8 +18,10 @@ import {
 
 export interface ResetDepartmentDependencies {
   readonly fs: Pick<typeof nodeFs, "access" | "lstat" | "readFile" | "realpath" | "rm" | "stat">;
-  readonly git?: Pick<GitCoreShape, "execute">;
+  readonly git?: Pick<GitCoreShape, "execute" | "withMutation">;
 }
+
+const HARD_RESET_STASH_MESSAGE = "Forkara Reset Department: stash before hard reset";
 
 function isMissing(cause: unknown): boolean {
   return (cause as NodeJS.ErrnoException | null)?.code === "ENOENT";
@@ -36,6 +38,13 @@ function resetError(
 export function makeResetDepartmentService(
   dependencies: ResetDepartmentDependencies,
 ): ResetDepartmentServiceShape {
+  const inspectHardResetImpactWithGit = (cwd: string, git: Pick<GitCoreShape, "execute">) =>
+    inspectHardResetImpact({
+      cwd,
+      fileSystem: dependencies.fs,
+      executeGit: (request) => git.execute(request),
+    });
+
   const inspect = async (cwd: string): Promise<DependencyCleanupPreview> => {
     let workspaceRoot: string;
     try {
@@ -154,11 +163,7 @@ export function makeResetDepartmentService(
         resetError("inspection-failed", "Git inspection is unavailable on this server.", true),
       );
     }
-    return inspectHardResetImpact({
-      cwd: input.cwd,
-      fileSystem: dependencies.fs,
-      executeGit: (request) => git.execute(request),
-    }).pipe(
+    return inspectHardResetImpactWithGit(input.cwd, git).pipe(
       Effect.catchCause((cause) =>
         Effect.fail(
           resetError(
@@ -171,10 +176,73 @@ export function makeResetDepartmentService(
     );
   };
 
+  const stashHardResetChanges: ResetDepartmentServiceShape["stashHardResetChanges"] = (input) => {
+    const git = dependencies.git;
+    if (!git) {
+      return Effect.fail(
+        resetError("stash-failed", "Git stash is unavailable on this server.", true),
+      );
+    }
+
+    return git
+      .withMutation(
+        input.cwd,
+        Effect.gen(function* () {
+          const current = yield* inspectHardResetImpactWithGit(input.cwd, git);
+          if (
+            current.repositoryState !== "ready" ||
+            current.repositoryIdentity === null ||
+            current.head === null ||
+            current.fingerprint === null ||
+            current.repositoryIdentity !== input.expectedRepositoryIdentity ||
+            current.head !== input.expectedHead ||
+            current.fingerprint !== input.expectedFingerprint
+          ) {
+            return yield* resetError(
+              "stale-preview",
+              "Repository state changed since inspection. Refresh the hard-reset impact before continuing.",
+              true,
+            );
+          }
+
+          const fileGroups: ReadonlyArray<readonly string[] | null> = [
+            current.stagedTracked,
+            current.unstagedTracked,
+            current.untracked,
+            current.conflicts,
+          ];
+          if (fileGroups.every((files) => files !== null && files.length === 0)) {
+            return { status: "nothing-to-stash" as const, snapshot: current };
+          }
+
+          yield* git.execute({
+            operation: "ResetDepartment.hardResetStash.push",
+            cwd: input.cwd,
+            args: ["stash", "push", "--include-untracked", "-m", HARD_RESET_STASH_MESSAGE],
+            timeoutMs: 30_000,
+          });
+          const snapshot = yield* inspectHardResetImpactWithGit(input.cwd, git);
+          return { status: "stashed" as const, snapshot };
+        }),
+      )
+      .pipe(
+        Effect.mapError((cause) =>
+          Schema.is(ResetDepartmentError)(cause)
+            ? cause
+            : resetError(
+                "stash-failed",
+                "Forkara could not stash the inspected changes. Refresh the impact before trying again.",
+                true,
+              ),
+        ),
+      );
+  };
+
   return {
     previewDependencyCleanup,
     executeDependencyCleanup,
     inspectHardResetImpact: inspectHardResetImpactSnapshot,
+    stashHardResetChanges,
   };
 }
 

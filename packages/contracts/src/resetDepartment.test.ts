@@ -5,6 +5,8 @@ import {
   DependencyCleanupPreview,
   DependencyCleanupResult,
   HardResetImpactSnapshot,
+  HardResetStashInput,
+  HardResetStashResult,
 } from "./resetDepartment";
 
 describe("Reset Department contracts", () => {
@@ -77,5 +79,37 @@ describe("Reset Department contracts", () => {
     } as const;
 
     expect(Schema.decodeUnknownSync(HardResetImpactSnapshot)(snapshot)).toEqual(snapshot);
+  });
+
+  it("decodes hard-reset stash guards and refreshed results", () => {
+    const input = {
+      cwd: "/workspace",
+      expectedRepositoryIdentity: "a".repeat(64),
+      expectedHead: "0123456789abcdef",
+      expectedFingerprint: "b".repeat(64),
+    };
+    const snapshot = {
+      repositoryState: "ready",
+      workspaceRoot: "/workspace",
+      repositoryRoot: "/workspace",
+      repositoryIdentity: input.expectedRepositoryIdentity,
+      branch: "main",
+      detached: false,
+      head: input.expectedHead,
+      stagedTracked: [],
+      unstagedTracked: [],
+      untracked: [],
+      conflicts: [],
+      operationState: "none",
+      fingerprint: "c".repeat(64),
+    } as const;
+
+    expect(Schema.decodeUnknownSync(HardResetStashInput)(input)).toEqual(input);
+    expect(
+      Schema.decodeUnknownSync(HardResetStashResult)({
+        status: "stashed",
+        snapshot,
+      }),
+    ).toEqual({ status: "stashed", snapshot });
   });
 });

@@ -51,6 +51,20 @@ export const HardResetImpactSnapshot = Schema.Struct({
 });
 export type HardResetImpactSnapshot = typeof HardResetImpactSnapshot.Type;
 
+export const HardResetStashInput = Schema.Struct({
+  cwd: TrimmedNonEmptyString,
+  expectedRepositoryIdentity: Sha256Hex,
+  expectedHead: TrimmedNonEmptyString,
+  expectedFingerprint: Sha256Hex,
+});
+export type HardResetStashInput = typeof HardResetStashInput.Type;
+
+export const HardResetStashResult = Schema.Struct({
+  status: Schema.Literals(["stashed", "nothing-to-stash"]),
+  snapshot: HardResetImpactSnapshot,
+});
+export type HardResetStashResult = typeof HardResetStashResult.Type;
+
 export class ResetDepartmentError extends Schema.TaggedErrorClass<ResetDepartmentError>()(
   "ResetDepartmentError",
   {
@@ -59,6 +73,8 @@ export class ResetDepartmentError extends Schema.TaggedErrorClass<ResetDepartmen
       "unsafe-target",
       "cleanup-failed",
       "inspection-failed",
+      "stale-preview",
+      "stash-failed",
     ]),
     message: TrimmedNonEmptyString,
     retryable: Schema.Boolean,

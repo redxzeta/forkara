@@ -1634,6 +1634,11 @@ const makeWsRpcHandlersLayer = () =>
             resetDepartmentService.inspectHardResetImpact(input),
             "Failed to inspect hard-reset impact",
           ),
+        [WS_METHODS.resetStashHardResetChanges]: (input) =>
+          resetDepartmentEffect(
+            resetDepartmentService.stashHardResetChanges(input),
+            "Failed to stash hard-reset changes",
+          ),
         [WS_METHODS.gitListBranches]: (input) =>
           rpcEffect(git.listBranches(input), "Failed to list branches"),
         [WS_METHODS.gitCreateWorktree]: (input) =>

@@ -10,6 +10,21 @@ import { render } from "vitest-browser-react";
 import { ResetDepartmentSettingsPanel } from "./ResetDepartmentSettingsPanel";
 
 function resetApi() {
+  const impact = {
+    repositoryState: "ready" as const,
+    workspaceRoot: "/workspace",
+    repositoryRoot: "/workspace",
+    repositoryIdentity: "a".repeat(64),
+    branch: "main",
+    detached: false,
+    head: "0123456789abcdef",
+    stagedTracked: ["staged.txt"],
+    unstagedTracked: ["dirty.txt"],
+    untracked: ["untracked.txt"],
+    conflicts: [],
+    operationState: "none" as const,
+    fingerprint: "b".repeat(64),
+  };
   return {
     previewDependencyCleanup: vi.fn(async () => ({
       workspaceRoot: "/workspace",
@@ -26,20 +41,16 @@ function resetApi() {
       installCommand: "bun install",
       removed: true,
     })),
-    inspectHardResetImpact: vi.fn(async () => ({
-      repositoryState: "ready" as const,
-      workspaceRoot: "/workspace",
-      repositoryRoot: "/workspace",
-      repositoryIdentity: "a".repeat(64),
-      branch: "main",
-      detached: false,
-      head: "0123456789abcdef",
-      stagedTracked: ["staged.txt"],
-      unstagedTracked: ["dirty.txt"],
-      untracked: ["untracked.txt"],
-      conflicts: [],
-      operationState: "none" as const,
-      fingerprint: "b".repeat(64),
+    inspectHardResetImpact: vi.fn(async () => impact),
+    stashHardResetChanges: vi.fn(async () => ({
+      status: "stashed" as const,
+      snapshot: {
+        ...impact,
+        stagedTracked: [],
+        unstagedTracked: [],
+        untracked: [],
+        fingerprint: "c".repeat(64),
+      },
     })),
   };
 }
@@ -93,7 +104,55 @@ describe("ResetDepartmentSettingsPanel", () => {
     expect(document.body.textContent).toContain("Unstaged tracked: 1");
     expect(document.body.textContent).toContain("Untracked: 1");
     expect(document.body.textContent).toContain("Untracked files would remain.");
+    expect(document.body.textContent).toContain(
+      "Stash includes staged, unstaged, and untracked changes. Ignored files are excluded.",
+    );
+    await expect.element(page.getByRole("button", { name: "Stash Changes Instead" })).toBeVisible();
+    await expect.element(page.getByRole("button", { name: "Cancel" })).toBeVisible();
+    expect(document.body.textContent).not.toContain("Continue to Hard Reset");
     expect(document.body.textContent).not.toContain("git has receipts");
+  });
+
+  it("stashes only the currently inspected snapshot and refreshes the displayed state", async () => {
+    const api = resetApi();
+    await render(<ResetDepartmentSettingsPanel active workspaceRoot="/workspace" resetApi={api} />);
+
+    await userEvent.click(
+      page.getByRole("button", { name: "Inspect git reset --hard impact — DANGER" }),
+    );
+    await userEvent.click(page.getByRole("button", { name: "Stash Changes Instead" }));
+    await vi.waitFor(() =>
+      expect(api.stashHardResetChanges).toHaveBeenCalledWith({
+        cwd: "/workspace",
+        expectedRepositoryIdentity: "a".repeat(64),
+        expectedHead: "0123456789abcdef",
+        expectedFingerprint: "b".repeat(64),
+      }),
+    );
+    expect(page.getByRole("status").element().textContent).toContain(
+      "Crisis postponed successfully.",
+    );
+    expect(document.body.textContent).toContain("Nothing to stash.");
+  });
+
+  it("clears a failed stash preview and blocks progression until refresh", async () => {
+    const api = resetApi();
+    api.stashHardResetChanges.mockRejectedValueOnce(new Error("Stash refused."));
+    await render(<ResetDepartmentSettingsPanel active workspaceRoot="/workspace" resetApi={api} />);
+
+    await userEvent.click(
+      page.getByRole("button", { name: "Inspect git reset --hard impact — DANGER" }),
+    );
+    await userEvent.click(page.getByRole("button", { name: "Stash Changes Instead" }));
+    await vi.waitFor(() =>
+      expect(document.body.textContent).toContain(
+        "Further progress is blocked until a fresh inspection succeeds.",
+      ),
+    );
+    await expect
+      .element(page.getByRole("button", { name: "Stash Changes Instead" }))
+      .not.toBeInTheDocument();
+    await expect.element(page.getByRole("button", { name: "Refresh impact" })).toBeVisible();
   });
 
   it("requires an exact-path preview before executing cleanup", async () => {

@@ -6,7 +6,11 @@ import {
   BrandingImportGeneratedAssetInput,
   BrandingInspectionInput,
 } from "./branding";
-import { DependencyCleanupInput, HardResetImpactInput } from "./resetDepartment";
+import {
+  DependencyCleanupInput,
+  HardResetImpactInput,
+  HardResetStashInput,
+} from "./resetDepartment";
 
 import {
   AutomationCancelRunInput,
@@ -198,6 +202,7 @@ export const WS_METHODS = {
   resetPreviewDependencyCleanup: "reset.previewDependencyCleanup",
   resetExecuteDependencyCleanup: "reset.executeDependencyCleanup",
   resetInspectHardResetImpact: "reset.inspectHardResetImpact",
+  resetStashHardResetChanges: "reset.stashHardResetChanges",
 
   // Studio methods
   studioListThreadOutputs: "studio.listThreadOutputs",
@@ -412,6 +417,7 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.resetPreviewDependencyCleanup, DependencyCleanupInput),
   tagRequestBody(WS_METHODS.resetExecuteDependencyCleanup, DependencyCleanupInput),
   tagRequestBody(WS_METHODS.resetInspectHardResetImpact, HardResetImpactInput),
+  tagRequestBody(WS_METHODS.resetStashHardResetChanges, HardResetStashInput),
 
   // Filesystem browse
   // Studio
