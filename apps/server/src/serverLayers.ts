@@ -232,7 +232,7 @@ export function makeServerRuntimeServicesLayer(
     ProjectPullRequestPinsLive,
     pullRequestServiceLayer,
     xPostServiceLayer,
-    ResetDepartmentServiceLive,
+    ResetDepartmentServiceLive.pipe(Layer.provide(GitCoreLive)),
     orchestrationReactorLayer,
     providerCommandReactorLayer,
     threadGitMetadataReactorLayer,

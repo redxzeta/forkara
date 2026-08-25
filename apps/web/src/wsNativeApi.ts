@@ -558,6 +558,8 @@ export function createWsNativeApi(): NativeApi {
         transport.request(WS_METHODS.resetPreviewDependencyCleanup, input),
       executeDependencyCleanup: (input) =>
         transport.request(WS_METHODS.resetExecuteDependencyCleanup, input),
+      inspectHardResetImpact: (input) =>
+        transport.request(WS_METHODS.resetInspectHardResetImpact, input),
     },
     filesystem: {
       browse: (input) => transport.request(WS_METHODS.filesystemBrowse, input),

@@ -8,7 +8,9 @@ import {
   detectProjectPackageManager,
   PROJECT_PACKAGE_MANAGER_INSTALL_COMMANDS,
 } from "../../projectPackageManager";
+import { GitCore, type GitCoreShape } from "../../git/Services/GitCore";
 import { isContainedPath } from "../../workspace/realPathContainment";
+import { inspectHardResetImpact } from "../hardResetImpact";
 import {
   ResetDepartmentService,
   type ResetDepartmentServiceShape,
@@ -16,6 +18,7 @@ import {
 
 export interface ResetDepartmentDependencies {
   readonly fs: Pick<typeof nodeFs, "access" | "lstat" | "readFile" | "realpath" | "rm" | "stat">;
+  readonly git?: Pick<GitCoreShape, "execute">;
 }
 
 function isMissing(cause: unknown): boolean {
@@ -142,10 +145,43 @@ export function makeResetDepartmentService(
             ),
     });
 
-  return { previewDependencyCleanup, executeDependencyCleanup };
+  const inspectHardResetImpactSnapshot: ResetDepartmentServiceShape["inspectHardResetImpact"] = (
+    input,
+  ) => {
+    const git = dependencies.git;
+    if (!git) {
+      return Effect.fail(
+        resetError("inspection-failed", "Git inspection is unavailable on this server.", true),
+      );
+    }
+    return inspectHardResetImpact({
+      cwd: input.cwd,
+      fileSystem: dependencies.fs,
+      executeGit: (request) => git.execute(request),
+    }).pipe(
+      Effect.catchCause((cause) =>
+        Effect.fail(
+          resetError(
+            "inspection-failed",
+            cause.toString().trim() || "Could not inspect hard-reset impact.",
+            true,
+          ),
+        ),
+      ),
+    );
+  };
+
+  return {
+    previewDependencyCleanup,
+    executeDependencyCleanup,
+    inspectHardResetImpact: inspectHardResetImpactSnapshot,
+  };
 }
 
-export const ResetDepartmentServiceLive = Layer.succeed(
+export const ResetDepartmentServiceLive = Layer.effect(
   ResetDepartmentService,
-  makeResetDepartmentService({ fs: nodeFs }),
+  Effect.gen(function* () {
+    const git = yield* GitCore;
+    return makeResetDepartmentService({ fs: nodeFs, git });
+  }),
 );
