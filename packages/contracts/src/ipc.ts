@@ -28,8 +28,10 @@ import type {
   DependencyCleanupInput,
   DependencyCleanupPreview,
   DependencyCleanupResult,
+  HardResetConfirmationInput,
   HardResetImpactInput,
   HardResetImpactSnapshot,
+  HardResetResult,
   HardResetStashInput,
   HardResetStashResult,
 } from "./resetDepartment";
@@ -770,6 +772,7 @@ export interface NativeApi {
     executeDependencyCleanup: (input: DependencyCleanupInput) => Promise<DependencyCleanupResult>;
     inspectHardResetImpact: (input: HardResetImpactInput) => Promise<HardResetImpactSnapshot>;
     stashHardResetChanges: (input: HardResetStashInput) => Promise<HardResetStashResult>;
+    executeHardReset: (input: HardResetConfirmationInput) => Promise<HardResetResult>;
   };
   filesystem: {
     browse: (input: FilesystemBrowseInput) => Promise<FilesystemBrowseResult>;

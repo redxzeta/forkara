@@ -2,8 +2,10 @@ import type { HardResetImpactSnapshot, NativeApi } from "@forkara/contracts";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "../ui/button";
+import { Input } from "../ui/input";
 
 type ResetDepartmentApi = NonNullable<NativeApi["resetDepartment"]>;
+const HARD_RESET_CONFIRMATION = "git has receipts";
 
 function countLabel(files: readonly string[] | null, noun: string): string {
   if (files === null) return `${noun}: unknown`;
@@ -21,8 +23,10 @@ export function HardResetGuardPanel({
 }) {
   const [snapshot, setSnapshot] = useState<HardResetImpactSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState<"inspect" | "stash" | null>(null);
+  const [busy, setBusy] = useState<"inspect" | "stash" | "reset" | null>(null);
   const [requiresRefresh, setRequiresRefresh] = useState(false);
+  const [confirmation, setConfirmation] = useState("");
+  const [resetResult, setResetResult] = useState<string | null>(null);
   const requestIdRef = useRef(0);
 
   useEffect(() => {
@@ -31,7 +35,13 @@ export function HardResetGuardPanel({
     setError(null);
     setBusy(null);
     setRequiresRefresh(false);
+    setConfirmation("");
+    setResetResult(null);
   }, [workspaceRoot]);
+
+  useEffect(() => {
+    setConfirmation("");
+  }, [snapshot?.repositoryIdentity, snapshot?.head, snapshot?.fingerprint, error]);
 
   async function inspect(): Promise<void> {
     if (!api || !workspaceRoot || busy) return;
@@ -39,6 +49,8 @@ export function HardResetGuardPanel({
     setBusy("inspect");
     setError(null);
     setRequiresRefresh(false);
+    setConfirmation("");
+    setResetResult(null);
     try {
       const nextSnapshot = await api.inspectHardResetImpact({ cwd: workspaceRoot });
       if (requestIdRef.current !== requestId) return;
@@ -75,6 +87,8 @@ export function HardResetGuardPanel({
     const requestId = ++requestIdRef.current;
     setBusy("stash");
     setError(null);
+    setConfirmation("");
+    setResetResult(null);
     try {
       const result = await api.stashHardResetChanges({
         cwd: workspaceRoot,
@@ -95,6 +109,55 @@ export function HardResetGuardPanel({
       const message = cause instanceof Error ? cause.message : "Could not stash local changes.";
       setSnapshot(null);
       setRequiresRefresh(true);
+      setConfirmation("");
+      setError(`${message} Refresh the impact before continuing.`);
+      onStatus(`${message} Refresh the impact before continuing.`);
+    } finally {
+      if (requestIdRef.current === requestId) setBusy(null);
+    }
+  }
+
+  async function executeReset(): Promise<void> {
+    if (
+      !api ||
+      !workspaceRoot ||
+      busy ||
+      requiresRefresh ||
+      confirmation !== HARD_RESET_CONFIRMATION ||
+      snapshot?.repositoryState !== "ready" ||
+      snapshot.repositoryIdentity === null ||
+      snapshot.head === null ||
+      snapshot.fingerprint === null ||
+      snapshot.operationState === "unknown"
+    ) {
+      return;
+    }
+    const requestId = ++requestIdRef.current;
+    setBusy("reset");
+    setError(null);
+    setResetResult(null);
+    try {
+      const result = await api.executeHardReset({
+        cwd: workspaceRoot,
+        expectedRepositoryIdentity: snapshot.repositoryIdentity,
+        expectedHead: snapshot.head,
+        expectedFingerprint: snapshot.fingerprint,
+        confirmation: HARD_RESET_CONFIRMATION,
+      });
+      if (requestIdRef.current !== requestId) return;
+      setSnapshot(result.snapshot);
+      setRequiresRefresh(false);
+      setConfirmation("");
+      const message =
+        "Hard reset completed and repository state was refreshed. Untracked and ignored files were not removed.";
+      setResetResult(message);
+      onStatus(message);
+    } catch (cause) {
+      if (requestIdRef.current !== requestId) return;
+      const message = cause instanceof Error ? cause.message : "Could not complete hard reset.";
+      setSnapshot(null);
+      setRequiresRefresh(true);
+      setConfirmation("");
       setError(`${message} Refresh the impact before continuing.`);
       onStatus(`${message} Refresh the impact before continuing.`);
     } finally {
@@ -108,6 +171,8 @@ export function HardResetGuardPanel({
     setError(null);
     setBusy(null);
     setRequiresRefresh(false);
+    setConfirmation("");
+    setResetResult(null);
     onStatus("Hard reset cancelled. No Git mutation ran.");
   }
 
@@ -126,6 +191,8 @@ export function HardResetGuardPanel({
     snapshot.repositoryIdentity !== null &&
     snapshot.head !== null &&
     snapshot.fingerprint !== null;
+  const canConfirmReset =
+    hasGuardFacts && snapshot.operationState !== "unknown" && !requiresRefresh;
   const shouldRefresh = requiresRefresh || snapshot !== null;
 
   return (
@@ -159,12 +226,13 @@ export function HardResetGuardPanel({
             Stash includes staged, unstaged, and untracked changes. Ignored files are excluded.
           </p>
           {snapshot.operationState === "unknown" ? (
-            <p className="text-muted-foreground">
-              The active merge/rebase state could not be determined.
+            <p className="font-medium text-destructive">
+              The active merge/rebase state could not be determined. Hard reset is blocked.
             </p>
           ) : snapshot.operationState !== "none" ? (
-            <p className="text-muted-foreground">
-              Repository operation: {snapshot.operationState}. Resolve it before any reset.
+            <p className="font-medium text-destructive">
+              Repository operation: {snapshot.operationState}. This known state and any listed
+              conflicts will be discarded if you confirm the hard reset.
             </p>
           ) : null}
           <code className="block break-all text-[10px] text-muted-foreground">
@@ -173,6 +241,7 @@ export function HardResetGuardPanel({
         </div>
       ) : null}
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {resetResult ? <p className="text-xs font-medium text-foreground">{resetResult}</p> : null}
       {requiresRefresh ? (
         <p className="text-xs font-medium text-destructive">
           Further progress is blocked until a fresh inspection succeeds.
@@ -207,6 +276,37 @@ export function HardResetGuardPanel({
             onClick={cancel}
           >
             Cancel
+          </Button>
+        </div>
+      ) : null}
+      {snapshot?.repositoryState === "ready" ? (
+        <div className="space-y-2 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-3">
+          <div className="space-y-1">
+            <label
+              htmlFor="hard-reset-confirmation"
+              className="text-xs font-medium text-foreground"
+            >
+              Type <code>{HARD_RESET_CONFIRMATION}</code> exactly to continue
+            </label>
+            <Input
+              id="hard-reset-confirmation"
+              aria-label={`Type ${HARD_RESET_CONFIRMATION} exactly to continue`}
+              autoComplete="off"
+              spellCheck={false}
+              value={confirmation}
+              disabled={busy !== null || !canConfirmReset}
+              onChange={(event) => setConfirmation(event.target.value)}
+            />
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="destructive"
+            className="w-full"
+            disabled={busy !== null || !canConfirmReset || confirmation !== HARD_RESET_CONFIRMATION}
+            onClick={() => void executeReset()}
+          >
+            {busy === "reset" ? "Resetting tracked changes…" : "Continue to Hard Reset"}
           </Button>
         </div>
       ) : null}

@@ -2,8 +2,10 @@ import type {
   DependencyCleanupInput,
   DependencyCleanupPreview,
   DependencyCleanupResult,
+  HardResetConfirmationInput,
   HardResetImpactInput,
   HardResetImpactSnapshot,
+  HardResetResult,
   HardResetStashInput,
   HardResetStashResult,
   ResetDepartmentError,
@@ -23,6 +25,9 @@ export interface ResetDepartmentServiceShape {
   readonly stashHardResetChanges: (
     input: HardResetStashInput,
   ) => Effect.Effect<HardResetStashResult, ResetDepartmentError>;
+  readonly executeHardReset: (
+    input: HardResetConfirmationInput,
+  ) => Effect.Effect<HardResetResult, ResetDepartmentError>;
 }
 
 export class ResetDepartmentService extends ServiceMap.Service<

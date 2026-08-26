@@ -4,7 +4,9 @@ import { describe, expect, it } from "vitest";
 import {
   DependencyCleanupPreview,
   DependencyCleanupResult,
+  HardResetConfirmationInput,
   HardResetImpactSnapshot,
+  HardResetResult,
   HardResetStashInput,
   HardResetStashResult,
 } from "./resetDepartment";
@@ -111,5 +113,50 @@ describe("Reset Department contracts", () => {
         snapshot,
       }),
     ).toEqual({ status: "stashed", snapshot });
+  });
+
+  it("requires the exact case-sensitive hard-reset confirmation literal", () => {
+    const input = {
+      cwd: "/workspace",
+      expectedRepositoryIdentity: "a".repeat(64),
+      expectedHead: "0123456789abcdef",
+      expectedFingerprint: "b".repeat(64),
+      confirmation: "git has receipts",
+    } as const;
+    const snapshot = {
+      repositoryState: "ready",
+      workspaceRoot: "/workspace",
+      repositoryRoot: "/workspace",
+      repositoryIdentity: input.expectedRepositoryIdentity,
+      branch: "main",
+      detached: false,
+      head: input.expectedHead,
+      stagedTracked: [],
+      unstagedTracked: [],
+      untracked: [],
+      conflicts: [],
+      operationState: "none",
+      fingerprint: "c".repeat(64),
+    } as const;
+
+    expect(Schema.decodeUnknownSync(HardResetConfirmationInput)(input)).toEqual(input);
+    expect(
+      Schema.decodeUnknownSync(HardResetResult)({
+        status: "reset-completed",
+        snapshot,
+      }),
+    ).toEqual({ status: "reset-completed", snapshot });
+    expect(() =>
+      Schema.decodeUnknownSync(HardResetConfirmationInput)({
+        ...input,
+        confirmation: "Git has receipts",
+      }),
+    ).toThrow();
+    expect(() =>
+      Schema.decodeUnknownSync(HardResetConfirmationInput)({
+        ...input,
+        confirmation: "git has receipts ",
+      }),
+    ).toThrow();
   });
 });

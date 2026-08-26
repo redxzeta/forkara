@@ -562,6 +562,7 @@ export function createWsNativeApi(): NativeApi {
         transport.request(WS_METHODS.resetInspectHardResetImpact, input),
       stashHardResetChanges: (input) =>
         transport.request(WS_METHODS.resetStashHardResetChanges, input),
+      executeHardReset: (input) => transport.request(WS_METHODS.resetExecuteHardReset, input),
     },
     filesystem: {
       browse: (input) => transport.request(WS_METHODS.filesystemBrowse, input),

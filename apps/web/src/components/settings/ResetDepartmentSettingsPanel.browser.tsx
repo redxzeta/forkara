@@ -9,7 +9,7 @@ import { render } from "vitest-browser-react";
 
 import { ResetDepartmentSettingsPanel } from "./ResetDepartmentSettingsPanel";
 
-function resetApi() {
+function resetApi(operationState: "none" | "merge" | "rebase" | "unknown" = "none") {
   const impact = {
     repositoryState: "ready" as const,
     workspaceRoot: "/workspace",
@@ -22,7 +22,7 @@ function resetApi() {
     unstagedTracked: ["dirty.txt"],
     untracked: ["untracked.txt"],
     conflicts: [],
-    operationState: "none" as const,
+    operationState,
     fingerprint: "b".repeat(64),
   };
   return {
@@ -50,6 +50,17 @@ function resetApi() {
         unstagedTracked: [],
         untracked: [],
         fingerprint: "c".repeat(64),
+      },
+    })),
+    executeHardReset: vi.fn(async () => ({
+      status: "reset-completed" as const,
+      snapshot: {
+        ...impact,
+        stagedTracked: [],
+        unstagedTracked: [],
+        conflicts: [],
+        operationState: "none" as const,
+        fingerprint: "d".repeat(64),
       },
     })),
   };
@@ -90,7 +101,7 @@ describe("ResetDepartmentSettingsPanel", () => {
     );
   });
 
-  it("shows factual tracked and untracked reset impact without exposing execution", async () => {
+  it("shows factual reset impact with safer actions before guarded execution", async () => {
     const api = resetApi();
     await render(<ResetDepartmentSettingsPanel active workspaceRoot="/workspace" resetApi={api} />);
 
@@ -109,8 +120,86 @@ describe("ResetDepartmentSettingsPanel", () => {
     );
     await expect.element(page.getByRole("button", { name: "Stash Changes Instead" })).toBeVisible();
     await expect.element(page.getByRole("button", { name: "Cancel" })).toBeVisible();
-    expect(document.body.textContent).not.toContain("Continue to Hard Reset");
-    expect(document.body.textContent).not.toContain("git has receipts");
+    await expect
+      .element(page.getByRole("button", { name: "Continue to Hard Reset" }))
+      .toBeVisible();
+    await expect
+      .element(page.getByLabelText("Type git has receipts exactly to continue"))
+      .toBeVisible();
+    expect(
+      page
+        .getByRole("button", { name: "Stash Changes Instead" })
+        .element()
+        .compareDocumentPosition(
+          page.getByRole("button", { name: "Continue to Hard Reset" }).element(),
+        ) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("requires exact confirmation, refreshes facts, and preserves untracked-file disclosure", async () => {
+    const api = resetApi();
+    await render(<ResetDepartmentSettingsPanel active workspaceRoot="/workspace" resetApi={api} />);
+
+    await userEvent.click(
+      page.getByRole("button", { name: "Inspect git reset --hard impact — DANGER" }),
+    );
+    const confirmation = page.getByLabelText("Type git has receipts exactly to continue");
+    const continueButton = page.getByRole("button", { name: "Continue to Hard Reset" });
+    await userEvent.fill(confirmation, "Git has receipts");
+    await expect.element(continueButton).toBeDisabled();
+    await userEvent.fill(confirmation, "git has receipts");
+    await expect.element(continueButton).toBeEnabled();
+    await userEvent.click(continueButton);
+
+    await vi.waitFor(() =>
+      expect(api.executeHardReset).toHaveBeenCalledWith({
+        cwd: "/workspace",
+        expectedRepositoryIdentity: "a".repeat(64),
+        expectedHead: "0123456789abcdef",
+        expectedFingerprint: "b".repeat(64),
+        confirmation: "git has receipts",
+      }),
+    );
+    expect(page.getByRole("status").element().textContent).toContain(
+      "Untracked and ignored files were not removed.",
+    );
+    expect(document.body.textContent).toContain("Staged tracked: 0");
+    expect(document.body.textContent).toContain("Unstaged tracked: 0");
+    expect(document.body.textContent).toContain("Untracked: 1");
+    await expect.element(confirmation).toHaveValue("");
+  });
+
+  it("clears confirmation on refreshed inspection and blocks an unknown operation state", async () => {
+    const api = resetApi("unknown");
+    await render(<ResetDepartmentSettingsPanel active workspaceRoot="/workspace" resetApi={api} />);
+
+    await userEvent.click(
+      page.getByRole("button", { name: "Inspect git reset --hard impact — DANGER" }),
+    );
+    const confirmation = page.getByLabelText("Type git has receipts exactly to continue");
+    await expect.element(confirmation).toBeDisabled();
+    await expect
+      .element(page.getByRole("button", { name: "Continue to Hard Reset" }))
+      .toBeDisabled();
+    expect(document.body.textContent).toContain(
+      "The active merge/rebase state could not be determined. Hard reset is blocked.",
+    );
+
+    const knownApi = resetApi("merge");
+    document.body.innerHTML = "";
+    await render(
+      <ResetDepartmentSettingsPanel active workspaceRoot="/workspace" resetApi={knownApi} />,
+    );
+    await userEvent.click(
+      page.getByRole("button", { name: "Inspect git reset --hard impact — DANGER" }),
+    );
+    const knownConfirmation = page.getByLabelText("Type git has receipts exactly to continue");
+    await userEvent.fill(knownConfirmation, "git has receipts");
+    await userEvent.click(
+      page.getByRole("button", { name: "Refresh git reset --hard impact — DANGER" }),
+    );
+    await expect.element(knownConfirmation).toHaveValue("");
+    expect(document.body.textContent).toContain("Repository operation: merge.");
   });
 
   it("stashes only the currently inspected snapshot and refreshes the displayed state", async () => {
