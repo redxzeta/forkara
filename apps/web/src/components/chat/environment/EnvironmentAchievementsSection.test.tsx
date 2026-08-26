@@ -16,6 +16,22 @@ describe("achievement viewer", () => {
       icon: "?",
     });
     expect(unlocked).toMatchObject({ title: "42", description: "You know what you did." });
+
+    const resetOracleLocked = achievementViewerRows([]).find(
+      (row) => row.id === "oracle_has_spoken",
+    );
+    const resetOracleUnlocked = achievementViewerRows([
+      { id: "oracle_has_spoken", unlockedAt: "2026-08-23T12:00:00.000Z" },
+    ]).find((row) => row.id === "oracle_has_spoken");
+    expect(resetOracleLocked).toMatchObject({
+      title: "Secret achievement",
+      description: "Hidden until unlocked.",
+      icon: "?",
+    });
+    expect(resetOracleUnlocked).toMatchObject({
+      title: "The Oracle Has Spoken",
+      description: "Receive the Reset Oracle's rare warning.",
+    });
   });
 
   it("states the local-only persistence boundary", () => {

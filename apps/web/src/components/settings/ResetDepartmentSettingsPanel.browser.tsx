@@ -7,7 +7,12 @@ import { page, userEvent } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 
+import { getAchievementSnapshot, resetAchievementState } from "../../achievements/engine";
 import { ResetDepartmentSettingsPanel } from "./ResetDepartmentSettingsPanel";
+
+function hasAchievement(id: string): boolean {
+  return getAchievementSnapshot().some((unlock) => unlock.id === id);
+}
 
 function resetApi(operationState: "none" | "merge" | "rebase" | "unknown" = "none") {
   const impact = {
@@ -68,6 +73,7 @@ function resetApi(operationState: "none" | "merge" | "rebase" | "unknown" = "non
 
 describe("ResetDepartmentSettingsPanel", () => {
   afterEach(() => {
+    resetAchievementState();
     document.body.innerHTML = "";
   });
 
@@ -99,6 +105,7 @@ describe("ResetDepartmentSettingsPanel", () => {
         "This is a parody; no Codex quota or account state changed.",
       ),
     );
+    expect(hasAchievement("reset_pending")).toBe(true);
   });
 
   it("shows factual reset impact with safer actions before guarded execution", async () => {
@@ -167,6 +174,7 @@ describe("ResetDepartmentSettingsPanel", () => {
     expect(document.body.textContent).toContain("Unstaged tracked: 0");
     expect(document.body.textContent).toContain("Untracked: 1");
     await expect.element(confirmation).toHaveValue("");
+    expect(hasAchievement("hard_reset_enjoyer")).toBe(true);
   });
 
   it("clears confirmation on refreshed inspection and blocks an unknown operation state", async () => {
@@ -222,6 +230,7 @@ describe("ResetDepartmentSettingsPanel", () => {
       "Crisis postponed successfully.",
     );
     expect(document.body.textContent).toContain("Nothing to stash.");
+    expect(hasAchievement("character_development")).toBe(true);
   });
 
   it("clears a failed stash preview and blocks progression until refresh", async () => {
@@ -244,6 +253,7 @@ describe("ResetDepartmentSettingsPanel", () => {
     await expect
       .element(page.getByRole("button", { name: "Refresh git reset --hard impact — DANGER" }))
       .toBeVisible();
+    expect(hasAchievement("character_development")).toBe(true);
   });
 
   it("requires an exact-path preview before executing cleanup", async () => {
@@ -266,6 +276,46 @@ describe("ResetDepartmentSettingsPanel", () => {
       expect(api.executeDependencyCleanup).toHaveBeenCalledWith({ cwd: "/workspace" }),
     );
     expect(document.body.textContent).toContain("Dependencies successfully forgotten.");
+    expect(hasAchievement("node_modules_were_the_problem")).toBe(true);
+  });
+
+  it("records dependency and hard-reset achievements only after successful results", async () => {
+    const api = resetApi();
+    api.executeDependencyCleanup.mockRejectedValueOnce(new Error("Cleanup refused."));
+    api.executeHardReset.mockRejectedValueOnce(new Error("Reset refused."));
+    await render(<ResetDepartmentSettingsPanel active workspaceRoot="/workspace" resetApi={api} />);
+
+    await userEvent.click(
+      page.getByRole("button", { name: "Preview Delete node_modules — LOW RISK" }),
+    );
+    await userEvent.click(page.getByRole("button", { name: "Delete node_modules" }));
+    await vi.waitFor(() => expect(document.body.textContent).toContain("Cleanup refused."));
+
+    await userEvent.click(
+      page.getByRole("button", { name: "Inspect git reset --hard impact — DANGER" }),
+    );
+    await userEvent.fill(
+      page.getByLabelText("Type git has receipts exactly to continue"),
+      "git has receipts",
+    );
+    await userEvent.click(page.getByRole("button", { name: "Continue to Hard Reset" }));
+    await vi.waitFor(() => expect(document.body.textContent).toContain("Reset refused."));
+
+    expect(hasAchievement("node_modules_were_the_problem")).toBe(false);
+    expect(hasAchievement("hard_reset_enjoyer")).toBe(false);
+  });
+
+  it("records hard-reset cancellation when the safer choice is made", async () => {
+    const api = resetApi();
+    await render(<ResetDepartmentSettingsPanel active workspaceRoot="/workspace" resetApi={api} />);
+
+    await userEvent.click(
+      page.getByRole("button", { name: "Inspect git reset --hard impact — DANGER" }),
+    );
+    await userEvent.click(page.getByRole("button", { name: "Cancel" }));
+
+    expect(hasAchievement("character_development")).toBe(true);
+    expect(api.executeHardReset).not.toHaveBeenCalled();
   });
 
   it("invokes the Oracle from the keyboard with a deterministic rare result", async () => {
@@ -279,5 +329,6 @@ describe("ResetDepartmentSettingsPanel", () => {
       expect(page.getByRole("status").element().textContent).toContain("DO NOT RESET ANYTHING."),
     );
     expect(document.body.textContent).toContain("DO NOT RESET ANYTHING.");
+    expect(hasAchievement("oracle_has_spoken")).toBe(true);
   });
 });

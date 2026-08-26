@@ -5,6 +5,8 @@ import type {
 } from "@forkara/contracts";
 import { useEffect, useState } from "react";
 
+import { recordResetDepartmentAchievement } from "~/achievements/resetDepartment";
+
 import { Button } from "../ui/button";
 
 type ResetDepartmentApi = NonNullable<NativeApi["resetDepartment"]>;
@@ -62,6 +64,9 @@ export function DependencyExorcismControl({
     setError(null);
     try {
       const nextResult = await api.executeDependencyCleanup({ cwd: workspaceRoot });
+      if (nextResult.removed) {
+        recordResetDepartmentAchievement({ type: "reset.dependency_exorcism_succeeded" });
+      }
       setResult(nextResult);
       setPreview(null);
       onStatus(

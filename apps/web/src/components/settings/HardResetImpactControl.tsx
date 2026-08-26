@@ -1,6 +1,8 @@
 import type { HardResetImpactSnapshot, NativeApi } from "@forkara/contracts";
 import { useEffect, useRef, useState } from "react";
 
+import { recordResetDepartmentAchievement } from "~/achievements/resetDepartment";
+
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 
@@ -84,6 +86,10 @@ export function HardResetGuardPanel({
     ) {
       return;
     }
+    recordResetDepartmentAchievement({
+      type: "reset.hard_reset_alternative_chosen",
+      choice: "stash",
+    });
     const requestId = ++requestIdRef.current;
     setBusy("stash");
     setError(null);
@@ -144,6 +150,7 @@ export function HardResetGuardPanel({
         expectedFingerprint: snapshot.fingerprint,
         confirmation: HARD_RESET_CONFIRMATION,
       });
+      recordResetDepartmentAchievement({ type: "reset.hard_reset_succeeded" });
       if (requestIdRef.current !== requestId) return;
       setSnapshot(result.snapshot);
       setRequiresRefresh(false);
@@ -166,6 +173,10 @@ export function HardResetGuardPanel({
   }
 
   function cancel(): void {
+    recordResetDepartmentAchievement({
+      type: "reset.hard_reset_alternative_chosen",
+      choice: "cancel",
+    });
     requestIdRef.current += 1;
     setSnapshot(null);
     setError(null);

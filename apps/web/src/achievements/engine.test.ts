@@ -5,14 +5,21 @@ import { createAchievementEngine } from "./engine";
 
 function memoryStorage(initial: string | null = null) {
   let value = initial;
+  let key: string | null = null;
   return {
-    getItem: () => value,
-    setItem: (_key: string, next: string) => {
+    getItem: (nextKey: string) => {
+      key = nextKey;
+      return value;
+    },
+    setItem: (nextKey: string, next: string) => {
+      key = nextKey;
       value = next;
     },
-    removeItem: () => {
+    removeItem: (nextKey: string) => {
+      key = nextKey;
       value = null;
     },
+    key: () => key,
     value: () => value,
   };
 }
@@ -86,6 +93,104 @@ describe("achievement engine", () => {
     ]);
   });
 
+  it("decodes legacy v1 documents and defaults malformed progress without losing unlocks", () => {
+    const legacyStorage = memoryStorage(
+      JSON.stringify({
+        version: 1,
+        unlocks: [{ id: "git_has_receipts", unlockedAt: "2026-08-23T12:00:00.000Z" }],
+      }),
+    );
+    const legacy = createAchievementEngine({ storage: legacyStorage });
+    expect(legacy.getSnapshot()).toEqual([
+      { id: "git_has_receipts", unlockedAt: "2026-08-23T12:00:00.000Z" },
+    ]);
+
+    const malformedProgressStorage = memoryStorage(
+      JSON.stringify({
+        version: 1,
+        unlocks: [{ id: "git_has_receipts", unlockedAt: "2026-08-23T12:00:00.000Z" }],
+        oracleUseCount: "three",
+        resetToolIds: "oracle",
+      }),
+    );
+    const malformed = createAchievementEngine({ storage: malformedProgressStorage });
+    expect(malformed.getSnapshot()).toEqual(legacy.getSnapshot());
+    malformed.record({ type: "reset.oracle_used", rare: false });
+    malformed.record({ type: "reset.oracle_used", rare: false });
+    expect(malformed.getSnapshot().some((unlock) => unlock.id === "ask_again_later")).toBe(false);
+    malformed.record({ type: "reset.oracle_used", rare: false });
+    expect(malformed.getSnapshot().some((unlock) => unlock.id === "ask_again_later")).toBe(true);
+  });
+
+  it("persists Reset progress in the existing v1 document and resumes the third Oracle use", () => {
+    const storage = memoryStorage();
+    const first = createAchievementEngine({
+      storage,
+      now: () => new Date("2026-08-23T12:00:00.000Z"),
+    });
+    expect(first.record({ type: "reset.oracle_used", rare: false })).toEqual([]);
+    expect(first.record({ type: "reset.oracle_used", rare: false })).toEqual([]);
+    expect(JSON.parse(storage.value() ?? "null")).toMatchObject({
+      version: 1,
+      oracleUseCount: 2,
+      resetToolIds: ["oracle"],
+    });
+    expect(storage.key()).toBe("synara:achievements:v1");
+
+    const reloaded = createAchievementEngine({
+      storage,
+      now: () => new Date("2026-08-24T12:00:00.000Z"),
+    });
+    expect(reloaded.record({ type: "reset.oracle_used", rare: false })).toEqual([
+      { id: "ask_again_later", unlockedAt: "2026-08-24T12:00:00.000Z" },
+    ]);
+  });
+
+  it("counts distinct reset-tier tools and unlocks all deterministic Reset achievements once", () => {
+    const engine = createAchievementEngine({
+      storage: memoryStorage(),
+      now: () => new Date("2026-08-23T12:00:00.000Z"),
+    });
+    engine.record({ type: "reset.oracle_used", rare: false });
+    engine.record({ type: "reset.oracle_used", rare: false });
+    expect(engine.getSnapshot().some((unlock) => unlock.id === "have_you_tried_resetting_it")).toBe(
+      false,
+    );
+    engine.record({ type: "reset.oracle_used", rare: false });
+    engine.record({ type: "reset.dependency_exorcism_succeeded" });
+    engine.record({ type: "reset.quota_parody_used" });
+    engine.record({ type: "reset.hard_reset_succeeded" });
+    engine.record({ type: "reset.hard_reset_alternative_chosen", choice: "cancel" });
+    engine.record({ type: "reset.oracle_used", rare: true });
+    engine.record({ type: "reset.hard_reset_alternative_chosen", choice: "stash" });
+    engine.record({ type: "reset.hard_reset_succeeded" });
+
+    expect(
+      engine
+        .getSnapshot()
+        .map((unlock) => unlock.id)
+        .filter((id) =>
+          [
+            "ask_again_later",
+            "node_modules_were_the_problem",
+            "have_you_tried_resetting_it",
+            "hard_reset_enjoyer",
+            "character_development",
+            "oracle_has_spoken",
+            "reset_pending",
+          ].includes(id),
+        ),
+    ).toEqual([
+      "ask_again_later",
+      "node_modules_were_the_problem",
+      "have_you_tried_resetting_it",
+      "hard_reset_enjoyer",
+      "character_development",
+      "oracle_has_spoken",
+      "reset_pending",
+    ]);
+  });
+
   it("keeps source workflows non-blocking when storage fails", () => {
     const storage = {
       getItem: () => {
@@ -116,14 +221,28 @@ describe("achievement engine", () => {
     expect(() => engine.record({ type: "fork_archaeology.opened" })).not.toThrow();
   });
 
+  it("isolates recording-time failures from source actions", () => {
+    const engine = createAchievementEngine({
+      storage: memoryStorage(),
+      now: () => {
+        throw new Error("clock unavailable");
+      },
+    });
+    expect(() => engine.record({ type: "reset.hard_reset_succeeded" })).not.toThrow();
+    expect(engine.getSnapshot()).toEqual([]);
+  });
+
   it("keeps every definition stable and discoverable in one catalog", () => {
     expect(new Set(ACHIEVEMENT_CATALOG.map((definition) => definition.id)).size).toBe(
       ACHIEVEMENT_CATALOG.length,
     );
-    expect(ACHIEVEMENT_CATALOG).toHaveLength(14);
+    expect(ACHIEVEMENT_CATALOG).toHaveLength(21);
     expect(ACHIEVEMENT_CATALOG.find((definition) => definition.id === "forty_two")).toMatchObject({
       secret: true,
       description: "You know what you did.",
     });
+    expect(
+      ACHIEVEMENT_CATALOG.find((definition) => definition.id === "oracle_has_spoken"),
+    ).toMatchObject({ secret: true });
   });
 });

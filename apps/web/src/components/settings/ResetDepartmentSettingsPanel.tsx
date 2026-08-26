@@ -4,6 +4,7 @@
 
 import { useState } from "react";
 
+import { recordResetDepartmentAchievement } from "~/achievements/resetDepartment";
 import { cn } from "~/lib/utils";
 import { settingRowAnchorId } from "~/settingsNavigation";
 
@@ -154,11 +155,16 @@ export function ResetDepartmentSettingsPanel({
                     onClick={() => {
                       if (oracle) {
                         const result = selectResetOracleResponse(random);
+                        recordResetDepartmentAchievement({
+                          type: "reset.oracle_used",
+                          rare: result.rare,
+                        });
                         setOutcome({ actionId: "oracle", message: result.response });
                         setStatus(`The Reset Oracle says: ${result.response}`);
                         return;
                       }
                       if (quota) {
+                        recordResetDepartmentAchievement({ type: "reset.quota_parody_used" });
                         const message =
                           "Request submitted to the universe. This is a parody; no Codex quota or account state changed.";
                         setOutcome({ actionId: "quota", message });
