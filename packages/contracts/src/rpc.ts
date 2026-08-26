@@ -15,8 +15,10 @@ import {
   DependencyCleanupInput,
   DependencyCleanupPreview,
   DependencyCleanupResult,
+  HardResetConfirmationInput,
   HardResetImpactInput,
   HardResetImpactSnapshot,
+  HardResetResult,
   HardResetStashInput,
   HardResetStashResult,
   ResetDepartmentError,
@@ -599,6 +601,12 @@ export const WsResetInspectHardResetImpactRpc = Rpc.make(WS_METHODS.resetInspect
 export const WsResetStashHardResetChangesRpc = Rpc.make(WS_METHODS.resetStashHardResetChanges, {
   payload: HardResetStashInput,
   success: HardResetStashResult,
+  error: ResetDepartmentRpcError,
+});
+
+export const WsResetExecuteHardResetRpc = Rpc.make(WS_METHODS.resetExecuteHardReset, {
+  payload: HardResetConfirmationInput,
+  success: HardResetResult,
   error: ResetDepartmentRpcError,
 });
 
@@ -1474,6 +1482,7 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsResetExecuteDependencyCleanupRpc,
   WsResetInspectHardResetImpactRpc,
   WsResetStashHardResetChangesRpc,
+  WsResetExecuteHardResetRpc,
   WsStudioListThreadOutputsRpc,
   WsFilesystemBrowseRpc,
   WsShellOpenInEditorRpc,

@@ -65,6 +65,21 @@ export const HardResetStashResult = Schema.Struct({
 });
 export type HardResetStashResult = typeof HardResetStashResult.Type;
 
+export const HardResetConfirmationInput = Schema.Struct({
+  cwd: TrimmedNonEmptyString,
+  expectedRepositoryIdentity: Sha256Hex,
+  expectedHead: TrimmedNonEmptyString,
+  expectedFingerprint: Sha256Hex,
+  confirmation: Schema.Literal("git has receipts"),
+});
+export type HardResetConfirmationInput = typeof HardResetConfirmationInput.Type;
+
+export const HardResetResult = Schema.Struct({
+  status: Schema.Literal("reset-completed"),
+  snapshot: HardResetImpactSnapshot,
+});
+export type HardResetResult = typeof HardResetResult.Type;
+
 export class ResetDepartmentError extends Schema.TaggedErrorClass<ResetDepartmentError>()(
   "ResetDepartmentError",
   {
@@ -75,6 +90,8 @@ export class ResetDepartmentError extends Schema.TaggedErrorClass<ResetDepartmen
       "inspection-failed",
       "stale-preview",
       "stash-failed",
+      "reset-blocked",
+      "reset-failed",
     ]),
     message: TrimmedNonEmptyString,
     retryable: Schema.Boolean,

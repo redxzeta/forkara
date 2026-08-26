@@ -22,6 +22,7 @@ export interface ResetDepartmentDependencies {
 }
 
 const HARD_RESET_STASH_MESSAGE = "Forkara Reset Department: stash before hard reset";
+const HARD_RESET_CONFIRMATION = "git has receipts";
 
 function isMissing(cause: unknown): boolean {
   return (cause as NodeJS.ErrnoException | null)?.code === "ENOENT";
@@ -238,11 +239,88 @@ export function makeResetDepartmentService(
       );
   };
 
+  const executeHardReset: ResetDepartmentServiceShape["executeHardReset"] = (input) => {
+    const git = dependencies.git;
+    if (!git) {
+      return Effect.fail(
+        resetError("reset-failed", "Git reset is unavailable on this server.", true),
+      );
+    }
+    if (input.confirmation !== HARD_RESET_CONFIRMATION) {
+      return Effect.fail(
+        resetError(
+          "reset-blocked",
+          `Type ${HARD_RESET_CONFIRMATION} exactly before continuing.`,
+          false,
+        ),
+      );
+    }
+
+    return git
+      .withMutation(
+        input.cwd,
+        Effect.gen(function* () {
+          const current = yield* inspectHardResetImpactWithGit(input.cwd, git);
+          if (
+            current.repositoryState !== "ready" ||
+            current.repositoryIdentity === null ||
+            current.head === null ||
+            current.fingerprint === null
+          ) {
+            return yield* resetError(
+              "reset-blocked",
+              "Hard reset requires a ready Git repository with known identity, HEAD, and fingerprint.",
+              true,
+            );
+          }
+          if (current.operationState === "unknown") {
+            return yield* resetError(
+              "reset-blocked",
+              "Hard reset is blocked because the active merge or rebase state is unknown.",
+              true,
+            );
+          }
+          if (
+            current.repositoryIdentity !== input.expectedRepositoryIdentity ||
+            current.head !== input.expectedHead ||
+            current.fingerprint !== input.expectedFingerprint
+          ) {
+            return yield* resetError(
+              "stale-preview",
+              "Repository state changed since inspection. Refresh the hard-reset impact before continuing.",
+              true,
+            );
+          }
+
+          yield* git.execute({
+            operation: "ResetDepartment.hardReset.resetHardHead",
+            cwd: input.cwd,
+            args: ["reset", "--hard", "HEAD"],
+            timeoutMs: 30_000,
+          });
+          const snapshot = yield* inspectHardResetImpactWithGit(input.cwd, git);
+          return { status: "reset-completed" as const, snapshot };
+        }),
+      )
+      .pipe(
+        Effect.mapError((cause) =>
+          Schema.is(ResetDepartmentError)(cause)
+            ? cause
+            : resetError(
+                "reset-failed",
+                "Forkara could not complete git reset --hard HEAD. Refresh the impact before trying again.",
+                true,
+              ),
+        ),
+      );
+  };
+
   return {
     previewDependencyCleanup,
     executeDependencyCleanup,
     inspectHardResetImpact: inspectHardResetImpactSnapshot,
     stashHardResetChanges,
+    executeHardReset,
   };
 }
 
