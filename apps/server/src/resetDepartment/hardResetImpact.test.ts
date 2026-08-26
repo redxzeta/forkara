@@ -1,83 +1,30 @@
-import { execFile as execFileCallback } from "node:child_process";
 import * as fs from "node:fs/promises";
-import * as os from "node:os";
 import * as path from "node:path";
-import { promisify } from "node:util";
 
 import { Effect } from "effect";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { inspectHardResetImpact, parseHardResetImpactStatus } from "./hardResetImpact";
+import {
+  git,
+  makeRepository,
+  makeTemporaryDirectory,
+  makeTestGitCore,
+  removeTemporaryRoots,
+} from "./resetDepartmentTestRepository";
 
-const execFile = promisify(execFileCallback);
-const temporaryRoots: string[] = [];
 const inspectionCommands: string[][] = [];
-
-async function git(cwd: string, args: readonly string[]): Promise<string> {
-  const result = await execFile("git", [...args], {
-    cwd,
-    encoding: "utf8",
-    env: {
-      ...process.env,
-      GIT_AUTHOR_NAME: "Forkara Test",
-      GIT_AUTHOR_EMAIL: "test@forkara.invalid",
-      GIT_COMMITTER_NAME: "Forkara Test",
-      GIT_COMMITTER_EMAIL: "test@forkara.invalid",
-    },
-  });
-  return result.stdout.trim();
-}
-
-function executeGit(request: {
-  readonly cwd: string;
-  readonly args: ReadonlyArray<string>;
-  readonly allowNonZeroExit?: boolean;
-}) {
-  inspectionCommands.push([...request.args]);
-  return Effect.promise(async () => {
-    try {
-      const result = await execFile("git", [...request.args], {
-        cwd: request.cwd,
-        encoding: "utf8",
-      });
-      return { code: 0, stdout: result.stdout, stderr: result.stderr };
-    } catch (cause) {
-      const error = cause as Error & {
-        readonly code?: number;
-        readonly stdout?: string;
-        readonly stderr?: string;
-      };
-      if (request.allowNonZeroExit && typeof error.code === "number") {
-        return {
-          code: error.code,
-          stdout: error.stdout ?? "",
-          stderr: error.stderr ?? error.message,
-        };
-      }
-      throw error;
-    }
-  });
-}
-
-async function makeRepository(): Promise<string> {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), "forkara-reset-impact-"));
-  temporaryRoots.push(root);
-  await git(root, ["init", "-b", "main"]);
-  await fs.writeFile(path.join(root, "tracked.txt"), "base\n");
-  await git(root, ["add", "tracked.txt"]);
-  await git(root, ["commit", "-m", "initial"]);
-  return root;
-}
+const testGit = makeTestGitCore({ commands: inspectionCommands });
 
 async function inspect(cwd: string) {
-  return await Effect.runPromise(inspectHardResetImpact({ cwd, fileSystem: fs, executeGit }));
+  return await Effect.runPromise(
+    inspectHardResetImpact({ cwd, fileSystem: fs, executeGit: testGit.execute }),
+  );
 }
 
 afterEach(async () => {
   inspectionCommands.length = 0;
-  await Promise.all(
-    temporaryRoots.splice(0).map((root) => fs.rm(root, { recursive: true, force: true })),
-  );
+  await removeTemporaryRoots();
 });
 
 describe("hard-reset impact inspection", () => {
@@ -201,8 +148,7 @@ describe("hard-reset impact inspection", () => {
   });
 
   it("keeps repository facts unknown outside a Git worktree", async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), "forkara-reset-nonrepo-"));
-    temporaryRoots.push(root);
+    const root = await makeTemporaryDirectory("forkara-reset-nonrepo-");
 
     await expect(inspect(root)).resolves.toEqual({
       repositoryState: "not-repository",

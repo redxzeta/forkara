@@ -10,7 +10,7 @@ function countLabel(files: readonly string[] | null, noun: string): string {
   return `${noun}: ${files.length}`;
 }
 
-export function HardResetImpactControl({
+export function HardResetGuardPanel({
   api,
   workspaceRoot,
   onStatus,
@@ -21,21 +21,24 @@ export function HardResetImpactControl({
 }) {
   const [snapshot, setSnapshot] = useState<HardResetImpactSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<"inspect" | "stash" | null>(null);
+  const [requiresRefresh, setRequiresRefresh] = useState(false);
   const requestIdRef = useRef(0);
 
   useEffect(() => {
     requestIdRef.current += 1;
     setSnapshot(null);
     setError(null);
-    setBusy(false);
+    setBusy(null);
+    setRequiresRefresh(false);
   }, [workspaceRoot]);
 
   async function inspect(): Promise<void> {
     if (!api || !workspaceRoot || busy) return;
     const requestId = ++requestIdRef.current;
-    setBusy(true);
+    setBusy("inspect");
     setError(null);
+    setRequiresRefresh(false);
     try {
       const nextSnapshot = await api.inspectHardResetImpact({ cwd: workspaceRoot });
       if (requestIdRef.current !== requestId) return;
@@ -53,8 +56,59 @@ export function HardResetImpactControl({
       setError(message);
       onStatus(message);
     } finally {
-      if (requestIdRef.current === requestId) setBusy(false);
+      if (requestIdRef.current === requestId) setBusy(null);
     }
+  }
+
+  async function stashInstead(): Promise<void> {
+    if (
+      !api ||
+      !workspaceRoot ||
+      busy ||
+      snapshot?.repositoryState !== "ready" ||
+      snapshot.repositoryIdentity === null ||
+      snapshot.head === null ||
+      snapshot.fingerprint === null
+    ) {
+      return;
+    }
+    const requestId = ++requestIdRef.current;
+    setBusy("stash");
+    setError(null);
+    try {
+      const result = await api.stashHardResetChanges({
+        cwd: workspaceRoot,
+        expectedRepositoryIdentity: snapshot.repositoryIdentity,
+        expectedHead: snapshot.head,
+        expectedFingerprint: snapshot.fingerprint,
+      });
+      if (requestIdRef.current !== requestId) return;
+      setSnapshot(result.snapshot);
+      setRequiresRefresh(false);
+      onStatus(
+        result.status === "stashed"
+          ? "Crisis postponed successfully. Staged, unstaged, and untracked changes were stashed; ignored files were excluded."
+          : "Nothing to stash. Ignored files, if any, were excluded.",
+      );
+    } catch (cause) {
+      if (requestIdRef.current !== requestId) return;
+      const message = cause instanceof Error ? cause.message : "Could not stash local changes.";
+      setSnapshot(null);
+      setRequiresRefresh(true);
+      setError(`${message} Refresh the impact before continuing.`);
+      onStatus(`${message} Refresh the impact before continuing.`);
+    } finally {
+      if (requestIdRef.current === requestId) setBusy(null);
+    }
+  }
+
+  function cancel(): void {
+    requestIdRef.current += 1;
+    setSnapshot(null);
+    setError(null);
+    setBusy(null);
+    setRequiresRefresh(false);
+    onStatus("Hard reset cancelled. No Git mutation ran.");
   }
 
   const unavailableMessage = !workspaceRoot
@@ -62,6 +116,17 @@ export function HardResetImpactControl({
     : !api
       ? "Git impact inspection is unavailable on this server."
       : null;
+  const hasLocalChanges =
+    snapshot?.repositoryState === "ready" &&
+    [snapshot.stagedTracked, snapshot.unstagedTracked, snapshot.untracked, snapshot.conflicts].some(
+      (files) => files !== null && files.length > 0,
+    );
+  const hasGuardFacts =
+    snapshot?.repositoryState === "ready" &&
+    snapshot.repositoryIdentity !== null &&
+    snapshot.head !== null &&
+    snapshot.fingerprint !== null;
+  const shouldRefresh = requiresRefresh || snapshot !== null;
 
   return (
     <div className="mt-3 space-y-2">
@@ -90,6 +155,9 @@ export function HardResetImpactControl({
             `git reset --hard HEAD` would discard staged and unstaged tracked changes. Untracked
             files would remain.
           </p>
+          <p className="font-medium text-foreground">
+            Stash includes staged, unstaged, and untracked changes. Ignored files are excluded.
+          </p>
           {snapshot.operationState === "unknown" ? (
             <p className="text-muted-foreground">
               The active merge/rebase state could not be determined.
@@ -105,19 +173,53 @@ export function HardResetImpactControl({
         </div>
       ) : null}
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {requiresRefresh ? (
+        <p className="text-xs font-medium text-destructive">
+          Further progress is blocked until a fresh inspection succeeds.
+        </p>
+      ) : null}
       {unavailableMessage ? (
         <p className="text-xs text-muted-foreground">{unavailableMessage}</p>
+      ) : null}
+      {snapshot ? (
+        <div className="grid gap-2 sm:grid-cols-2">
+          {hasLocalChanges ? (
+            <Button
+              type="button"
+              size="sm"
+              className="w-full"
+              disabled={busy !== null || !hasGuardFacts}
+              onClick={() => void stashInstead()}
+            >
+              {busy === "stash" ? "Stashing…" : "Stash Changes Instead"}
+            </Button>
+          ) : (
+            <p className="self-center text-center text-xs text-muted-foreground">
+              Nothing to stash.
+            </p>
+          )}
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="w-full"
+            disabled={busy !== null}
+            onClick={cancel}
+          >
+            Cancel
+          </Button>
+        </div>
       ) : null}
       <Button
         type="button"
         size="sm"
         variant="destructive-outline"
         className="w-full"
-        disabled={busy || unavailableMessage !== null}
-        aria-label="Inspect git reset --hard impact — DANGER"
+        disabled={busy !== null || unavailableMessage !== null}
+        aria-label={`${shouldRefresh ? "Refresh" : "Inspect"} git reset --hard impact — DANGER`}
         onClick={() => void inspect()}
       >
-        {busy ? "Inspecting…" : snapshot ? "Refresh impact" : "Inspect impact"}
+        {busy === "inspect" ? "Inspecting…" : shouldRefresh ? "Refresh impact" : "Inspect impact"}
       </Button>
     </div>
   );

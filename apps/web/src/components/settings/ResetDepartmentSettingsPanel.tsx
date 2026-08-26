@@ -10,7 +10,7 @@ import { settingRowAnchorId } from "~/settingsNavigation";
 import { Button } from "../ui/button";
 import type { NativeApi } from "@forkara/contracts";
 import { DependencyExorcismControl } from "./DependencyExorcismControl";
-import { HardResetImpactControl } from "./HardResetImpactControl";
+import { HardResetGuardPanel } from "./HardResetImpactControl";
 import { SettingsSectionShell } from "./SettingsPanelPrimitives";
 import { selectResetOracleResponse } from "./resetOracle";
 
@@ -132,7 +132,7 @@ export function ResetDepartmentSettingsPanel({
                     onStatus={setStatus}
                   />
                 ) : hardReset ? (
-                  <HardResetImpactControl
+                  <HardResetGuardPanel
                     api={resetApi}
                     workspaceRoot={workspaceRoot}
                     onStatus={setStatus}

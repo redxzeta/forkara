@@ -4,6 +4,8 @@ import type {
   DependencyCleanupResult,
   HardResetImpactInput,
   HardResetImpactSnapshot,
+  HardResetStashInput,
+  HardResetStashResult,
   ResetDepartmentError,
 } from "@forkara/contracts";
 import { ServiceMap, type Effect } from "effect";
@@ -18,6 +20,9 @@ export interface ResetDepartmentServiceShape {
   readonly inspectHardResetImpact: (
     input: HardResetImpactInput,
   ) => Effect.Effect<HardResetImpactSnapshot, ResetDepartmentError>;
+  readonly stashHardResetChanges: (
+    input: HardResetStashInput,
+  ) => Effect.Effect<HardResetStashResult, ResetDepartmentError>;
 }
 
 export class ResetDepartmentService extends ServiceMap.Service<
