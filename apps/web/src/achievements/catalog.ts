@@ -14,7 +14,28 @@ export type AchievementEvent =
   | { readonly type: "originality_meter.result" }
   | { readonly type: "assistant_response.completed"; readonly bullyModeEnabled: boolean }
   | { readonly type: "apology.stage_reached"; readonly stageIndex: number }
-  | { readonly type: "fork_family_tree.viewed"; readonly knownGenerationCount: number };
+  | { readonly type: "fork_family_tree.viewed"; readonly knownGenerationCount: number }
+  | { readonly type: "reset.oracle_used"; readonly rare: boolean }
+  | { readonly type: "reset.dependency_exorcism_succeeded" }
+  | { readonly type: "reset.quota_parody_used" }
+  | { readonly type: "reset.hard_reset_succeeded" }
+  | {
+      readonly type: "reset.hard_reset_alternative_chosen";
+      readonly choice: "cancel" | "stash";
+    };
+
+export const RESET_TOOL_IDS = [
+  "oracle",
+  "dependency-exorcism",
+  "quota-parody",
+  "hard-reset",
+] as const;
+export type ResetToolId = (typeof RESET_TOOL_IDS)[number];
+
+export interface AchievementProgress {
+  readonly oracleUseCount: number;
+  readonly resetToolIds: readonly ResetToolId[];
+}
 
 interface AchievementDefinitionShape {
   readonly id: string;
@@ -22,7 +43,7 @@ interface AchievementDefinitionShape {
   readonly description: string;
   readonly icon?: string;
   readonly secret: boolean;
-  readonly unlocks: (event: AchievementEvent) => boolean;
+  readonly unlocks: (event: AchievementEvent, progress: AchievementProgress) => boolean;
 }
 
 export const ACHIEVEMENT_CATALOG = [
@@ -138,6 +159,66 @@ export const ACHIEVEMENT_CATALOG = [
     secret: false,
     unlocks: (event) => event.type === "fork_family_tree.viewed" && event.knownGenerationCount >= 3,
   },
+  {
+    id: "ask_again_later",
+    title: "Ask Again Later",
+    description: "Consult the Reset Oracle three times.",
+    icon: "🎱",
+    secret: false,
+    unlocks: (event, progress) =>
+      event.type === "reset.oracle_used" && progress.oracleUseCount >= 3,
+  },
+  {
+    id: "node_modules_were_the_problem",
+    title: "Node Modules Were the Problem",
+    description: "Successfully complete Dependency Exorcism.",
+    icon: "🧹",
+    secret: false,
+    unlocks: (event) => event.type === "reset.dependency_exorcism_succeeded",
+  },
+  {
+    id: "have_you_tried_resetting_it",
+    title: "Have You Tried Resetting It?",
+    description: "Use two distinct Reset Department tools.",
+    icon: "♻️",
+    secret: false,
+    unlocks: (_event, progress) => progress.resetToolIds.length >= 2,
+  },
+  {
+    id: "hard_reset_enjoyer",
+    title: "Hard Reset Enjoyer",
+    description: "Successfully complete the guarded hard reset.",
+    icon: "☢️",
+    secret: false,
+    unlocks: (event) => event.type === "reset.hard_reset_succeeded",
+  },
+  {
+    id: "character_development",
+    title: "Character Development",
+    description: "Choose Cancel or Stash Changes Instead in the hard-reset flow.",
+    icon: "🛑",
+    secret: false,
+    unlocks: (event) => event.type === "reset.hard_reset_alternative_chosen",
+  },
+  {
+    id: "oracle_has_spoken",
+    title: "The Oracle Has Spoken",
+    description: "Receive the Reset Oracle's rare warning.",
+    icon: "🎱",
+    secret: true,
+    unlocks: (event) => event.type === "reset.oracle_used" && event.rare,
+  },
+  {
+    id: "reset_pending",
+    title: "Reset Pending",
+    description: "Try the quota reset parody. Completion is approximately 42 minutes away.",
+    icon: "⏳",
+    secret: false,
+    unlocks: (event) => event.type === "reset.quota_parody_used",
+  },
+  // Deferred by design: dependency reinstall and subsequent commit events are not reliably
+  // observable in the current architecture, so Dependency Exorcist and Maybe Commit First are
+  // intentionally absent rather than unlocked from guesses.
 ] as const satisfies readonly AchievementDefinitionShape[];
 
 export type AchievementDefinition = (typeof ACHIEVEMENT_CATALOG)[number];
