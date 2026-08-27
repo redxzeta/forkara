@@ -4,7 +4,11 @@
 // Layer: Web UI dialog
 // Exports: CreateProjectDialog, CreateProjectSubmitValue
 
-import { type GitHubProjectProvisionProgressEvent, type SpaceId } from "@forkara/contracts";
+import {
+  type GitHubProjectProvisionOperation,
+  type GitHubProjectProvisionProgressEvent,
+  type SpaceId,
+} from "@forkara/contracts";
 import { parseGitHubRepositoryInput } from "@forkara/shared/githubRepository";
 import { normalizeProjectDirectoryName } from "@forkara/shared/projectDirectoryName";
 import { recordAchievementEvent } from "../achievements/engine";
@@ -82,6 +86,8 @@ interface CreateLocalProjectSubmitValue {
 interface CreateGitHubProjectSubmitValue {
   readonly source: "github";
   readonly operationId: string;
+  readonly operation: GitHubProjectProvisionOperation;
+  readonly forkDestinationOwner: string | null;
   readonly repository: string;
   readonly destinationParent: string;
   readonly directoryName: string;
@@ -108,6 +114,8 @@ export function CreateProjectDialog(props: {
   const [source, setSource] = useState<"local" | "github">("local");
   const [path, setPath] = useState("");
   const [repositoryInput, setRepositoryInput] = useState("");
+  const [githubOperation, setGitHubOperation] = useState<GitHubProjectProvisionOperation>("clone");
+  const [forkDestinationOwner, setForkDestinationOwner] = useState("");
   const [destinationParent, setDestinationParent] = useState("");
   const [directoryName, setDirectoryName] = useState("");
   const [directoryNameEdited, setDirectoryNameEdited] = useState(false);
@@ -136,6 +144,8 @@ export function CreateProjectDialog(props: {
   const fieldId = useId();
   const pathInputId = `${fieldId}-path`;
   const repositoryInputId = `${fieldId}-repository`;
+  const githubOperationLegendId = `${fieldId}-github-operation`;
+  const forkDestinationOwnerInputId = `${fieldId}-fork-destination-owner`;
   const destinationParentInputId = `${fieldId}-destination-parent`;
   const directoryNameInputId = `${fieldId}-directory-name`;
   const submitButtonId = `${fieldId}-submit`;
@@ -151,6 +161,8 @@ export function CreateProjectDialog(props: {
     setSource("local");
     setPath("");
     setRepositoryInput("");
+    setGitHubOperation("clone");
+    setForkDestinationOwner("");
     setDestinationParent(props.defaultCloneParent);
     setDirectoryName("");
     setDirectoryNameEdited(false);
@@ -334,6 +346,9 @@ export function CreateProjectDialog(props: {
           {
             source: "github",
             operationId,
+            operation: githubOperation,
+            forkDestinationOwner:
+              githubOperation === "fork-and-clone" ? forkDestinationOwner.trim() || null : null,
             repository: parsedRepository ?? repositoryInput.trim(),
             destinationParent: trimmedDestinationParent,
             directoryName: normalizedDirectoryName ?? trimmedDirectoryName,
@@ -501,10 +516,14 @@ export function CreateProjectDialog(props: {
           ) : (
             <CreateGitHubProjectFields
               repositoryInputId={repositoryInputId}
+              operationLegendId={githubOperationLegendId}
+              forkDestinationOwnerInputId={forkDestinationOwnerInputId}
               destinationParentInputId={destinationParentInputId}
               directoryNameInputId={directoryNameInputId}
               errorId={errorId}
               repositoryInput={repositoryInput}
+              operation={githubOperation}
+              forkDestinationOwner={forkDestinationOwner}
               destinationParent={destinationParent}
               directoryName={directoryName}
               finalClonePath={finalClonePath}
@@ -519,6 +538,14 @@ export function CreateProjectDialog(props: {
                 if (nextRepository && !directoryNameEdited) {
                   setDirectoryName(nextRepository.split("/").at(-1) ?? "");
                 }
+                setFormError(null);
+              }}
+              onOperationChange={(nextOperation) => {
+                setGitHubOperation(nextOperation);
+                setFormError(null);
+              }}
+              onForkDestinationOwnerChange={(nextOwner) => {
+                setForkDestinationOwner(nextOwner);
                 setFormError(null);
               }}
               onDestinationParentChange={(nextParent) => {
@@ -629,10 +656,14 @@ export function CreateProjectDialog(props: {
           >
             {submitting
               ? source === "github"
-                ? "Cloning…"
+                ? githubOperation === "fork-and-clone"
+                  ? "Forking and cloning…"
+                  : "Cloning…"
                 : "Creating…"
               : source === "github"
-                ? "Clone and add"
+                ? githubOperation === "fork-and-clone"
+                  ? "Fork and add"
+                  : "Clone and add"
                 : "Create project"}
           </Button>
         </DialogFooter>

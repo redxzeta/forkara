@@ -1,5 +1,6 @@
 import {
   WS_CLIENT_REQUIRED_CAPABILITIES,
+  WS_GITHUB_PROJECT_PROVISIONING_V2_CAPABILITY,
   WS_PROTOCOL_EPOCH,
   WS_PROTOCOL_MAX_REVISION,
   WS_PROTOCOL_MIN_REVISION,
@@ -35,7 +36,14 @@ describe("WebSocket compatibility bootstrap", () => {
     expect(result.capabilities).toContain("orchestration.cursor-safe-streams");
     expect(result.capabilities).toContain("orchestration.thread-detail-snapshot");
     expect(result.capabilities).toContain("projects.github-provisioning");
+    expect(result.capabilities).toContain(WS_GITHUB_PROJECT_PROVISIONING_V2_CAPABILITY);
     expect(WS_CLIENT_REQUIRED_CAPABILITIES).not.toContain("projects.github-provisioning");
+  });
+
+  it("keeps v2 provisioning optional so an old server can run the rest of the new client", () => {
+    expect(WS_CLIENT_REQUIRED_CAPABILITIES).not.toContain(
+      WS_GITHUB_PROJECT_PROVISIONING_V2_CAPABILITY,
+    );
   });
 
   it("returns terminal update guidance and rejects feature calls without negotiated query data", async () => {

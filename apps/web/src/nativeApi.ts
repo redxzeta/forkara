@@ -31,6 +31,8 @@ export function ensureNativeApi(): NativeApi {
 export function readNativeApiServerCapability(capability: string): boolean {
   if (typeof window === "undefined") return false;
   if (window.nativeApi) {
+    // A legacy desktop bridge only proves the original implicit-intent API.
+    // Never infer a newer capability from method presence alone.
     return (
       capability === WS_GITHUB_PROJECT_PROVISIONING_CAPABILITY &&
       typeof window.nativeApi.projects?.provisionFromGitHub === "function"

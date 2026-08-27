@@ -6,15 +6,12 @@ import { ModelSelection } from "./orchestration";
 const BoundedRepositoryInput = TrimmedNonEmptyString.check(Schema.isMaxLength(512));
 const BoundedPath = TrimmedNonEmptyString.check(Schema.isMaxLength(4_096));
 const BoundedDirectoryName = TrimmedNonEmptyString.check(Schema.isMaxLength(255));
+const BoundedGitHubOwner = TrimmedNonEmptyString.check(Schema.isMaxLength(39));
 
-/**
- * One server-owned GitHub checkout + project-registration operation.
- *
- * `destinationParent` is deliberately a parent directory. The server derives and
- * validates the final workspace root from it and `directoryName`, so the UI never
- * presents a parent path while the server interprets it as the clone target.
- */
-export const GitHubProjectProvisionInput = Schema.Struct({
+export const GitHubProjectProvisionOperation = Schema.Literals(["clone", "fork-and-clone"]);
+export type GitHubProjectProvisionOperation = typeof GitHubProjectProvisionOperation.Type;
+
+const GitHubProjectProvisionInputBase = {
   operationId: TrimmedNonEmptyString.check(Schema.isMaxLength(128)),
   repository: BoundedRepositoryInput,
   destinationParent: BoundedPath,
@@ -25,6 +22,22 @@ export const GitHubProjectProvisionInput = Schema.Struct({
   newProjectSpaceId: Schema.NullOr(SpaceId),
   defaultModelSelection: ModelSelection,
   createdAt: IsoDateTime,
+} as const;
+
+/**
+ * One server-owned GitHub checkout + project-registration operation.
+ *
+ * `destinationParent` is deliberately a parent directory. The server derives and
+ * validates the final workspace root from it and `directoryName`, so the UI never
+ * presents a parent path while the server interprets it as the clone target.
+ */
+export const GitHubProjectProvisionInput = Schema.Struct({
+  ...GitHubProjectProvisionInputBase,
+  // Older clients omitted intent. Decode that input as the safe, direct-clone path.
+  operation: GitHubProjectProvisionOperation.pipe(Schema.withDecodingDefaultKey(() => "clone")),
+  forkDestinationOwner: Schema.NullOr(BoundedGitHubOwner).pipe(
+    Schema.withDecodingDefaultKey(() => null),
+  ),
 });
 export type GitHubProjectProvisionInput = typeof GitHubProjectProvisionInput.Type;
 
@@ -42,6 +55,7 @@ export type GitHubProjectProvisionResult = typeof GitHubProjectProvisionResult.T
 export const GitHubProjectProvisionPhase = Schema.Literals([
   "validating",
   "resolving-access",
+  "forking",
   "cloning",
   "verifying",
   "registering",
