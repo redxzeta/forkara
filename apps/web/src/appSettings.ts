@@ -249,6 +249,9 @@ export const AppSettingsSchema = Schema.Struct({
   showEnvironmentNotepad: Schema.Boolean.pipe(withDefaults(() => false)),
   followUpBehavior: FollowUpBehavior.pipe(withDefaults(() => DEFAULT_FOLLOW_UP_BEHAVIOR)),
   enableAssistantStreaming: Schema.Boolean.pipe(withDefaults(() => true)),
+  // Local-only preference. Migrated callers use non-modal focus-mode surfaces;
+  // authorization and confirmation requirements remain unchanged.
+  noForksGivenModeEnabled: Schema.Boolean.pipe(withDefaults(() => false)),
   enableProviderUpdateChecks: Schema.Boolean.pipe(withDefaults(() => true)),
   bullyModeEnabled: Schema.Boolean.pipe(withDefaults(() => false)),
   enableNativeFontSmoothing: Schema.Boolean.pipe(withDefaults(getDefaultNativeFontSmoothing)),

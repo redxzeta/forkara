@@ -314,6 +314,13 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     keywords: "Show token-by-token output while a response is in progress. streaming",
   },
   {
+    id: "behavior:focus-mode",
+    section: "behavior",
+    title: "No Forks Given Mode",
+    keywords:
+      "Focus mode replaces migrated popups with inline and docked surfaces. safeguards confirmations permissions safety no popup non-modal",
+  },
+  {
     id: "behavior:bully-mode",
     section: "behavior",
     title: "Bully Mode",
