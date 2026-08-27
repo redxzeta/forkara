@@ -82,6 +82,7 @@ function renderActivity(input: {
   onThreadContextMenu?: (threadId: ThreadId, position: { x: number; y: number }) => void;
   onProjectContextMenu?: (projectId: ProjectId, position: { x: number; y: number }) => void;
   resolveThreadStatus?: (thread: SidebarThreadSummary) => ThreadStatusPill | null;
+  onAddProject?: () => void;
 }) {
   const projects = input.projects ?? [makeProject(PROJECT_A, "Project A")];
   return (
@@ -106,7 +107,7 @@ function renderActivity(input: {
       onProjectContextMenu={input.onProjectContextMenu ?? (() => {})}
       renderThreadHoverCard={() => null}
       onCreateChat={() => {}}
-      onAddProject={() => {}}
+      onAddProject={input.onAddProject ?? (() => {})}
     />
   );
 }
@@ -114,6 +115,54 @@ function renderActivity(input: {
 describe("SidebarActivityView", () => {
   afterEach(() => {
     document.body.innerHTML = "";
+  });
+
+  it("keeps Add project pointer- and keyboard-accessible across responsive reveal states", async () => {
+    const onAddProject = vi.fn();
+    await page.viewport(430, 900);
+    let mounted = await render(renderActivity({ threads: [makeThread(0)], onAddProject }));
+
+    let addProjectButton = page.getByRole("button", { name: "Add project", exact: true });
+    let toolbar = addProjectButton.element().closest<HTMLElement>("[class*='transition-opacity']");
+    expect(toolbar).not.toBeNull();
+    expect(getComputedStyle(toolbar!).pointerEvents).toBe("auto");
+
+    await addProjectButton.click();
+    addProjectButton.element().focus();
+    await userEvent.keyboard("{Enter}");
+    await userEvent.keyboard(" ");
+    expect(onAddProject).toHaveBeenCalledTimes(3);
+    await mounted.unmount();
+    document.body.innerHTML = "";
+
+    await page.viewport(960, 900);
+    mounted = await render(renderActivity({ threads: [makeThread(0)], onAddProject }));
+    addProjectButton = page.getByRole("button", { name: "Add project", exact: true });
+    toolbar = addProjectButton.element().closest<HTMLElement>("[class*='transition-opacity']");
+    expect(toolbar).not.toBeNull();
+    expect(toolbar!.className).toContain("md:pointer-events-none");
+    expect(toolbar!.className).toContain("md:opacity-0");
+    expect(toolbar!.className).toContain("md:group-hover/project-header:pointer-events-auto");
+    expect(toolbar!.className).toContain(
+      "md:group-focus-within/project-header:pointer-events-auto",
+    );
+
+    addProjectButton.element().focus();
+    await vi.waitFor(() => {
+      expect(getComputedStyle(toolbar!).pointerEvents).toBe("auto");
+      expect(getComputedStyle(toolbar!).opacity).toBe("1");
+    });
+    await userEvent.keyboard("{Enter}");
+
+    addProjectButton.element().blur();
+    await page.getByRole("button", { name: "Filter activity by project" }).hover();
+    await vi.waitFor(() => {
+      expect(getComputedStyle(toolbar!).pointerEvents).toBe("auto");
+      expect(getComputedStyle(toolbar!).opacity).toBe("1");
+    });
+    await addProjectButton.click();
+    expect(onAddProject).toHaveBeenCalledTimes(5);
+    await mounted.unmount();
   });
 
   it("pages project groups, reports only mounted rows, and prefers live PR state", async () => {
