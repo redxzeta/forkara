@@ -6277,7 +6277,40 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
 
     try {
-      await page.getByRole("button", { name: "Add project", exact: true }).click();
+      const addProjectButton = page.getByRole("button", { name: "Add project", exact: true });
+      const toolbar = addProjectButton
+        .element()
+        .closest<HTMLElement>("[class*='transition-opacity']");
+      expect(toolbar).not.toBeNull();
+      expect(getComputedStyle(toolbar!).pointerEvents).toBe("none");
+      expect(getComputedStyle(toolbar!).opacity).toBe("0");
+
+      await page.getByText("Projects", { exact: true }).hover();
+      await vi.waitFor(() => {
+        expect(getComputedStyle(toolbar!).pointerEvents).toBe("auto");
+        expect(getComputedStyle(toolbar!).opacity).toBe("1");
+      });
+      await addProjectButton.click();
+      await expect
+        .element(page.getByRole("heading", { name: "Create project" }))
+        .toBeInTheDocument();
+
+      await userEvent.keyboard("{Escape}");
+      await expect
+        .element(page.getByRole("heading", { name: "Create project" }))
+        .not.toBeInTheDocument();
+      addProjectButton.element().focus();
+      await userEvent.keyboard("{Enter}");
+      await expect
+        .element(page.getByRole("heading", { name: "Create project" }))
+        .toBeInTheDocument();
+
+      await userEvent.keyboard("{Escape}");
+      await expect
+        .element(page.getByRole("heading", { name: "Create project" }))
+        .not.toBeInTheDocument();
+      addProjectButton.element().focus();
+      await userEvent.keyboard(" ");
       await expect
         .element(page.getByRole("heading", { name: "Create project" }))
         .toBeInTheDocument();
