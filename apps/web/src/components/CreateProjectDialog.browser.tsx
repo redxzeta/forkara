@@ -70,6 +70,8 @@ describe("CreateProjectDialog GitHub source", () => {
     const [value, options] = onSubmit.mock.calls[0] ?? [];
     expect(value).toMatchObject({
       source: "github",
+      operation: "clone",
+      forkDestinationOwner: null,
       repository: "openai/codex",
       destinationParent: "/Users/test/Developer",
       directoryName: "codex",
@@ -77,6 +79,36 @@ describe("CreateProjectDialog GitHub source", () => {
     });
     expect(value.operationId).toEqual(expect.any(String));
     expect(options.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("submits fork-and-clone separately with an optional destination owner", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    await render(
+      <CreateProjectDialog
+        open
+        githubProvisioningAvailable
+        spaces={[]}
+        activeSpaceId={null}
+        defaultCloneParent="/Users/test/Developer"
+        onOpenChange={vi.fn()}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    await page.getByRole("radio", { name: "GitHub" }).click();
+    expect(page.getByRole("radio", { name: /Clone directly/ }).element()).toBeChecked();
+    await page.getByRole("radio", { name: /Fork and clone/ }).click();
+    await page.getByLabelText(/Fork destination/).fill("example-org");
+    await page.getByLabelText("Repository").fill("openai/codex");
+    await page.getByRole("button", { name: "Fork and add" }).click();
+
+    await vi.waitFor(() => expect(onSubmit).toHaveBeenCalledOnce());
+    expect(onSubmit.mock.calls[0]?.[0]).toMatchObject({
+      source: "github",
+      operation: "fork-and-clone",
+      forkDestinationOwner: "example-org",
+      repository: "openai/codex",
+    });
   });
 
   it("rejects invalid clone folder names before provisioning", async () => {

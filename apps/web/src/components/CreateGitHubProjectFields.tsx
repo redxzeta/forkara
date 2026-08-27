@@ -1,3 +1,4 @@
+import type { GitHubProjectProvisionOperation } from "@forkara/contracts";
 import type { KeyboardEvent, ReactNode } from "react";
 
 import { GitHubIcon } from "~/lib/icons";
@@ -12,10 +13,14 @@ export const PROJECT_DIALOG_FIELD_CONTROL_CLASS_NAME = "h-9 rounded-lg border-fo
 
 export function CreateGitHubProjectFields(props: {
   readonly repositoryInputId: string;
+  readonly operationLegendId: string;
+  readonly forkDestinationOwnerInputId: string;
   readonly destinationParentInputId: string;
   readonly directoryNameInputId: string;
   readonly errorId: string;
   readonly repositoryInput: string;
+  readonly operation: GitHubProjectProvisionOperation;
+  readonly forkDestinationOwner: string;
   readonly destinationParent: string;
   readonly directoryName: string;
   readonly finalClonePath: string;
@@ -25,6 +30,8 @@ export function CreateGitHubProjectFields(props: {
   readonly isPickingFolder: boolean;
   readonly submitting: boolean;
   readonly onRepositoryChange: (value: string) => void;
+  readonly onOperationChange: (value: GitHubProjectProvisionOperation) => void;
+  readonly onForkDestinationOwnerChange: (value: string) => void;
   readonly onDestinationParentChange: (value: string) => void;
   readonly onDirectoryNameChange: (value: string) => void;
   readonly onBrowse: () => void;
@@ -51,6 +58,70 @@ export function CreateGitHubProjectFields(props: {
           </GitHubRequirement>
         </ol>
       </div>
+
+      <fieldset className="space-y-2" aria-labelledby={props.operationLegendId}>
+        <legend
+          id={props.operationLegendId}
+          className={cn(
+            "block",
+            dialogFieldLabelClassName,
+            "text-[length:var(--app-font-size-ui,12px)] text-foreground",
+          )}
+        >
+          GitHub operation
+        </legend>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <GitHubOperationChoice
+            name={props.operationLegendId}
+            checked={props.operation === "clone"}
+            value="clone"
+            title="Clone directly"
+            description="Use the requested source directly. No fork or upstream remote is created."
+            disabled={props.submitting}
+            onChange={props.onOperationChange}
+          />
+          <GitHubOperationChoice
+            name={props.operationLegendId}
+            checked={props.operation === "fork-and-clone"}
+            value="fork-and-clone"
+            title="Fork and clone"
+            description="Create or reuse your fork, clone it, and configure the source as upstream."
+            disabled={props.submitting}
+            onChange={props.onOperationChange}
+          />
+        </div>
+      </fieldset>
+
+      {props.operation === "fork-and-clone" ? (
+        <div className="space-y-2">
+          <label
+            htmlFor={props.forkDestinationOwnerInputId}
+            className={cn(
+              "block",
+              dialogFieldLabelClassName,
+              "text-[length:var(--app-font-size-ui,12px)] text-foreground",
+            )}
+          >
+            Fork destination <span className="font-normal text-muted-foreground">(optional)</span>
+          </label>
+          <InputGroup className={PROJECT_DIALOG_FIELD_CONTROL_CLASS_NAME}>
+            <GitHubIcon className="ms-3 size-4 text-muted-foreground/70" aria-hidden="true" />
+            <InputGroupInput
+              id={props.forkDestinationOwnerInputId}
+              value={props.forkDestinationOwner}
+              placeholder="Your account or organization"
+              spellCheck={false}
+              autoCorrect="off"
+              autoCapitalize="off"
+              onChange={(event) => props.onForkDestinationOwnerChange(event.target.value)}
+              onKeyDown={props.onSubmitKeyDown}
+            />
+          </InputGroup>
+          <p className="text-[length:var(--app-font-size-ui-xs,10px)] text-muted-foreground/70">
+            Leave empty to use the account authenticated with GitHub CLI.
+          </p>
+        </div>
+      ) : null}
 
       <div className="space-y-2">
         <label
@@ -162,6 +233,46 @@ export function CreateGitHubProjectFields(props: {
         </p>
       ) : null}
     </div>
+  );
+}
+
+function GitHubOperationChoice(props: {
+  readonly name: string;
+  readonly checked: boolean;
+  readonly value: GitHubProjectProvisionOperation;
+  readonly title: string;
+  readonly description: string;
+  readonly disabled: boolean;
+  readonly onChange: (value: GitHubProjectProvisionOperation) => void;
+}) {
+  return (
+    <label
+      className={cn(
+        "flex cursor-pointer gap-2.5 rounded-xl border px-3 py-2.5 outline-none transition-colors has-focus-visible:border-foreground/40",
+        props.checked
+          ? "border-foreground/30 bg-foreground/[0.055]"
+          : "border-foreground/10 hover:bg-foreground/[0.025]",
+        props.disabled && "cursor-default opacity-50",
+      )}
+    >
+      <input
+        type="radio"
+        name={props.name}
+        value={props.value}
+        checked={props.checked}
+        disabled={props.disabled}
+        className="mt-0.5 size-3.5 accent-foreground"
+        onChange={() => props.onChange(props.value)}
+      />
+      <span className="min-w-0">
+        <span className="block text-[length:var(--app-font-size-ui,12px)] font-medium text-foreground">
+          {props.title}
+        </span>
+        <span className="mt-0.5 block text-[length:var(--app-font-size-ui-xs,10px)] leading-4 text-muted-foreground">
+          {props.description}
+        </span>
+      </span>
+    </label>
   );
 }
 

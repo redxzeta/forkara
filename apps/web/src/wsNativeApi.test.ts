@@ -804,6 +804,8 @@ describe("wsNativeApi", () => {
   it("forwards cancellable GitHub project provisioning and its progress events", async () => {
     const input = {
       operationId: "operation-1",
+      operation: "clone" as const,
+      forkDestinationOwner: null,
       repository: "openai/codex",
       destinationParent: "/projects",
       directoryName: "codex",
@@ -819,7 +821,7 @@ describe("wsNativeApi", () => {
       workspaceRoot: "/projects/codex",
       projectId: input.projectId,
       checkout: "created" as const,
-      forkCreated: true,
+      forkCreated: false,
     };
     requestMock.mockResolvedValue(result);
     const { createWsNativeApi } = await import("./wsNativeApi");

@@ -87,7 +87,7 @@ import {
   type ProviderKind,
   ThreadId,
   type ResolvedKeybindingsConfig,
-  WS_GITHUB_PROJECT_PROVISIONING_CAPABILITY,
+  WS_GITHUB_PROJECT_PROVISIONING_V2_CAPABILITY,
 } from "@forkara/contracts";
 import { isGenericChatThreadTitle } from "@forkara/shared/chatThreads";
 import { getDefaultModel } from "@forkara/shared/model";
@@ -434,7 +434,7 @@ const EMPTY_KEYBINDINGS: ResolvedKeybindingsConfig = [];
 const subscribeGitHubProvisioningCapability = (listener: () => void) =>
   onNativeApiServerCapabilitiesChange(listener);
 const readGitHubProvisioningCapability = () =>
-  readNativeApiServerCapability(WS_GITHUB_PROJECT_PROVISIONING_CAPABILITY);
+  readNativeApiServerCapability(WS_GITHUB_PROJECT_PROVISIONING_V2_CAPABILITY);
 const readGitHubProvisioningServerCapability = () => false;
 const THREAD_PREVIEW_LIMIT = 5;
 // Each "Show more" click reveals this many extra rows; "Show less" hides them again page by page.
@@ -3376,6 +3376,8 @@ export default function Sidebar() {
                 api.projects.provisionFromGitHub(
                   {
                     operationId: value.operationId,
+                    operation: value.operation,
+                    forkDestinationOwner: value.forkDestinationOwner,
                     repository: value.repository,
                     destinationParent: value.destinationParent,
                     directoryName: value.directoryName,

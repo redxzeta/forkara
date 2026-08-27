@@ -323,7 +323,7 @@ function resolveForkSourceInfo(
 function ensureFork(
   sourceRepository: string,
   forkSource: GitHubForkSourceInfo,
-  forkDestinationOwnerInput: string | undefined,
+  forkDestinationOwnerInput: string | null,
   viewerLogin: string,
   parent: string,
   reporter: GitHubProjectProvisioningProgressReporter,
@@ -359,6 +359,12 @@ function ensureFork(
   ];
 
   return Effect.gen(function* () {
+    yield* publishPhase(
+      reporter,
+      operationId,
+      "forking",
+      `Creating or reusing a fork of ${sourceRepository}`,
+    );
     const forked = yield* github.execute({ cwd: parent, args: commandArgs }).pipe(
       Effect.as(true),
       Effect.catch((cause) => {
@@ -519,7 +525,7 @@ function classifyCloneFailure(cause: unknown): GitHubProjectProvisioningError {
 
   const exceededConfiguredCloneTimeout =
     (isGitCommandFailure &&
-      cause.operation === "clone public GitHub project" &&
+      cause.operation === "clone GitHub project directly" &&
       lower.endsWith(" timed out.")) ||
     (isGitHubCliFailure && lower.includes("gh repo clone") && lower.includes(" timed out."));
   if (exceededConfiguredCloneTimeout) {
@@ -736,13 +742,12 @@ export const makeGitHubProjectProvisioner = Effect.fn(function* (
   const cloneToStaging = Effect.fnUntraced(function* (
     input: GitHubProjectProvisionInput,
     repository: string,
-    useGitHubCli: boolean,
     parent: string,
     stagingPath: string,
     reporter: GitHubProjectProvisioningProgressReporter,
   ) {
     const publishChunk = createCloneProgressChunkHandler(input.operationId, reporter);
-    if (useGitHubCli) {
+    if (input.operation === "fork-and-clone") {
       yield* github.execute({
         cwd: parent,
         args: ["repo", "clone", "--no-upstream", repository, stagingPath, "--", "--progress"],
@@ -765,7 +770,7 @@ export const makeGitHubProjectProvisioner = Effect.fn(function* (
     // WebSocket request interrupts this Effect, closes that Scope, and terminates
     // the fallback `git clone` process just like runProcess does for the gh path.
     yield* git.execute({
-      operation: "clone public GitHub project",
+      operation: "clone GitHub project directly",
       cwd: parent,
       args: ["clone", "--progress", "--", `https://github.com/${repository}.git`, stagingPath],
       env: {
@@ -791,6 +796,14 @@ export const makeGitHubProjectProvisioner = Effect.fn(function* (
         return yield* provisioningError(
           "INVALID_REPOSITORY",
           "Enter a GitHub repository as `owner/repository` or a GitHub.com repository URL.",
+          false,
+        );
+      }
+
+      if (input.operation === "clone" && input.forkDestinationOwner !== null) {
+        return yield* provisioningError(
+          "INVALID_DESTINATION",
+          "A fork destination is accepted only for fork and clone.",
           false,
         );
       }
@@ -847,36 +860,52 @@ export const makeGitHubProjectProvisioner = Effect.fn(function* (
       return yield* withDestinationLock(
         workspaceRoot,
         Effect.gen(function* () {
-          const viewerLogin = yield* github.getViewerLogin({ cwd: parent }).pipe(
-            Effect.catch((cause) => {
-              const detail = isGitHubCliError(cause) ? cause.detail : extractErrorDetail(cause);
-              if (isAuthRequired(detail.toLowerCase()) || isGitHubCliUnavailable(cause)) {
-                return Effect.succeed("");
-              }
-              return Effect.fail(
-                classifyGitHubFailure(cause, "Authenticate with GitHub", repository),
-              );
-            }),
-          );
-          const useGitHubCli = viewerLogin.trim().length > 0;
-          const forkSource = useGitHubCli
-            ? yield* resolveForkSourceInfo(repository, parent, reporter, input.operationId, github)
-            : null;
-          const forkPlan = useGitHubCli
-            ? yield* ensureFork(
-                repository,
-                forkSource ?? {
-                  isFork: false,
-                  parentNameWithOwner: null,
-                },
-                (input as { forkDestinationOwner?: string | undefined }).forkDestinationOwner,
-                viewerLogin,
-                parent,
-                reporter,
-                input.operationId,
-                github,
-              )
-            : { cloneRepository: repository, upstreamRepository: null, forkCreated: false };
+          const forkPlan =
+            input.operation === "fork-and-clone"
+              ? yield* Effect.gen(function* () {
+                  yield* publishPhase(
+                    reporter,
+                    input.operationId,
+                    "resolving-access",
+                    "Authenticating for fork creation",
+                  );
+                  const viewerLogin = yield* github.getViewerLogin({ cwd: parent }).pipe(
+                    Effect.mapError((cause) => {
+                      const detail = extractErrorDetail(cause);
+                      if (isAuthRequired(detail.toLowerCase()) || isGitHubCliUnavailable(cause)) {
+                        return provisioningError(
+                          "AUTH_REQUIRED",
+                          "Fork and clone requires GitHub CLI authentication. Run `gh auth login`, then retry.",
+                          false,
+                          cause,
+                        );
+                      }
+                      return classifyGitHubFailure(
+                        cause,
+                        "Authenticate for fork creation",
+                        repository,
+                      );
+                    }),
+                  );
+                  const forkSource = yield* resolveForkSourceInfo(
+                    repository,
+                    parent,
+                    reporter,
+                    input.operationId,
+                    github,
+                  );
+                  return yield* ensureFork(
+                    repository,
+                    forkSource,
+                    input.forkDestinationOwner,
+                    viewerLogin,
+                    parent,
+                    reporter,
+                    input.operationId,
+                    github,
+                  );
+                })
+              : { cloneRepository: repository, upstreamRepository: null, forkCreated: false };
           const existing = yield* inspectExistingDestination(
             workspaceRoot,
             forkPlan.cloneRepository,
@@ -893,7 +922,9 @@ export const makeGitHubProjectProvisioner = Effect.fn(function* (
             reporter,
             input.operationId,
             "resolving-access",
-            "Resolving GitHub access",
+            input.operation === "fork-and-clone"
+              ? "Preparing authenticated fork checkout"
+              : "Preparing direct repository clone",
           );
           const stagingPath = path.join(
             parent,
@@ -906,17 +937,12 @@ export const makeGitHubProjectProvisioner = Effect.fn(function* (
               reporter,
               input.operationId,
               "cloning",
-              `Cloning ${forkPlan.cloneRepository}`,
+              input.operation === "fork-and-clone"
+                ? `Cloning fork ${forkPlan.cloneRepository}`
+                : `Cloning repository ${forkPlan.cloneRepository} directly`,
             );
             yield* cloneSlots.withPermits(1)(
-              cloneToStaging(
-                input,
-                forkPlan.cloneRepository,
-                useGitHubCli,
-                parent,
-                stagingPath,
-                reporter,
-              ),
+              cloneToStaging(input, forkPlan.cloneRepository, parent, stagingPath, reporter),
             );
 
             yield* publishPhase(reporter, input.operationId, "verifying", "Verifying checkout");
