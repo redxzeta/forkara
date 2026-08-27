@@ -867,6 +867,15 @@ describe("AppSettingsSchema", () => {
     expect(decode(JSON.stringify({ bullyModeEnabled: true })).bullyModeEnabled).toBe(true);
   });
 
+  it("defaults No Forks Given Mode to disabled and preserves an enabled preference", () => {
+    const decode = Schema.decodeSync(Schema.fromJsonString(AppSettingsSchema));
+
+    expect(decode("{}").noForksGivenModeEnabled).toBe(false);
+    expect(decode(JSON.stringify({ noForksGivenModeEnabled: true })).noForksGivenModeEnabled).toBe(
+      true,
+    );
+  });
+
   it("fills decoding defaults for persisted settings that predate newer keys", () => {
     const decode = Schema.decodeSync(Schema.fromJsonString(AppSettingsSchema));
 
@@ -893,6 +902,7 @@ describe("AppSettingsSchema", () => {
       appSnapShortcut: { kind: "both-option-keys" },
       appSnapPlaySound: true,
       enableAssistantStreaming: true,
+      noForksGivenModeEnabled: false,
       bullyModeEnabled: false,
       followUpBehavior: DEFAULT_FOLLOW_UP_BEHAVIOR,
       sidebarProjectSortOrder: DEFAULT_SIDEBAR_PROJECT_SORT_ORDER,

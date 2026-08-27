@@ -50,6 +50,7 @@ import { ProviderUsageSettingsPanel } from "../components/settings/ProviderUsage
 import { ExternalMcpSettingsPanel } from "../components/settings/ExternalMcpSettingsPanel";
 import { XIntegrationSettingsPanel } from "../components/settings/XIntegrationSettingsPanel";
 import { ResetDepartmentSettingsPanel } from "../components/settings/ResetDepartmentSettingsPanel";
+import { NoForksGivenModeSetting } from "../components/settings/NoForksGivenModeSetting";
 import {
   SettingResetButton,
   SettingsSegmentedControl,
@@ -345,6 +346,9 @@ function SettingsRouteView() {
       : []),
     ...(settings.enableAssistantStreaming !== defaults.enableAssistantStreaming
       ? ["Assistant output"]
+      : []),
+    ...(settings.noForksGivenModeEnabled !== defaults.noForksGivenModeEnabled
+      ? ["No Forks Given Mode"]
       : []),
     ...(settings.bullyModeEnabled !== defaults.bullyModeEnabled ? ["Bully Mode"] : []),
     ...(settings.followUpBehavior !== defaults.followUpBehavior ? ["Follow-up behavior"] : []),
@@ -1136,6 +1140,14 @@ function SettingsRouteView() {
 
   const renderBehaviorPanel = () => (
     <div className="space-y-6">
+      <SettingsSection title="Focus">
+        <NoForksGivenModeSetting
+          checked={settings.noForksGivenModeEnabled}
+          defaultChecked={defaults.noForksGivenModeEnabled}
+          onCheckedChange={(checked) => updateSettings({ noForksGivenModeEnabled: checked })}
+        />
+      </SettingsSection>
+
       <SettingsSection title="Conversation">
         <SettingsRow
           title="Follow-up behavior"

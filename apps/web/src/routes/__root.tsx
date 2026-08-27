@@ -37,6 +37,7 @@ import { WhatsNewPopoutCard } from "../whatsNew/WhatsNewPopoutCard";
 import { shouldRenderTerminalWorkspace } from "../components/ChatView.logic";
 import { Button, dialogActionButtonClassName } from "../components/ui/button";
 import { AnchoredToastProvider, ToastProvider, toastManager } from "../components/ui/toast";
+import { StatusHistoryDock, StatusHistoryProvider } from "../components/focus/StatusHistory";
 import { useGitProgressToastPreview } from "../components/useGitProgressToastPreview";
 import { resolveAndPersistPreferredEditor } from "../editorPreferences";
 import { useFeatureFlags } from "../featureFlags";
@@ -283,21 +284,24 @@ function RootRouteView() {
 
   return (
     <>
-      <ToastProvider position="top-center">
-        <AnchoredToastProvider>
-          <GitProgressToastPreviewDev />
-          <EventRouter />
-          <ProviderStatusRefreshCoordinator />
-          <GlobalShortcutsDialog />
-          <GlobalFeedbackDialog />
-          <GlobalWhatsNewSurface />
-          <TaskCompletionNotifications />
-          <AppSnapWelcomeDialog />
-          <AppSnapCoordinator />
-          <DesktopProjectBootstrap />
-          <Outlet />
-        </AnchoredToastProvider>
-      </ToastProvider>
+      <StatusHistoryProvider>
+        <ToastProvider position="top-center">
+          <AnchoredToastProvider>
+            <GitProgressToastPreviewDev />
+            <EventRouter />
+            <ProviderStatusRefreshCoordinator />
+            <GlobalShortcutsDialog />
+            <GlobalFeedbackDialog />
+            <GlobalWhatsNewSurface />
+            <TaskCompletionNotifications />
+            <AppSnapWelcomeDialog />
+            <AppSnapCoordinator />
+            <DesktopProjectBootstrap />
+            <Outlet />
+          </AnchoredToastProvider>
+        </ToastProvider>
+        <StatusHistoryDock />
+      </StatusHistoryProvider>
       {desktopChrome}
     </>
   );
