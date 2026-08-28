@@ -16,6 +16,7 @@ export function InlineOperationError(props: {
   readonly summary: string;
   readonly correctiveAction: string;
   readonly technicalDetails?: string | undefined;
+  readonly occurrenceCount?: number | undefined;
   readonly retryLabel?: string | undefined;
   readonly onRetry?: (() => void) | undefined;
   readonly onDismiss?: (() => void) | undefined;
@@ -39,6 +40,14 @@ export function InlineOperationError(props: {
         <CircleAlertIcon aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-destructive" />
         <div className="min-w-0 flex-1">
           <p className="font-medium text-[var(--notification-fg)]">{props.summary}</p>
+          {(props.occurrenceCount ?? 1) > 1 ? (
+            <p
+              aria-label={`${props.occurrenceCount} occurrences`}
+              className="mt-1 text-xs font-medium text-[var(--notification-fg)]/72"
+            >
+              Repeated {props.occurrenceCount} times
+            </p>
+          ) : null}
           <p className="mt-1 text-sm text-[var(--notification-fg)]/72">{props.correctiveAction}</p>
 
           {props.technicalDetails ? (

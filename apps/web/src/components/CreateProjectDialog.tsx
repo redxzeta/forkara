@@ -5,6 +5,7 @@
 // Exports: CreateProjectDialog, CreateProjectSubmitValue
 
 import {
+  GitHubProjectProvisionError,
   type GitHubProjectProvisionOperation,
   type GitHubProjectProvisionProgressEvent,
   type SpaceId,
@@ -24,6 +25,11 @@ import { createSpace } from "../lib/spaces";
 import { readNativeApi } from "../nativeApi";
 import { randomUUID } from "../lib/utils";
 import { joinProjectPath } from "../lib/projectPaths";
+import {
+  coalesceProvisioningFailure,
+  isGitHubProjectProvisionError,
+  type ProvisioningFailureOccurrence,
+} from "../lib/githubProjectProvisioningError";
 import type { Space } from "../types";
 import { useVoidSpace } from "../voidSpaceStore";
 import { cn } from "~/lib/utils";
@@ -51,6 +57,7 @@ import { ComposerPickerSelectPopup } from "./chat/ComposerPickerMenuPopup";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "./ui/input-group";
 import { Select, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { CentralIcon } from "~/lib/central-icons";
+import { InlineOperationError } from "./focus/InlineOperationError";
 
 // Inputs share one fixed height + radius so every control in the dialog reads
 // as the same size (mirrors EditProfileDialog's field styling).
@@ -138,6 +145,9 @@ export function CreateProjectDialog(props: {
   const [isDropTarget, setIsDropTarget] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [provisionFailure, setProvisionFailure] = useState<ProvisioningFailureOccurrence | null>(
+    null,
+  );
   const openedRef = useRef(false);
   const submitAbortRef = useRef<AbortController | null>(null);
   const activeOperationIdRef = useRef<string | null>(null);
@@ -177,6 +187,7 @@ export function CreateProjectDialog(props: {
     setIsDropTarget(false);
     setSubmitting(false);
     setFormError(null);
+    setProvisionFailure(null);
     // Deferred a frame: the dialog moves focus itself on open, so focusing the
     // path field has to happen after that lands or it is immediately undone.
     const frame = requestAnimationFrame(() => document.getElementById(pathInputId)?.focus());
@@ -201,6 +212,16 @@ export function CreateProjectDialog(props: {
       : props.spaces;
   const voidSpace = useVoidSpace();
 
+  const clearFailure = useCallback(() => {
+    setFormError(null);
+    setProvisionFailure(null);
+  }, []);
+
+  const setLocalFailure = useCallback((message: string) => {
+    setProvisionFailure(null);
+    setFormError(message);
+  }, []);
+
   useEffect(() => {
     if (!props.open) return;
     const api = readNativeApi();
@@ -222,27 +243,27 @@ export function CreateProjectDialog(props: {
     (picked: string) => {
       setPath(picked);
       setPickedPath(picked);
-      setFormError(null);
+      clearFailure();
       // Land focus on the confirm button so a plain Enter finishes the flow.
       requestAnimationFrame(() => document.getElementById(submitButtonId)?.focus());
     },
-    [submitButtonId],
+    [clearFailure, submitButtonId],
   );
 
   const applyDestinationParent = useCallback(
     (picked: string) => {
       setDestinationParent(picked);
-      setFormError(null);
+      clearFailure();
       requestAnimationFrame(() => document.getElementById(directoryNameInputId)?.focus());
     },
-    [directoryNameInputId],
+    [clearFailure, directoryNameInputId],
   );
 
   const handleBrowse = async () => {
     if (isPickingFolder || submitting) return;
     const api = readNativeApi();
     if (!api) {
-      setFormError("The app server is unavailable.");
+      setLocalFailure("The app server is unavailable.");
       return;
     }
     setIsPickingFolder(true);
@@ -254,7 +275,7 @@ export function CreateProjectDialog(props: {
         else applyPickedFolder(picked);
       }
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : "Unable to open the folder picker.");
+      setLocalFailure(error instanceof Error ? error.message : "Unable to open the folder picker.");
     }
     setIsPickingFolder(false);
   };
@@ -289,7 +310,7 @@ export function CreateProjectDialog(props: {
       const dropped = event.dataTransfer ? resolveDroppedFolder(event.dataTransfer) : null;
       if (!dropped) return;
       if ("error" in dropped) {
-        setFormError(dropped.error);
+        setLocalFailure(dropped.error);
         return;
       }
       applyPickedFolder(dropped.path);
@@ -304,36 +325,38 @@ export function CreateProjectDialog(props: {
       window.removeEventListener("dragleave", handleDragLeave, true);
       window.removeEventListener("drop", handleDrop, true);
     };
-  }, [applyPickedFolder, props.open, source]);
+  }, [applyPickedFolder, props.open, setLocalFailure, source]);
 
   const submit = async () => {
     if (submitting) return;
     // The confirm button stays enabled (and white) like the reference dialog;
     // an empty submit explains what is missing instead of being unclickable.
     if (source === "local" && trimmedPath.length === 0) {
-      setFormError("Type a folder path, or drop a folder above.");
+      setLocalFailure("Type a folder path, or drop a folder above.");
       return;
     }
     if (source === "github" && !parsedRepository) {
-      setFormError("Enter a GitHub repository as owner/repository or a GitHub.com repository URL.");
+      setLocalFailure(
+        "Enter a GitHub repository as owner/repository or a GitHub.com repository URL.",
+      );
       return;
     }
     if (source === "github" && !props.githubProvisioningAvailable) {
-      setFormError("Update the Synara server before adding a project from GitHub.");
+      setLocalFailure("Update the Synara server before adding a project from GitHub.");
       return;
     }
     if (source === "github" && trimmedDestinationParent.length === 0) {
-      setFormError("Choose the parent folder where the repository should be cloned.");
+      setLocalFailure("Choose the parent folder where the repository should be cloned.");
       return;
     }
     if (source === "github" && !normalizedDirectoryName) {
-      setFormError(
+      setLocalFailure(
         "Choose a valid folder name without slashes, reserved device names, or a trailing dot.",
       );
       return;
     }
     setSubmitting(true);
-    setFormError(null);
+    clearFailure();
     setProvisionProgress(source === "github" ? "Validating repository" : null);
     const abortController = new AbortController();
     submitAbortRef.current = abortController;
@@ -371,16 +394,34 @@ export function CreateProjectDialog(props: {
       props.onOpenChange(false);
     } catch (error) {
       submitAbortRef.current = null;
+      const failedOperationId = activeOperationIdRef.current;
       activeOperationIdRef.current = null;
-      setFormError(
-        abortController.signal.aborted
-          ? source === "github"
-            ? "GitHub clone cancelled. You can retry safely."
-            : "Project creation cancelled."
-          : error instanceof Error
-            ? error.message
-            : "An error occurred while adding the project.",
-      );
+      const typedFailure = isGitHubProjectProvisionError(error)
+        ? error
+        : abortController.signal.aborted && source === "github" && failedOperationId
+          ? new GitHubProjectProvisionError({
+              operationId: failedOperationId,
+              stage: "cancellation",
+              code: "CANCELLED",
+              summary: "GitHub project provisioning was cancelled.",
+              correctiveAction:
+                "Retry when you are ready. Any interrupted checkout was recovered safely.",
+              technicalDetails: null,
+              retryable: true,
+            })
+          : null;
+      if (typedFailure) {
+        setFormError(null);
+        setProvisionFailure((current) => coalesceProvisioningFailure(current, typedFailure));
+      } else {
+        setLocalFailure(
+          abortController.signal.aborted
+            ? "Project creation cancelled."
+            : error instanceof Error
+              ? error.message
+              : "An error occurred while adding the project.",
+        );
+      }
       setProvisionProgress(null);
       setSubmitting(false);
     }
@@ -439,7 +480,7 @@ export function CreateProjectDialog(props: {
             githubAvailable={props.githubProvisioningAvailable}
             onValueChange={(nextSource) => {
               setSource(nextSource);
-              setFormError(null);
+              clearFailure();
               setProvisionProgress(null);
               requestAnimationFrame(() =>
                 document
@@ -467,7 +508,7 @@ export function CreateProjectDialog(props: {
                   autoCapitalize="off"
                   onChange={(event) => {
                     setPath(event.target.value);
-                    setFormError(null);
+                    clearFailure();
                   }}
                   onKeyDown={submitOnEnter}
                 />
@@ -538,24 +579,24 @@ export function CreateProjectDialog(props: {
                 if (nextRepository && !directoryNameEdited) {
                   setDirectoryName(nextRepository.split("/").at(-1) ?? "");
                 }
-                setFormError(null);
+                clearFailure();
               }}
               onOperationChange={(nextOperation) => {
                 setGitHubOperation(nextOperation);
-                setFormError(null);
+                clearFailure();
               }}
               onForkDestinationOwnerChange={(nextOwner) => {
                 setForkDestinationOwner(nextOwner);
-                setFormError(null);
+                clearFailure();
               }}
               onDestinationParentChange={(nextParent) => {
                 setDestinationParent(nextParent);
-                setFormError(null);
+                clearFailure();
               }}
               onDirectoryNameChange={(nextName) => {
                 setDirectoryName(nextName);
                 setDirectoryNameEdited(true);
-                setFormError(null);
+                clearFailure();
               }}
               onBrowse={() => void handleBrowse()}
               onSubmitKeyDown={submitOnEnter}
@@ -635,6 +676,16 @@ export function CreateProjectDialog(props: {
                 </p>
               ) : null}
             </div>
+          ) : null}
+          {provisionFailure ? (
+            <InlineOperationError
+              summary={provisionFailure.error.summary}
+              correctiveAction={provisionFailure.error.correctiveAction}
+              technicalDetails={provisionFailure.error.technicalDetails ?? undefined}
+              occurrenceCount={provisionFailure.occurrenceCount}
+              onRetry={provisionFailure.error.retryable ? () => void submit() : undefined}
+              onDismiss={() => setProvisionFailure(null)}
+            />
           ) : null}
         </DialogPanel>
         <DialogFooter className="px-5 pb-5">

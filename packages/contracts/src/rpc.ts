@@ -87,6 +87,7 @@ import {
 } from "./device";
 import { FilesystemBrowseInput, FilesystemBrowseResult } from "./filesystem";
 import {
+  GitHubProjectProvisionError,
   GitHubProjectProvisionInput,
   GitHubProjectProvisionProgressEvent,
 } from "./githubProjectProvisioning";
@@ -543,7 +544,7 @@ export const WsSubscribeProjectDevServerEventsRpc = Rpc.make(
 export const WsProjectsProvisionFromGitHubRpc = Rpc.make(WS_METHODS.projectsProvisionFromGitHub, {
   payload: GitHubProjectProvisionInput,
   success: GitHubProjectProvisionProgressEvent,
-  error: WsRpcError,
+  error: Schema.Union([GitHubProjectProvisionError, WsRpcError]),
   stream: true,
 });
 

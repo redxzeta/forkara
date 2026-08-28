@@ -6,6 +6,11 @@ import type {
   GitHubProjectProvisionProgressEvent,
 } from "@forkara/contracts";
 import {
+  GitHubProjectProvisionError,
+  GitHubProjectProvisionErrorCode,
+  GitHubProjectProvisionErrorStage,
+} from "@forkara/contracts";
+import {
   parseGitHubRepositoryInput,
   parseGitHubRepositoryNameWithOwnerFromRemoteUrl,
 } from "@forkara/shared/githubRepository";
@@ -15,10 +20,12 @@ import { Effect, FileSystem, Path, Schema, Semaphore } from "effect";
 import { GitCommandError, GitHubCliError } from "../git/Errors";
 import type { GitCoreShape } from "../git/Services/GitCore";
 import type { GitHubCliShape } from "../git/Services/GitHubCli";
+import { redactSensitiveProcessArgs } from "../processArgumentRedaction";
 
 const CLONE_TIMEOUT_MS = 30 * 60 * 1_000;
 const CLONE_OUTPUT_LIMIT_BYTES = 2 * 1_024 * 1_024;
 const MAX_CLONE_PROGRESS_MESSAGE_LENGTH = 240;
+const MAX_TECHNICAL_DETAILS_LENGTH = 4_096;
 const CLONE_PROGRESS_LINE =
   /^(?:remote:\s*)?(?:Enumerating objects|Counting objects|Compressing objects|Receiving objects|Resolving deltas|Updating files|Checking out files|Filtering content):/i;
 const GITHUB_OWNER_NAME_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
@@ -46,27 +53,15 @@ interface GitHubForkPlan {
   readonly forkCreated: boolean;
 }
 
-export const GitHubProjectProvisioningErrorCode = Schema.Literals([
-  "INVALID_REPOSITORY",
-  "INVALID_DESTINATION",
-  "DESTINATION_CONFLICT",
-  "REPOSITORY_NOT_FOUND",
-  "AUTH_REQUIRED",
-  "NETWORK_ERROR",
-  "CLONE_TIMEOUT",
-  "PERMISSION_DENIED",
-  "DISK_FULL",
-  "CLONE_FAILED",
-]);
-export type GitHubProjectProvisioningErrorCode = typeof GitHubProjectProvisioningErrorCode.Type;
-
-export class GitHubProjectProvisioningError extends Schema.TaggedErrorClass<GitHubProjectProvisioningError>()(
-  "GitHubProjectProvisioningError",
+class ClassifiedProvisioningError extends Schema.TaggedErrorClass<ClassifiedProvisioningError>()(
+  "ClassifiedProvisioningError",
   {
-    code: GitHubProjectProvisioningErrorCode,
-    message: Schema.String,
+    stage: GitHubProjectProvisionErrorStage,
+    code: GitHubProjectProvisionErrorCode,
+    summary: Schema.String,
+    correctiveAction: Schema.String,
+    technicalDetails: Schema.NullOr(Schema.String),
     retryable: Schema.Boolean,
-    cause: Schema.optional(Schema.Defect),
   },
 ) {}
 
@@ -95,20 +90,178 @@ export interface GitHubProjectProvisioner {
   readonly provisionCheckout: (
     input: GitHubProjectProvisionInput,
     reporter: GitHubProjectProvisioningProgressReporter,
-  ) => Effect.Effect<GitHubProjectCheckoutResult, GitHubProjectProvisioningError>;
+  ) => Effect.Effect<GitHubProjectCheckoutResult, GitHubProjectProvisionError>;
+}
+
+const ERROR_DEFAULTS: Record<
+  GitHubProjectProvisionErrorCode,
+  {
+    readonly stage: GitHubProjectProvisionErrorStage;
+    readonly correctiveAction: string;
+    readonly retryable: boolean;
+  }
+> = {
+  REPOSITORY_INVALID: {
+    stage: "validation",
+    correctiveAction: "Enter owner/repository or a GitHub.com repository URL.",
+    retryable: false,
+  },
+  REPOSITORY_NOT_FOUND: {
+    stage: "access",
+    correctiveAction:
+      "Check the owner and repository name, then verify that the current account can access it.",
+    retryable: false,
+  },
+  GITHUB_AUTH_REQUIRED: {
+    stage: "access",
+    correctiveAction: "Sign in with GitHub CLI or configure Git credentials, then retry.",
+    retryable: false,
+  },
+  GITHUB_AUTH_INVALID: {
+    stage: "access",
+    correctiveAction: "Refresh the GitHub credentials on this server, then retry.",
+    retryable: false,
+  },
+  FORK_DESTINATION_INVALID: {
+    stage: "validation",
+    correctiveAction: "Choose a valid GitHub account or organization for the fork.",
+    retryable: false,
+  },
+  FORK_FAILED: {
+    stage: "fork",
+    correctiveAction:
+      "Verify source access and permission to create repositories in the destination account, then retry.",
+    retryable: true,
+  },
+  CLONE_TRANSPORT_FAILED: {
+    stage: "clone",
+    correctiveAction: "Check the server network connection and GitHub availability, then retry.",
+    retryable: true,
+  },
+  CLONE_CREDENTIAL_FAILED: {
+    stage: "clone",
+    correctiveAction:
+      "Configure Git credentials that can read this repository, or use a public repository, then retry.",
+    retryable: false,
+  },
+  CLONE_TIMEOUT: {
+    stage: "clone",
+    correctiveAction:
+      "For a very large repository, clone it manually and add the resulting local folder.",
+    retryable: false,
+  },
+  CLONE_VERIFICATION_FAILED: {
+    stage: "clone",
+    correctiveAction: "Retry the clone. If it fails again, add a verified local checkout instead.",
+    retryable: true,
+  },
+  DESTINATION_INVALID: {
+    stage: "validation",
+    correctiveAction: "Choose a valid absolute destination and folder name.",
+    retryable: false,
+  },
+  DESTINATION_MISSING: {
+    stage: "destination",
+    correctiveAction: "Create the parent folder or choose an existing destination, then retry.",
+    retryable: false,
+  },
+  DESTINATION_UNWRITABLE: {
+    stage: "destination",
+    correctiveAction: "Choose a destination the Forkara server can write to, then retry.",
+    retryable: false,
+  },
+  DESTINATION_CONFLICT: {
+    stage: "destination",
+    correctiveAction:
+      "Choose another folder name or remove the conflicting destination, then retry.",
+    retryable: false,
+  },
+  FILESYSTEM_FAILED: {
+    stage: "filesystem",
+    correctiveAction: "Check the destination filesystem and retry, or choose another destination.",
+    retryable: true,
+  },
+  DISK_FULL: {
+    stage: "filesystem",
+    correctiveAction: "Free disk space or choose another destination, then retry.",
+    retryable: false,
+  },
+  REGISTRATION_FAILED: {
+    stage: "registration",
+    correctiveAction:
+      "Retry to register the recovered checkout. If it still fails, add that local folder directly.",
+    retryable: true,
+  },
+  CANCELLED: {
+    stage: "cancellation",
+    correctiveAction: "Retry when you are ready. The interrupted checkout was cleaned up safely.",
+    retryable: true,
+  },
+  INTERNAL: {
+    stage: "internal",
+    correctiveAction:
+      "Retry once. If the problem continues, copy the technical details for support.",
+    retryable: true,
+  },
+};
+
+export function redactProvisioningTechnicalDetails(cause: unknown): string | null {
+  const raw = extractErrorDetail(cause).trim();
+  if (!raw) return null;
+  const redacted = redactSensitiveProcessArgs(raw)
+    .replace(/(https?:\/\/)[^\s/@:]+(?::[^\s/@]*)?@/gi, "$1[REDACTED]@")
+    .replace(/\bgithub_pat_[A-Za-z0-9_]+\b/g, "[REDACTED]")
+    .replace(/\bgh[pousr]_[A-Za-z0-9_]+\b/g, "[REDACTED]")
+    .replace(/\b(Authorization\s*:\s*)[^\r\n]+/gi, "$1[REDACTED]")
+    .replace(/\b(Bearer|Basic)\s+[A-Za-z0-9._~+/=-]+/gi, "$1 [REDACTED]")
+    .replace(
+      /([?&](?:access_?token|auth(?:orization)?|code|credential|key|password|secret|token)=)[^&#\s]+/gi,
+      "$1[REDACTED]",
+    )
+    .replace(
+      /((?:api[_-]?key|access[_-]?token|auth(?:orization)?|credential|github[_-]?token|password|secret|token)\s*[:=]\s*)[^\s,;]+/gi,
+      "$1[REDACTED]",
+    );
+  return redacted.slice(0, MAX_TECHNICAL_DETAILS_LENGTH);
 }
 
 function provisioningError(
-  code: GitHubProjectProvisioningErrorCode,
-  message: string,
-  retryable: boolean,
-  cause?: unknown,
-): GitHubProjectProvisioningError {
-  return new GitHubProjectProvisioningError({
+  code: GitHubProjectProvisionErrorCode,
+  summary: string,
+  options?: Readonly<
+    {
+      readonly cause?: unknown;
+    } & Partial<{
+      readonly stage: GitHubProjectProvisionErrorStage;
+      readonly correctiveAction: string;
+      readonly retryable: boolean;
+    }>
+  >,
+): ClassifiedProvisioningError {
+  const defaults = ERROR_DEFAULTS[code];
+  return new ClassifiedProvisioningError({
+    stage: options?.stage ?? defaults.stage,
     code,
-    message,
-    retryable,
-    ...(cause === undefined ? {} : { cause }),
+    summary,
+    correctiveAction: options?.correctiveAction ?? defaults.correctiveAction,
+    technicalDetails:
+      options && "cause" in options ? redactProvisioningTechnicalDetails(options.cause) : null,
+    retryable: options?.retryable ?? defaults.retryable,
+  });
+}
+
+function toSharedProvisioningError(
+  operationId: string,
+  error: ClassifiedProvisioningError,
+): GitHubProjectProvisionError {
+  return new GitHubProjectProvisionError({
+    operationId,
+    stage: error.stage,
+    code: error.code,
+    summary: error.summary,
+    correctiveAction: error.correctiveAction,
+    technicalDetails: error.technicalDetails,
+    retryable: error.retryable,
   });
 }
 
@@ -128,8 +281,25 @@ function hasTag(
   );
 }
 
-function isGitHubProjectProvisioningError(cause: unknown): cause is GitHubProjectProvisioningError {
-  return hasTag(cause, "GitHubProjectProvisioningError");
+function isGitHubProjectProvisioningError(cause: unknown): cause is ClassifiedProvisioningError {
+  return hasTag(cause, "ClassifiedProvisioningError");
+}
+
+export function makeGitHubProjectProvisionError(
+  operationId: string,
+  code: GitHubProjectProvisionErrorCode,
+  summary: string,
+  options?: Readonly<
+    {
+      readonly cause?: unknown;
+    } & Partial<{
+      readonly stage: GitHubProjectProvisionErrorStage;
+      readonly correctiveAction: string;
+      readonly retryable: boolean;
+    }>
+  >,
+): GitHubProjectProvisionError {
+  return toSharedProvisioningError(operationId, provisioningError(code, summary, options));
 }
 
 function isGitHubCliError(cause: unknown): cause is GitHubCliError {
@@ -186,8 +356,14 @@ function getPlatformErrorReasonTag(cause: unknown): string | null {
   if (errorCode === "EACCES") {
     return "PermissionDenied";
   }
+  if (errorCode === "ENOENT") {
+    return "NotFound";
+  }
+  if (errorCode === "ENOSPC") {
+    return "NoSpace";
+  }
 
-  if (!hasTag(cause, "SystemError")) {
+  if (!hasTag(cause, "PlatformError") && !hasTag(cause, "SystemError")) {
     return null;
   }
   if (typeof cause.reason !== "object" || cause.reason === null || !("_tag" in cause.reason)) {
@@ -225,18 +401,29 @@ function classifyGitHubFailure(
   cause: unknown,
   operationLabel: string,
   repository: string,
-): GitHubProjectProvisioningError {
+): ClassifiedProvisioningError {
   if (isGitHubProjectProvisioningError(cause)) return cause;
 
   const detail = extractErrorDetail(cause);
   const lower = detail.toLowerCase();
 
+  if (
+    lower.includes("bad credentials") ||
+    lower.includes("authentication failed") ||
+    lower.includes("http 401") ||
+    lower.includes("401 unauthorized")
+  ) {
+    return provisioningError(
+      "GITHUB_AUTH_INVALID",
+      `${operationLabel}: GitHub rejected the configured credentials for ${repository}.`,
+      { cause },
+    );
+  }
   if (isAuthRequired(lower)) {
     return provisioningError(
-      "AUTH_REQUIRED",
+      "GITHUB_AUTH_REQUIRED",
       `${operationLabel}: GitHub authentication is required for ${repository}.`,
-      false,
-      cause,
+      { cause },
     );
   }
   if (
@@ -247,8 +434,7 @@ function classifyGitHubFailure(
     return provisioningError(
       "REPOSITORY_NOT_FOUND",
       `${operationLabel}: Repository ${repository} was not found.`,
-      false,
-      cause,
+      { cause },
     );
   }
   if (
@@ -257,17 +443,15 @@ function classifyGitHubFailure(
     lower.includes("not permitted")
   ) {
     return provisioningError(
-      "PERMISSION_DENIED",
-      `${operationLabel}: The GitHub account does not have permission for ${repository}.`,
-      false,
-      cause,
+      "GITHUB_AUTH_INVALID",
+      `${operationLabel}: The current GitHub account cannot access ${repository}.`,
+      { cause },
     );
   }
   return provisioningError(
-    "CLONE_FAILED",
-    `${operationLabel}: The GitHub operation failed for ${repository}. Check permissions and retry.`,
-    true,
-    cause,
+    "FORK_FAILED",
+    `${operationLabel}: GitHub could not complete the fork operation for ${repository}.`,
+    { cause },
   );
 }
 
@@ -282,7 +466,7 @@ function resolveForkSourceInfo(
   reporter: GitHubProjectProvisioningProgressReporter,
   operationId: string,
   github: GitHubCliShape,
-): Effect.Effect<GitHubForkSourceInfo, GitHubProjectProvisioningError> {
+): Effect.Effect<GitHubForkSourceInfo, ClassifiedProvisioningError> {
   return Effect.gen(function* () {
     const raw = yield* github
       .execute({
@@ -301,8 +485,7 @@ function resolveForkSourceInfo(
         provisioningError(
           "REPOSITORY_NOT_FOUND",
           `Unable to inspect fork metadata for ${repository}.`,
-          false,
-          cause,
+          { cause },
         ),
       ),
     );
@@ -329,7 +512,7 @@ function ensureFork(
   reporter: GitHubProjectProvisioningProgressReporter,
   operationId: string,
   github: GitHubCliShape,
-): Effect.Effect<GitHubForkPlan, GitHubProjectProvisioningError> {
+): Effect.Effect<GitHubForkPlan, ClassifiedProvisioningError> {
   if (forkSource.isFork) {
     return Effect.succeed({
       cloneRepository: sourceRepository,
@@ -342,9 +525,8 @@ function ensureFork(
   if (!isValidGitHubOwner(forkDestinationOwner)) {
     return Effect.fail(
       provisioningError(
-        "INVALID_DESTINATION",
-        "Choose a valid destination account or organization.",
-        false,
+        "FORK_DESTINATION_INVALID",
+        "The fork destination account or organization is invalid.",
       ),
     );
   }
@@ -401,7 +583,7 @@ function setUpstreamRemote(
   operationId: string,
   git: GitCoreShape,
   github: GitHubCliShape,
-): Effect.Effect<void, GitHubProjectProvisioningError> {
+): Effect.Effect<void, ClassifiedProvisioningError> {
   if (!upstreamRepository) {
     return Effect.void;
   }
@@ -515,7 +697,7 @@ function createCloneProgressChunkHandler(
   };
 }
 
-function classifyCloneFailure(cause: unknown): GitHubProjectProvisioningError {
+function classifyCloneFailure(cause: unknown): ClassifiedProvisioningError {
   if (isGitHubProjectProvisioningError(cause)) return cause;
 
   const detail = extractErrorDetail(cause);
@@ -532,8 +714,7 @@ function classifyCloneFailure(cause: unknown): GitHubProjectProvisioningError {
     return provisioningError(
       "CLONE_TIMEOUT",
       "The repository clone exceeded Forkara's 30-minute limit. For very large repositories, clone it manually and add the local folder instead.",
-      false,
-      cause,
+      { cause },
     );
   }
 
@@ -545,8 +726,7 @@ function classifyCloneFailure(cause: unknown): GitHubProjectProvisioningError {
     return provisioningError(
       "REPOSITORY_NOT_FOUND",
       "The GitHub repository was not found, or the current account cannot access it.",
-      false,
-      cause,
+      { cause },
     );
   }
   if (
@@ -563,10 +743,9 @@ function classifyCloneFailure(cause: unknown): GitHubProjectProvisioningError {
     lower.includes("403 forbidden")
   ) {
     return provisioningError(
-      "AUTH_REQUIRED",
-      "GitHub authentication is required. Sign in with `gh auth login` or configure Git credentials, then retry.",
-      false,
-      cause,
+      "CLONE_CREDENTIAL_FAILED",
+      "GitHub rejected the credentials used for this clone.",
+      { cause },
     );
   }
   if (
@@ -578,59 +757,60 @@ function classifyCloneFailure(cause: unknown): GitHubProjectProvisioningError {
     lower.includes("timed out")
   ) {
     return provisioningError(
-      "NETWORK_ERROR",
-      "Forkara could not reach GitHub. Check the server's network connection and retry.",
-      true,
-      cause,
+      "CLONE_TRANSPORT_FAILED",
+      "Forkara could not reach GitHub while cloning the repository.",
+      { cause },
     );
   }
   if (lower.includes("no space left on device") || lower.includes("disk full")) {
     return provisioningError(
       "DISK_FULL",
       "The repository could not be cloned because the destination disk is full.",
-      false,
-      cause,
+      { cause },
     );
   }
   if (lower.includes("permission denied") || lower.includes("operation not permitted")) {
     return provisioningError(
-      "PERMISSION_DENIED",
+      "DESTINATION_UNWRITABLE",
       "Forkara does not have permission to write to the selected destination.",
-      false,
-      cause,
+      { cause },
     );
   }
   return provisioningError(
-    "CLONE_FAILED",
-    "The GitHub repository could not be cloned. Check the repository and Git configuration, then retry.",
-    true,
-    cause,
+    "INTERNAL",
+    "The repository could not be cloned because of an unexpected internal failure.",
+    { cause },
   );
 }
 
-function classifyPromotionFailure(cause: unknown): GitHubProjectProvisioningError {
+function classifyPromotionFailure(cause: unknown): ClassifiedProvisioningError {
   const reason = getPlatformErrorReasonTag(cause);
   if (reason === "AlreadyExists") {
     return provisioningError(
       "DESTINATION_CONFLICT",
       "The destination appeared while the repository was cloning. Choose another folder name or retry after removing it.",
-      false,
-      cause,
+      { cause },
     );
   }
   if (reason === "PermissionDenied") {
     return provisioningError(
-      "PERMISSION_DENIED",
+      "DESTINATION_UNWRITABLE",
       "Forkara does not have permission to move the cloned repository into the selected destination.",
-      false,
-      cause,
+      { cause },
+    );
+  }
+  const detail = extractErrorDetail(cause).toLowerCase();
+  if (reason === "NoSpace" || detail.includes("no space left") || detail.includes("disk full")) {
+    return provisioningError(
+      "DISK_FULL",
+      "The cloned repository could not be moved because the destination disk is full.",
+      { cause },
     );
   }
   return provisioningError(
-    "CLONE_FAILED",
+    "FILESYSTEM_FAILED",
     "The cloned repository could not be moved into the selected destination. Retry or choose another folder.",
-    true,
-    cause,
+    { cause },
   );
 }
 
@@ -710,15 +890,33 @@ export const makeGitHubProjectProvisioner = Effect.fn(function* (
     workspaceRoot: string,
     repository: string,
   ) {
-    const stat = yield* fileSystem
-      .stat(workspaceRoot)
-      .pipe(Effect.catch(() => Effect.succeed(null)));
+    const stat = yield* fileSystem.stat(workspaceRoot).pipe(
+      Effect.catch((cause) => {
+        const reason = getPlatformErrorReasonTag(cause);
+        if (reason === "NotFound") return Effect.succeed(null);
+        if (reason === "PermissionDenied") {
+          return Effect.fail(
+            provisioningError(
+              "DESTINATION_UNWRITABLE",
+              "Forkara cannot inspect the selected destination.",
+              { cause },
+            ),
+          );
+        }
+        return Effect.fail(
+          provisioningError(
+            "FILESYSTEM_FAILED",
+            "Forkara could not inspect the selected destination.",
+            { cause },
+          ),
+        );
+      }),
+    );
     if (!stat) return null;
     if (stat.type !== "Directory") {
       return yield* provisioningError(
         "DESTINATION_CONFLICT",
         "The destination already exists and is not a directory. Choose another folder name.",
-        false,
       );
     }
     const matches = yield* verifyCheckout(workspaceRoot, repository);
@@ -726,7 +924,6 @@ export const makeGitHubProjectProvisioner = Effect.fn(function* (
       return yield* provisioningError(
         "DESTINATION_CONFLICT",
         "The destination already contains different files or a different repository. Choose another folder name.",
-        false,
       );
     }
     return {
@@ -737,6 +934,39 @@ export const makeGitHubProjectProvisioner = Effect.fn(function* (
       forkCreated: false,
       recoveryPath: null,
     };
+  });
+
+  const verifyParentWritable = Effect.fnUntraced(function* (parent: string) {
+    const probe = yield* fileSystem
+      .makeTempDirectory({ directory: parent, prefix: ".forkara-write-check-" })
+      .pipe(
+        Effect.mapError((cause) => {
+          const detail = extractErrorDetail(cause).toLowerCase();
+          if (detail.includes("no space left") || detail.includes("disk full")) {
+            return provisioningError(
+              "DISK_FULL",
+              "The selected destination does not have enough free disk space.",
+              { cause },
+            );
+          }
+          return provisioningError(
+            "DESTINATION_UNWRITABLE",
+            "Forkara cannot write to the selected destination folder.",
+            { cause },
+          );
+        }),
+      );
+    yield* fileSystem
+      .remove(probe, { recursive: true, force: true })
+      .pipe(
+        Effect.mapError((cause) =>
+          provisioningError(
+            "FILESYSTEM_FAILED",
+            "Forkara could not remove its destination write-access probe.",
+            { cause },
+          ),
+        ),
+      );
   });
 
   const cloneToStaging = Effect.fnUntraced(function* (
@@ -794,26 +1024,23 @@ export const makeGitHubProjectProvisioner = Effect.fn(function* (
       const repository = parseGitHubRepositoryInput(input.repository);
       if (!repository) {
         return yield* provisioningError(
-          "INVALID_REPOSITORY",
+          "REPOSITORY_INVALID",
           "Enter a GitHub repository as `owner/repository` or a GitHub.com repository URL.",
-          false,
         );
       }
 
       if (input.operation === "clone" && input.forkDestinationOwner !== null) {
         return yield* provisioningError(
-          "INVALID_DESTINATION",
+          "FORK_DESTINATION_INVALID",
           "A fork destination is accepted only for fork and clone.",
-          false,
         );
       }
 
       const directoryName = normalizeProjectDirectoryName(input.directoryName);
       if (!directoryName) {
         return yield* provisioningError(
-          "INVALID_DESTINATION",
+          "DESTINATION_INVALID",
           "Choose a valid folder name without path separators or reserved characters.",
-          false,
         );
       }
 
@@ -826,21 +1053,40 @@ export const makeGitHubProjectProvisioner = Effect.fn(function* (
             : rawParent;
       if (!path.isAbsolute(expandedParent)) {
         return yield* provisioningError(
-          "INVALID_DESTINATION",
+          "DESTINATION_INVALID",
           "Choose an absolute destination folder on the Forkara server.",
-          false,
         );
       }
 
       const resolvedParent = path.resolve(expandedParent);
-      const parentStat = yield* fileSystem
-        .stat(resolvedParent)
-        .pipe(Effect.catch(() => Effect.succeed(null)));
-      if (!parentStat || parentStat.type !== "Directory") {
+      const parentStat = yield* fileSystem.stat(resolvedParent).pipe(
+        Effect.mapError((cause) => {
+          const reason = getPlatformErrorReasonTag(cause);
+          if (reason === "NotFound") {
+            return provisioningError(
+              "DESTINATION_MISSING",
+              "The destination parent folder does not exist.",
+              { cause },
+            );
+          }
+          if (reason === "PermissionDenied") {
+            return provisioningError(
+              "DESTINATION_UNWRITABLE",
+              "Forkara cannot inspect the destination parent folder.",
+              { cause },
+            );
+          }
+          return provisioningError(
+            "FILESYSTEM_FAILED",
+            "Forkara could not inspect the destination parent folder.",
+            { cause },
+          );
+        }),
+      );
+      if (parentStat.type !== "Directory") {
         return yield* provisioningError(
-          "INVALID_DESTINATION",
-          "The destination folder does not exist or is not a directory.",
-          false,
+          "DESTINATION_INVALID",
+          "The selected destination parent is not a directory.",
         );
       }
       const parent = yield* fileSystem
@@ -848,10 +1094,9 @@ export const makeGitHubProjectProvisioner = Effect.fn(function* (
         .pipe(
           Effect.mapError((cause) =>
             provisioningError(
-              "INVALID_DESTINATION",
+              "DESTINATION_UNWRITABLE",
               "The destination folder could not be resolved.",
-              false,
-              cause,
+              { cause },
             ),
           ),
         );
@@ -874,10 +1119,9 @@ export const makeGitHubProjectProvisioner = Effect.fn(function* (
                       const detail = extractErrorDetail(cause);
                       if (isAuthRequired(detail.toLowerCase()) || isGitHubCliUnavailable(cause)) {
                         return provisioningError(
-                          "AUTH_REQUIRED",
+                          "GITHUB_AUTH_REQUIRED",
                           "Fork and clone requires GitHub CLI authentication. Run `gh auth login`, then retry.",
-                          false,
-                          cause,
+                          { cause },
                         );
                       }
                       return classifyGitHubFailure(
@@ -918,6 +1162,8 @@ export const makeGitHubProjectProvisioner = Effect.fn(function* (
             };
           }
 
+          yield* verifyParentWritable(parent);
+
           yield* publishPhase(
             reporter,
             input.operationId,
@@ -949,9 +1195,9 @@ export const makeGitHubProjectProvisioner = Effect.fn(function* (
             const valid = yield* verifyCheckout(stagingPath, forkPlan.cloneRepository);
             if (!valid) {
               return yield* provisioningError(
-                "CLONE_FAILED",
+                "CLONE_VERIFICATION_FAILED",
                 "The cloned repository's origin does not match the requested GitHub fork.",
-                false,
+                { retryable: false },
               );
             }
 
@@ -1006,7 +1252,11 @@ export const makeGitHubProjectProvisioner = Effect.fn(function* (
           );
         }),
       );
-    }).pipe(Effect.mapError(classifyCloneFailure));
+    }).pipe(
+      Effect.mapError((cause) =>
+        toSharedProvisioningError(input.operationId, classifyCloneFailure(cause)),
+      ),
+    );
 
   return { provisionCheckout };
 });

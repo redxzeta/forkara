@@ -25,6 +25,7 @@ import {
   WS_METHODS,
   WsCompatibilityError,
   WsFeatureRpcGroup,
+  GitHubProjectProvisionError,
   type AutomationStreamEvent,
   type GitActionProgressEvent,
   type GitCreateDetachedWorktreeResult,
@@ -118,6 +119,24 @@ export function isRuntimeInterruptFailure(error: unknown): boolean {
 export interface WsRequestOptions {
   readonly timeoutMs?: number | null;
   readonly signal?: AbortSignal;
+}
+
+export function projectProvisionCancellationError(
+  method: string,
+  params: unknown,
+): GitHubProjectProvisionError | null {
+  if (method !== WS_METHODS.projectsProvisionFromGitHub) return null;
+  const operationId = (params as { readonly operationId?: unknown } | null)?.operationId;
+  if (typeof operationId !== "string" || operationId.trim().length === 0) return null;
+  return new GitHubProjectProvisionError({
+    operationId,
+    stage: "cancellation",
+    code: "CANCELLED",
+    summary: "GitHub project provisioning was cancelled.",
+    correctiveAction: "Retry when you are ready. Any interrupted checkout was recovered safely.",
+    technicalDetails: null,
+    retryable: true,
+  });
 }
 
 interface RequestAbortScope {
@@ -839,6 +858,8 @@ export class WsTransport {
         });
       }
       if (requestOptions.signal?.aborted) {
+        const cancellation = projectProvisionCancellationError(method, params);
+        if (cancellation) throw cancellation;
         throw new WsTransportRequestInterruptedError({
           message: `WebSocket RPC ${method} was cancelled.`,
           code: "WS_REQUEST_ABORTED",

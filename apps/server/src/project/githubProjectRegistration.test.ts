@@ -1,7 +1,10 @@
 import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
 
-import type { GitHubProjectCheckoutResult } from "./githubProjectProvisioning";
+import {
+  makeGitHubProjectProvisionError,
+  type GitHubProjectCheckoutResult,
+} from "./githubProjectProvisioning";
 import { recoverUnregisteredGitHubCheckout } from "./githubProjectRegistration";
 
 function checkout(kind: "created" | "reused"): GitHubProjectCheckoutResult {
@@ -46,5 +49,38 @@ describe("recoverUnregisteredGitHubCheckout", () => {
     );
 
     expect(moved).toBe(false);
+  });
+
+  it("finishes checkout recovery before mapping the registration failure", async () => {
+    const events: string[] = [];
+    const failure = await Effect.runPromise(
+      Effect.fail(new Error("registration secret=private-value")).pipe(
+        Effect.onError(() =>
+          recoverUnregisteredGitHubCheckout({
+            checkout: checkout("created"),
+            registrationCommitted: false,
+            moveWorkspaceRoot: () => Effect.sync(() => events.push("recovered")),
+          }),
+        ),
+        Effect.mapError((cause) => {
+          events.push("mapped");
+          return makeGitHubProjectProvisionError(
+            "operation-1",
+            "REGISTRATION_FAILED",
+            "Forkara cloned the repository but could not register the project.",
+            { cause },
+          );
+        }),
+        Effect.flip,
+      ),
+    );
+
+    expect(events).toEqual(["recovered", "mapped"]);
+    expect(failure).toMatchObject({
+      operationId: "operation-1",
+      stage: "registration",
+      code: "REGISTRATION_FAILED",
+    });
+    expect(failure.technicalDetails).not.toContain("private-value");
   });
 });

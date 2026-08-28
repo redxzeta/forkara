@@ -1,5 +1,6 @@
 import "../index.css";
 
+import { GitHubProjectProvisionError } from "@forkara/contracts";
 import { page } from "vitest/browser";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -132,6 +133,106 @@ describe("CreateProjectDialog GitHub source", () => {
 
     await expect.element(page.getByRole("alert")).toHaveTextContent("Choose a valid folder name");
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("preserves form state and retries an actionable typed failure with a new operation id", async () => {
+    const onSubmit = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new GitHubProjectProvisionError({
+          operationId: "server-operation-placeholder",
+          stage: "clone",
+          code: "CLONE_TRANSPORT_FAILED",
+          summary: "Forkara could not reach GitHub while cloning.",
+          correctiveAction: "Check the server network connection and retry.",
+          technicalDetails: "connection reset by peer",
+          retryable: true,
+        }),
+      )
+      .mockResolvedValueOnce(undefined);
+    await render(
+      <CreateProjectDialog
+        open
+        githubProvisioningAvailable
+        spaces={[]}
+        activeSpaceId={null}
+        defaultCloneParent="/Users/test/Developer"
+        onOpenChange={vi.fn()}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    await page.getByRole("radio", { name: "GitHub" }).click();
+    await page.getByLabelText("Repository").fill("openai/codex");
+    await page.getByLabelText("Clone into").fill("/tmp/projects");
+    await page.getByLabelText("Folder name").fill("codex-checkout");
+    await page.getByRole("button", { name: "Clone and add" }).click();
+
+    const alert = page.getByRole("alert", { name: "Operation failed" });
+    await expect.element(alert).toBeVisible();
+    expect(alert.element().textContent).toContain("Check the server network connection");
+    expect((page.getByLabelText("Repository").element() as HTMLInputElement).value).toBe(
+      "openai/codex",
+    );
+    expect((page.getByLabelText("Clone into").element() as HTMLInputElement).value).toBe(
+      "/tmp/projects",
+    );
+    expect((page.getByLabelText("Folder name").element() as HTMLInputElement).value).toBe(
+      "codex-checkout",
+    );
+    await page.getByRole("button", { name: "Technical details" }).click();
+    expect(alert.element().textContent).toContain("connection reset by peer");
+
+    await page.getByRole("button", { name: "Retry" }).click();
+    await vi.waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(2));
+    const first = onSubmit.mock.calls[0]?.[0];
+    const retry = onSubmit.mock.calls[1]?.[0];
+    expect(retry).toMatchObject({
+      repository: first.repository,
+      destinationParent: first.destinationParent,
+      directoryName: first.directoryName,
+      operation: first.operation,
+      spaceId: first.spaceId,
+    });
+    expect(retry.operationId).not.toBe(first.operationId);
+  });
+
+  it("dismisses a non-retryable typed failure without replacing it with local validation copy", async () => {
+    const onSubmit = vi.fn().mockRejectedValue(
+      new GitHubProjectProvisionError({
+        operationId: "operation-auth",
+        stage: "access",
+        code: "GITHUB_AUTH_INVALID",
+        summary: "GitHub rejected the configured credentials.",
+        correctiveAction: "Refresh the GitHub credentials on this server.",
+        technicalDetails: null,
+        retryable: false,
+      }),
+    );
+    await render(
+      <CreateProjectDialog
+        open
+        githubProvisioningAvailable
+        spaces={[]}
+        activeSpaceId={null}
+        defaultCloneParent="/Users/test/Developer"
+        onOpenChange={vi.fn()}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    await page.getByRole("radio", { name: "GitHub" }).click();
+    await page.getByLabelText("Repository").fill("openai/codex");
+    await page.getByRole("button", { name: "Clone and add" }).click();
+    await expect
+      .element(page.getByRole("alert", { name: "Operation failed" }))
+      .toHaveTextContent("Refresh the GitHub credentials");
+    expect(page.getByRole("button", { name: "Retry" }).query()).toBeNull();
+    await page.getByRole("button", { name: "Dismiss" }).click();
+    expect(page.getByRole("alert", { name: "Operation failed" }).query()).toBeNull();
+    expect((page.getByLabelText("Repository").element() as HTMLInputElement).value).toBe(
+      "openai/codex",
+    );
   });
 
   it("aborts the active clone when the dialog is closed", async () => {
