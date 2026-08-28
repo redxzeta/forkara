@@ -36,6 +36,7 @@ import {
   SNAPSHOT_FAULT_RETRY_MS,
   isRuntimeInterruptFailure,
   makeRequestAbortScope,
+  projectProvisionCancellationError,
   negotiateOverHttp,
   serverIdentityChanged,
   MAX_RESNAPSHOT_RETRY_ATTEMPTS,
@@ -1261,6 +1262,21 @@ describe("WsTransport", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("maps only Add Project request aborts to the shared operation-scoped cancellation", () => {
+    expect(
+      projectProvisionCancellationError(WS_METHODS.projectsProvisionFromGitHub, {
+        operationId: "operation-cancelled",
+      }),
+    ).toMatchObject({
+      _tag: "GitHubProjectProvisionError",
+      operationId: "operation-cancelled",
+      stage: "cancellation",
+      code: "CANCELLED",
+      retryable: true,
+    });
+    expect(projectProvisionCancellationError(WS_METHODS.projectsListDirectories, {})).toBeNull();
   });
 
   it("keeps the shared lifecycle stream while either lifecycle channel is active", () => {

@@ -7,9 +7,65 @@ const BoundedRepositoryInput = TrimmedNonEmptyString.check(Schema.isMaxLength(51
 const BoundedPath = TrimmedNonEmptyString.check(Schema.isMaxLength(4_096));
 const BoundedDirectoryName = TrimmedNonEmptyString.check(Schema.isMaxLength(255));
 const BoundedGitHubOwner = TrimmedNonEmptyString.check(Schema.isMaxLength(39));
+const BoundedProvisioningSummary = TrimmedNonEmptyString.check(Schema.isMaxLength(320));
+const BoundedCorrectiveAction = TrimmedNonEmptyString.check(Schema.isMaxLength(640));
+const BoundedTechnicalDetails = Schema.String.check(Schema.isMaxLength(4_096));
 
 export const GitHubProjectProvisionOperation = Schema.Literals(["clone", "fork-and-clone"]);
 export type GitHubProjectProvisionOperation = typeof GitHubProjectProvisionOperation.Type;
+
+export const GitHubProjectProvisionErrorStage = Schema.Literals([
+  "validation",
+  "access",
+  "fork",
+  "clone",
+  "destination",
+  "filesystem",
+  "registration",
+  "cancellation",
+  "internal",
+]);
+export type GitHubProjectProvisionErrorStage = typeof GitHubProjectProvisionErrorStage.Type;
+
+export const GitHubProjectProvisionErrorCode = Schema.Literals([
+  "REPOSITORY_INVALID",
+  "REPOSITORY_NOT_FOUND",
+  "GITHUB_AUTH_REQUIRED",
+  "GITHUB_AUTH_INVALID",
+  "FORK_DESTINATION_INVALID",
+  "FORK_FAILED",
+  "CLONE_TRANSPORT_FAILED",
+  "CLONE_CREDENTIAL_FAILED",
+  "CLONE_TIMEOUT",
+  "CLONE_VERIFICATION_FAILED",
+  "DESTINATION_INVALID",
+  "DESTINATION_MISSING",
+  "DESTINATION_UNWRITABLE",
+  "DESTINATION_CONFLICT",
+  "FILESYSTEM_FAILED",
+  "DISK_FULL",
+  "REGISTRATION_FAILED",
+  "CANCELLED",
+  "INTERNAL",
+]);
+export type GitHubProjectProvisionErrorCode = typeof GitHubProjectProvisionErrorCode.Type;
+
+/**
+ * Safe, actionable failure transported by the provisioning RPC stream.
+ * `technicalDetails` is nullable so callers never substitute an unredacted cause.
+ */
+export class GitHubProjectProvisionError extends Schema.TaggedErrorClass<GitHubProjectProvisionError>()(
+  "GitHubProjectProvisionError",
+  {
+    operationId: TrimmedNonEmptyString.check(Schema.isMaxLength(128)),
+    stage: GitHubProjectProvisionErrorStage,
+    code: GitHubProjectProvisionErrorCode,
+    summary: BoundedProvisioningSummary,
+    correctiveAction: BoundedCorrectiveAction,
+    technicalDetails: Schema.NullOr(BoundedTechnicalDetails),
+    retryable: Schema.Boolean,
+  },
+) {}
 
 const GitHubProjectProvisionInputBase = {
   operationId: TrimmedNonEmptyString.check(Schema.isMaxLength(128)),

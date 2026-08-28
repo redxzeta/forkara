@@ -15,6 +15,7 @@ import {
   WsCompatibilityError,
   WsDeviceRpcGroup,
   WsFeatureRpcGroup,
+  GitHubProjectProvisionError,
   WsRpcError,
   PullRequestsUnavailableError,
   ResetDepartmentError,
@@ -167,7 +168,7 @@ import { XPostService } from "./xPost/Services/XPostService";
 import { ResetDepartmentService } from "./resetDepartment/Services/ResetDepartmentService";
 import { resolveGitHubRepository } from "./pullRequests/repositoryResolution";
 import {
-  GitHubProjectProvisioningError,
+  makeGitHubProjectProvisionError,
   makeGitHubProjectProvisioner,
 } from "./project/githubProjectProvisioning";
 
@@ -847,12 +848,8 @@ const makeWsRpcHandlersLayer = () =>
         effect.pipe(Effect.mapError((cause) => toWsRpcError(cause, fallbackMessage)));
 
       const toProjectProvisionRpcError = (cause: unknown) =>
-        cause instanceof GitHubProjectProvisioningError
-          ? new WsRpcError({
-              message: cause.message,
-              code: cause.code,
-              retryable: cause.retryable,
-            })
+        cause instanceof GitHubProjectProvisionError
+          ? cause
           : toWsRpcError(cause, "Failed to clone and add the GitHub project");
 
       const findRegisteredProjectId = (workspaceRoot: string) =>
@@ -1248,14 +1245,34 @@ const makeWsRpcHandlersLayer = () =>
           ),
         [WS_METHODS.projectsProvisionFromGitHub]: (input) =>
           bufferLiveUiStream(
-            Stream.callback<GitHubProjectProvisionProgressEvent, WsRpcError>((queue) =>
-              Effect.gen(function* () {
+            Stream.callback<
+              GitHubProjectProvisionProgressEvent,
+              GitHubProjectProvisionError | WsRpcError
+            >((queue) => {
+              let streamOpen = true;
+              const offerIfOpen = (event: GitHubProjectProvisionProgressEvent) =>
+                Effect.suspend(() =>
+                  streamOpen ? Queue.offer(queue, event).pipe(Effect.asVoid) : Effect.void,
+                );
+              const endIfOpen = Effect.suspend(() => {
+                if (!streamOpen) return Effect.void;
+                streamOpen = false;
+                return Queue.end(queue);
+              });
+              const failIfOpen = (cause: GitHubProjectProvisionError | WsRpcError) =>
+                Effect.suspend(() => {
+                  if (!streamOpen) return Effect.void;
+                  streamOpen = false;
+                  return Queue.fail(queue, cause).pipe(Effect.asVoid);
+                });
+
+              return Effect.gen(function* () {
                 const checkout = yield* githubProjectProvisioner.provisionCheckout(input, {
-                  publish: (event) => Queue.offer(queue, event).pipe(Effect.asVoid),
+                  publish: offerIfOpen,
                 });
                 let registrationCommitted = false;
                 const registerCheckout = Effect.gen(function* () {
-                  yield* Queue.offer(queue, {
+                  yield* offerIfOpen({
                     operationId: input.operationId,
                     kind: "phase",
                     phase: "registering",
@@ -1327,6 +1344,14 @@ const makeWsRpcHandlersLayer = () =>
                         fileSystem.rename(workspaceRoot, recoveryPath),
                     }),
                   ),
+                  Effect.mapError((cause) =>
+                    makeGitHubProjectProvisionError(
+                      input.operationId,
+                      "REGISTRATION_FAILED",
+                      "Forkara cloned the repository but could not register the project.",
+                      { cause },
+                    ),
+                  ),
                   // Promotion and registration form one critical section. If the client cancels
                   // after cloning, finish registration first so its workspace is never moved out
                   // from under a committed project. Recovery must share the same guarantee.
@@ -1334,18 +1359,17 @@ const makeWsRpcHandlersLayer = () =>
                 );
 
                 const result = yield* registerCheckout;
-                yield* Queue.offer(queue, {
+                yield* offerIfOpen({
                   operationId: input.operationId,
                   kind: "completed",
                   result,
                 });
-                yield* Queue.end(queue);
+                yield* endIfOpen;
               }).pipe(
-                Effect.catch((cause) =>
-                  Queue.fail(queue, toProjectProvisionRpcError(cause)).pipe(Effect.asVoid),
-                ),
-              ),
-            ),
+                Effect.catch((cause) => failIfOpen(toProjectProvisionRpcError(cause))),
+                Effect.ensuring(Effect.sync(() => (streamOpen = false))),
+              );
+            }),
             { label: "projects.github-provision" },
           ),
         [WS_METHODS.brandingInspect]: (input) =>

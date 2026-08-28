@@ -1,5 +1,10 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { CommandId, ProjectId, type GitHubProjectProvisionInput } from "@forkara/contracts";
+import {
+  CommandId,
+  GitHubProjectProvisionError,
+  ProjectId,
+  type GitHubProjectProvisionInput,
+} from "@forkara/contracts";
 import { Deferred, Effect, Fiber, FileSystem, Path, PlatformError } from "effect";
 import { describe, expect, it } from "vitest";
 
@@ -7,8 +12,8 @@ import { GitCommandError, GitHubCliError } from "../git/Errors";
 import type { GitCoreShape } from "../git/Services/GitCore";
 import type { GitHubCliShape } from "../git/Services/GitHubCli";
 import {
-  GitHubProjectProvisioningError,
   makeGitHubProjectProvisioner,
+  redactProvisioningTechnicalDetails,
 } from "./githubProjectProvisioning";
 
 function makeInput(destinationParent: string): GitHubProjectProvisionInput {
@@ -41,6 +46,28 @@ function unavailableGitHubCli(): GitHubCliShape {
 }
 
 describe("GitHub project provisioning", () => {
+  it("bounds and redacts technical details before transport", () => {
+    const details = redactProvisioningTechnicalDetails(
+      new Error(
+        [
+          "Authorization: Bearer header-secret",
+          "https://user:password@github.com/openai/codex.git?token=query-secret&safe=yes",
+          "GITHUB_TOKEN=assignment-secret",
+          "github_pat_0123456789abcdefghijklmnopqrstuvwxyz",
+          "x".repeat(5_000),
+        ].join("\n"),
+      ),
+    );
+
+    expect(details).not.toContain("header-secret");
+    expect(details).not.toContain("password");
+    expect(details).not.toContain("query-secret");
+    expect(details).not.toContain("assignment-secret");
+    expect(details).not.toContain("github_pat_");
+    expect(details).toContain("[REDACTED]");
+    expect(details?.length).toBeLessThanOrEqual(4_096);
+  });
+
   function makeForkAwareGitHubCliStub(fileSystem: FileSystem.FileSystem): GitHubCliShape {
     const isForkInfo = JSON.stringify({
       isFork: false,
@@ -302,8 +329,13 @@ describe("GitHub project provisioning", () => {
       }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
     );
 
-    expect(failure).toMatchObject({ code: "AUTH_REQUIRED", retryable: false });
-    expect(failure.message).toContain("gh auth login");
+    expect(failure).toMatchObject({
+      operationId: "operation-1",
+      stage: "access",
+      code: "GITHUB_AUTH_REQUIRED",
+      retryable: false,
+    });
+    expect(failure.summary).toContain("gh auth login");
   });
 
   it("rejects a fork destination on clone-only input", async () => {
@@ -328,7 +360,12 @@ describe("GitHub project provisioning", () => {
       }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
     );
 
-    expect(failure).toMatchObject({ code: "INVALID_DESTINATION", retryable: false });
+    expect(failure).toMatchObject({
+      operationId: "operation-1",
+      stage: "validation",
+      code: "FORK_DESTINATION_INVALID",
+      retryable: false,
+    });
   });
 
   it("reuses an existing fork after GitHub reports that it already exists", async () => {
@@ -489,6 +526,80 @@ describe("GitHub project provisioning", () => {
     expect(failure.retryable).toBe(false);
   });
 
+  it("distinguishes a missing destination parent", async () => {
+    const failure = await Effect.runPromise(
+      Effect.gen(function* () {
+        const fileSystem = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const parent = yield* fileSystem.makeTempDirectoryScoped({ prefix: "synara-provision-" });
+        const missing = path.join(parent, "missing");
+        const provisioner = yield* makeGitHubProjectProvisioner({
+          homeDir: parent,
+          fileSystem,
+          path,
+          git: makeGitCoreStub(fileSystem),
+          github: unavailableGitHubCli(),
+        });
+        return yield* provisioner
+          .provisionCheckout(makeInput(missing), { publish: () => Effect.void })
+          .pipe(Effect.flip);
+      }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
+    );
+
+    expect(failure).toMatchObject({
+      operationId: "operation-1",
+      stage: "destination",
+      code: "DESTINATION_MISSING",
+      retryable: false,
+    });
+  });
+
+  it("verifies destination write access before cloning", async () => {
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const fileSystem = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const parent = yield* fileSystem.makeTempDirectoryScoped({ prefix: "synara-provision-" });
+        let cloneStarted = false;
+        const unwritableFileSystem = {
+          ...fileSystem,
+          makeTempDirectory: () =>
+            Effect.fail(
+              PlatformError.systemError({
+                _tag: "PermissionDenied",
+                module: "FileSystem",
+                method: "makeTempDirectory",
+              }),
+            ),
+        } satisfies FileSystem.FileSystem;
+        const git = {
+          execute: () => {
+            cloneStarted = true;
+            return Effect.die("clone must not start");
+          },
+        } as unknown as GitCoreShape;
+        const provisioner = yield* makeGitHubProjectProvisioner({
+          homeDir: parent,
+          fileSystem: unwritableFileSystem,
+          path,
+          git,
+          github: unavailableGitHubCli(),
+        });
+        const failure = yield* provisioner
+          .provisionCheckout(makeInput(parent), { publish: () => Effect.void })
+          .pipe(Effect.flip);
+        return { failure, cloneStarted };
+      }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
+    );
+
+    expect(result.failure).toMatchObject({
+      stage: "destination",
+      code: "DESTINATION_UNWRITABLE",
+      retryable: false,
+    });
+    expect(result.cloneStarted).toBe(false);
+  });
+
   it("preserves transient Git failures while inspecting an existing checkout", async () => {
     const failure = await Effect.runPromise(
       Effect.gen(function* () {
@@ -520,7 +631,7 @@ describe("GitHub project provisioning", () => {
       }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
     );
 
-    expect(failure.code).toBe("NETWORK_ERROR");
+    expect(failure.code).toBe("CLONE_TRANSPORT_FAILED");
     expect(failure.retryable).toBe(true);
   });
 
@@ -557,8 +668,12 @@ describe("GitHub project provisioning", () => {
       }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
     );
 
-    expect(result.failure).toBeInstanceOf(GitHubProjectProvisioningError);
-    expect(result.failure.code).toBe("NETWORK_ERROR");
+    expect(result.failure).toBeInstanceOf(GitHubProjectProvisionError);
+    expect(result.failure).toMatchObject({
+      operationId: "operation-1",
+      stage: "clone",
+      code: "CLONE_TRANSPORT_FAILED",
+    });
     expect(result.entries).toEqual([]);
   });
 
@@ -592,7 +707,7 @@ describe("GitHub project provisioning", () => {
       }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
     );
 
-    expect(failure.code).toBe("AUTH_REQUIRED");
+    expect(failure.code).toBe("CLONE_CREDENTIAL_FAILED");
     expect(failure.retryable).toBe(false);
   });
 
@@ -628,7 +743,7 @@ describe("GitHub project provisioning", () => {
 
     expect(failure.code).toBe("CLONE_TIMEOUT");
     expect(failure.retryable).toBe(false);
-    expect(failure.message).toContain("30-minute limit");
+    expect(failure.summary).toContain("30-minute limit");
   });
 
   it("reports a clone failure when the target appears during promotion", async () => {
@@ -662,8 +777,8 @@ describe("GitHub project provisioning", () => {
       }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
     );
 
-    expect(failure.code).toBe("CLONE_FAILED");
-    expect(failure.retryable).toBe(true);
+    expect(failure.code).toBe("DESTINATION_CONFLICT");
+    expect(failure.retryable).toBe(false);
   });
 
   it("removes its staging directory when an in-flight clone is cancelled", async () => {
