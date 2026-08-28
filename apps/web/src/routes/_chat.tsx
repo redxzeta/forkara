@@ -11,7 +11,8 @@ import {
 import ShortcutsDialog from "../components/ShortcutsDialog";
 import { RecentViewSwitcher } from "../components/RecentViewSwitcher";
 import { shouldRenderTerminalWorkspace } from "../components/ChatView.logic";
-import ThreadSidebar from "../components/Sidebar";
+import ThreadSidebar, { type SidebarShellRenderContract } from "../components/Sidebar";
+import { SidebarShellLayout } from "../components/SidebarShellLayout";
 import { isElectron } from "../env";
 import { useHandleNewChat } from "../hooks/useHandleNewChat";
 import { useHandleNewStudioChat } from "../hooks/useHandleNewStudioChat";
@@ -566,38 +567,44 @@ function ChatRouteLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const resolvedSidebarOpen = isEditorView ? false : sidebarOpen;
 
-  // The thread sidebar always lives on the left; the right dock is a separate surface.
-  const sidebarElement = (
-    <Sidebar
-      side="left"
-      collapsible="offcanvas"
-      // Match the right dock's soft drawer slide (shared token) instead of the
-      // shell's default `ease-linear`. Applied to the container + gap in lockstep.
-      className={cn("text-foreground", SIDEBAR_OFFCANVAS_MOTION_CLASS)}
-      gapClassName={cn(SIDEBAR_GAP_CLASS, SIDEBAR_OFFCANVAS_MOTION_CLASS)}
-      innerClassName={SIDEBAR_INNER_CLASS}
-      transparentSurface
-      resizable={THREAD_SIDEBAR_RESIZABLE}
-    >
-      <ThreadSidebar />
-    </Sidebar>
-  );
-
-  // Chat column shell. The content-seam rail is the resize hit-area for the seam —
-  // the visible straight divider + depth shadow live on the route surface (see
-  // `.chat-content-card` in index.css). It sits OUTSIDE <Sidebar> so it stacks above
-  // the card, so SidebarInstanceProvider re-supplies the same resize config/side it
-  // would have gotten inside <Sidebar> (otherwise dragging to resize stops working).
-  // `data-sidebar-side` on the provider selects the seam geometry.
-  const mainContentShell = (
-    <div className="relative flex h-svh min-h-0 min-w-0 flex-1">
-      {isEditorView ? null : (
-        <SidebarInstanceProvider side="left" resizable={THREAD_SIDEBAR_RESIZABLE}>
-          <SidebarRail placement="content-seam" />
-        </SidebarInstanceProvider>
-      )}
-      <Outlet />
-    </div>
+  const renderSidebarShell = useCallback(
+    ({
+      sidebarContent,
+      projectCreationSurface,
+      hideMainContentOnNarrowScreens,
+    }: SidebarShellRenderContract) => (
+      <SidebarShellLayout
+        sidebar={
+          <Sidebar
+            side="left"
+            collapsible="offcanvas"
+            // Match the right dock's soft drawer slide (shared token) instead of the
+            // shell's default `ease-linear`. Applied to the container + gap in lockstep.
+            className={cn("text-foreground", SIDEBAR_OFFCANVAS_MOTION_CLASS)}
+            gapClassName={cn(SIDEBAR_GAP_CLASS, SIDEBAR_OFFCANVAS_MOTION_CLASS)}
+            innerClassName={SIDEBAR_INNER_CLASS}
+            transparentSurface
+            resizable={THREAD_SIDEBAR_RESIZABLE}
+          >
+            {sidebarContent}
+          </Sidebar>
+        }
+        projectCreationSurface={projectCreationSurface}
+        hideMainContentOnNarrowScreens={hideMainContentOnNarrowScreens}
+        mainContent={
+          <>
+            {/* The content-seam rail is outside Sidebar so it remains above the route card. */}
+            {isEditorView ? null : (
+              <SidebarInstanceProvider side="left" resizable={THREAD_SIDEBAR_RESIZABLE}>
+                <SidebarRail placement="content-seam" />
+              </SidebarInstanceProvider>
+            )}
+            <Outlet />
+          </>
+        }
+      />
+    ),
+    [isEditorView],
   );
 
   return (
@@ -610,8 +617,7 @@ function ChatRouteLayout() {
     >
       <ThreadRetentionMaintenanceToast />
       <ChatRouteGlobalShortcuts />
-      {sidebarElement}
-      {mainContentShell}
+      <ThreadSidebar renderShell={renderSidebarShell} />
     </SidebarProvider>
   );
 }
