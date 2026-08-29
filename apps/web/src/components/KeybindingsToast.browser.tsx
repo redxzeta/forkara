@@ -1,6 +1,7 @@
 import "../index.css";
 
 import {
+  DEFAULT_SERVER_SETTINGS_VIEW,
   DEVICE_WS_METHODS,
   EventId,
   ORCHESTRATION_WS_METHODS,
@@ -8,6 +9,7 @@ import {
   type OrchestrationReadModel,
   type ProjectId,
   type ServerConfig,
+  type ServerSettingsView,
   type ThreadId,
   TurnId,
   type WsWelcomePayload,
@@ -44,6 +46,7 @@ const NOW_ISO = "2026-03-04T12:00:00.000Z";
 interface TestFixture {
   snapshot: OrchestrationReadModel;
   serverConfig: ServerConfig;
+  serverSettings: ServerSettingsView;
   welcome: WsWelcomePayload;
 }
 
@@ -130,6 +133,7 @@ function buildFixture(): TestFixture {
   return {
     snapshot: createMinimalSnapshot(),
     serverConfig: createBaseServerConfig(),
+    serverSettings: DEFAULT_SERVER_SETTINGS_VIEW,
     welcome: {
       cwd: "/repo/project",
       projectName: "Project",
@@ -158,6 +162,9 @@ function resolveWsRpc(tag: string): unknown {
   }
   if (tag === WS_METHODS.serverGetConfig) {
     return fixture.serverConfig;
+  }
+  if (tag === WS_METHODS.serverGetSettings) {
+    return fixture.serverSettings;
   }
   if (tag === WS_METHODS.projectsListDevServers) {
     return { servers: [] };
@@ -309,7 +316,9 @@ async function mountApp(): Promise<{ cleanup: () => Promise<void> }> {
 
   const router = getRouter(createMemoryHistory({ initialEntries: [`/${THREAD_ID}`] }));
 
-  const screen = await render(<RouterProvider router={router} />, { container: host });
+  const screen = await render(<RouterProvider router={router} />, {
+    container: host,
+  });
   try {
     await vi.waitFor(
       () => {
@@ -446,7 +455,10 @@ describe("Keybindings update toast", () => {
   it("[personality-smoke] sends Bully Mode and per-turn precision through the full app", async () => {
     fixture = buildFixture();
     resetAchievementState();
-    localStorage.setItem("synara:app-settings:v1", JSON.stringify({ bullyModeEnabled: true }));
+    fixture.serverSettings = {
+      ...fixture.serverSettings,
+      bullyModeEnabled: true,
+    };
     const completedTurnId = TurnId.makeUnsafe("turn-personality-bully-completed");
     fixture.snapshot = {
       ...fixture.snapshot,
@@ -559,7 +571,10 @@ describe("Keybindings update toast", () => {
 
     try {
       await sendServerConfigUpdatedPush([
-        { kind: "keybindings.malformed-config", message: "Expected JSON array" },
+        {
+          kind: "keybindings.malformed-config",
+          message: "Expected JSON array",
+        },
       ]);
       await waitForToast("Invalid keybindings configuration");
     } finally {
