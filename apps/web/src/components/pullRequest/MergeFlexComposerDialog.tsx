@@ -281,7 +281,7 @@ export function MergeFlexComposerDialog(props: MergeFlexComposerDialogProps) {
         <DialogHeader>
           <div className="flex items-center gap-2">
             <Badge variant={sourceMode === "factual" ? "success" : "warning"}>
-              {sourceMode === "factual" ? "FACTUAL RECEIPTS" : "PARODY · SOURCE: VIBES"}
+              {sourceMode === "factual" ? "FACTUAL RECEIPTS" : "ALLEGED RECEIPTS"}
             </Badge>
             <span className={cn(PR_FINE_TEXT_CLASS_NAME, PR_QUIET_INK_CLASS_NAME)}>
               {sourceMode === "factual" ? `@${props.result.viewer}` : "PR Inflation Department"}
@@ -344,7 +344,9 @@ export function MergeFlexComposerDialog(props: MergeFlexComposerDialogProps) {
             <div className="col-span-2 sm:col-span-1">
               <dt className={cn(PR_FINE_TEXT_CLASS_NAME, PR_QUIET_INK_CLASS_NAME)}>Source</dt>
               <dd className={PR_META_TEXT_CLASS_NAME}>
-                {sourceMode === "factual" ? mergeFlexScopeLabel(props.result) : "Simulated locally"}
+                {sourceMode === "factual"
+                  ? mergeFlexScopeLabel(props.result)
+                  : "Accounting Department"}
               </dd>
             </div>
           </dl>
@@ -448,13 +450,13 @@ export function MergeFlexComposerDialog(props: MergeFlexComposerDialogProps) {
             >
               {sourceMode === "factual"
                 ? "X applies its own weighted-length validation when you explicitly post."
-                : "The final parody marker is appended outside this editor and cannot be removed."}
+                : "Public posts always include the source marker shown in the preview."}
             </p>
           </div>
 
           <div className="space-y-1.5">
             <p className={cn(PR_META_TEXT_CLASS_NAME, "font-medium")}>
-              Final preview · {sourceMode === "factual" ? "factual receipts" : "parody"}
+              Final preview · {sourceMode === "factual" ? "factual receipts" : "source: vibes"}
             </p>
             <blockquote className="whitespace-pre-wrap break-words rounded-xl border border-border/60 bg-muted/20 p-3 text-sm leading-relaxed">
               {activeDraft.length > 0 ? finalPreview : "Your preview will appear here."}
@@ -525,9 +527,7 @@ export function MergeFlexComposerDialog(props: MergeFlexComposerDialogProps) {
           ) : null}
           {postResult ? (
             <div role="status" className="rounded-xl border border-success/30 bg-success/5 p-3">
-              <p className={cn(PR_META_TEXT_CLASS_NAME, "font-medium text-success")}>
-                {sourceMode === "factual" ? "Posted to X" : "Posted parody to X"}
-              </p>
+              <p className={cn(PR_META_TEXT_CLASS_NAME, "font-medium text-success")}>Posted to X</p>
               <Button
                 type="button"
                 size="sm"
@@ -557,13 +557,7 @@ export function MergeFlexComposerDialog(props: MergeFlexComposerDialogProps) {
           </Button>
           <Button type="button" disabled={!canPost} onClick={() => void submit()}>
             {isPosting ? <Spinner /> : null}
-            {isPosting
-              ? "Posting…"
-              : postResult
-                ? "Posted"
-                : sourceMode === "factual"
-                  ? "Post to X"
-                  : "Post parody to X"}
+            {isPosting ? "Posting…" : postResult ? "Posted" : "Post to X"}
           </Button>
         </DialogFooter>
       </DialogPopup>

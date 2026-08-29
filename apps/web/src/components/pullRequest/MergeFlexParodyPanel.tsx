@@ -44,8 +44,7 @@ export function MergeFlexParodyPanel(props: {
       <div>
         <p className={cn(PR_META_TEXT_CLASS_NAME, "font-medium")}>PR Inflation Department</p>
         <p className={cn(PR_FINE_TEXT_CLASS_NAME, PR_QUIET_INK_CLASS_NAME)}>
-          Local parody state only. This never creates pull requests, commits, branches, or GitHub
-          activity.
+          Alleged counts never create pull requests, commits, branches, or GitHub activity.
         </p>
       </div>
 
@@ -103,7 +102,7 @@ export function MergeFlexParodyPanel(props: {
       </fieldset>
 
       <fieldset className="space-y-2" disabled={props.disabled || !props.countValid}>
-        <legend className={cn(PR_META_TEXT_CLASS_NAME, "font-medium")}>Parody template</legend>
+        <legend className={cn(PR_META_TEXT_CLASS_NAME, "font-medium")}>Department template</legend>
         <div className="flex flex-wrap gap-2">
           {MERGE_FLEX_PARODY_TEMPLATES.map((template) => (
             <Button
@@ -144,7 +143,7 @@ export function MergeFlexParodyPanel(props: {
           </Button>
         </div>
         <pre className="max-h-32 overflow-auto whitespace-pre-wrap break-words rounded-md bg-muted/35 p-2 text-[10px] leading-relaxed text-muted-foreground">
-          {agentPrompt ?? "Enter a valid alleged count to prepare the local-only prompt."}
+          {agentPrompt ?? "Enter a valid alleged count to prepare the agent prompt."}
         </pre>
         {copyError ? (
           <p role="alert" className={cn(PR_FINE_TEXT_CLASS_NAME, "text-destructive")}>

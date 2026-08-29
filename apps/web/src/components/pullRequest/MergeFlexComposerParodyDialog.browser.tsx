@@ -66,14 +66,13 @@ describe("MergeFlexComposerDialog parody mode", () => {
     const editor = page.getByLabelText("Post text");
     await editor.fill("Edited factual receipt");
     await page.getByRole("radio", { name: "Resume-Driven Development" }).click();
-    await expect.element(page.getByText("PARODY · SOURCE: VIBES")).toBeInTheDocument();
+    await expect.element(page.getByText("ALLEGED RECEIPTS")).toBeInTheDocument();
 
     const allegedCount = page.getByRole("spinbutton", { name: "Alleged PRs merged today" });
     await allegedCount.fill("1000000");
     await expect.element(page.getByRole("alert")).toHaveTextContent("Enter a whole number");
     expect(
-      (page.getByRole("button", { name: "Post parody to X" }).element() as HTMLButtonElement)
-        .disabled,
+      (page.getByRole("button", { name: "Post to X" }).element() as HTMLButtonElement).disabled,
     ).toBe(true);
 
     await page.getByRole("button", { name: "42", exact: true }).click();
@@ -91,11 +90,11 @@ describe("MergeFlexComposerDialog parody mode", () => {
     await page.getByRole("radio", { name: "Resume-Driven Development" }).click();
     expect((editor.element() as HTMLTextAreaElement).value).toBe("Custom boast with no disclaimer");
 
-    await page.getByRole("button", { name: "Post parody to X" }).click();
+    await page.getByRole("button", { name: "Post to X" }).click();
     await vi.waitFor(() => expect(onPost).toHaveBeenCalledOnce());
     expect(onPost).toHaveBeenCalledWith(
       `Custom boast with no disclaimer\n\n${MERGE_FLEX_PARODY_MARKER}`,
     );
-    await expect.element(page.getByRole("status")).toHaveTextContent("Posted parody to X");
+    await expect.element(page.getByRole("status")).toHaveTextContent("Posted to X");
   });
 });

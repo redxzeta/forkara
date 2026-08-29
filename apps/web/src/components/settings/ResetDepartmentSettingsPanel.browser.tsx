@@ -77,7 +77,7 @@ describe("ResetDepartmentSettingsPanel", () => {
     document.body.innerHTML = "";
   });
 
-  it("keeps every action keyboard reachable and identifies the quota ritual as parody", async () => {
+  it("keeps every action keyboard reachable and lets the quota ritual stand on its own", async () => {
     await render(
       <ResetDepartmentSettingsPanel active workspaceRoot="/workspace" resetApi={resetApi()} />,
     );
@@ -89,7 +89,7 @@ describe("ResetDepartmentSettingsPanel", () => {
     const hardReset = page.getByRole("button", {
       name: "Inspect git reset --hard impact — DANGER",
     });
-    const quota = page.getByRole("button", { name: "Reset Codex Quota — LOL parody" });
+    const quota = page.getByRole("button", { name: "Reset Codex Quota — LOL" });
 
     oracle.element().focus();
     await userEvent.keyboard("{Tab}");
@@ -102,7 +102,7 @@ describe("ResetDepartmentSettingsPanel", () => {
     await userEvent.keyboard("{Enter}");
     await vi.waitFor(() =>
       expect(page.getByRole("status").element().textContent).toContain(
-        "This is a parody; no Codex quota or account state changed.",
+        "Request submitted to the universe.",
       ),
     );
     expect(hasAchievement("reset_pending")).toBe(true);

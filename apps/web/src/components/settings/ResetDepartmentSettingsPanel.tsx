@@ -44,7 +44,7 @@ export const RESET_DEPARTMENT_ACTIONS = [
     icon: "♻️",
     title: "Reset Codex Quota",
     risk: "LOL",
-    description: "A fictional quota reset. No provider or account state is connected.",
+    description: "Submit a quota reset request to the appropriate cosmic authority.",
   },
 ] as const;
 
@@ -147,11 +147,7 @@ export function ResetDepartmentSettingsPanel({
                     data-reset-oracle={oracle ? "true" : undefined}
                     data-reset-quota-parody={quota ? "true" : undefined}
                     aria-describedby={descriptionId}
-                    aria-label={
-                      oracle
-                        ? `${action.title} — ${action.risk}`
-                        : `${action.title} — ${action.risk} parody`
-                    }
+                    aria-label={`${action.title} — ${action.risk}`}
                     onClick={() => {
                       if (oracle) {
                         const result = selectResetOracleResponse(random);
@@ -165,8 +161,7 @@ export function ResetDepartmentSettingsPanel({
                       }
                       if (quota) {
                         recordResetDepartmentAchievement({ type: "reset.quota_parody_used" });
-                        const message =
-                          "Request submitted to the universe. This is a parody; no Codex quota or account state changed.";
+                        const message = "Request submitted to the universe.";
                         setOutcome({ actionId: "quota", message });
                         setStatus(message);
                         return;
@@ -183,8 +178,7 @@ export function ResetDepartmentSettingsPanel({
       </SettingsSectionShell>
 
       <p className="min-h-5 text-xs text-muted-foreground" role="status" aria-live="polite">
-        {status ??
-          "The Oracle and quota parody are harmless. Dependency cleanup requires a preview; Git impact inspection is read-only."}
+        {status ?? "Dependency cleanup requires a preview; Git impact inspection is read-only."}
       </p>
     </div>
   );

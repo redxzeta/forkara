@@ -81,8 +81,7 @@ export function OriginalityMeterReport({ result }: { result: GitOriginalityMeter
           </div>
         ) : null}
         <p className="mt-3 rounded-lg border border-warning/30 bg-warning/5 p-2 text-sm">
-          This score is a joke. It is not a measure of legal originality, authorship, ownership, or
-          license compliance.
+          Not a legal determination of originality, authorship, ownership, or license compliance.
         </p>
       </section>
 
@@ -123,7 +122,7 @@ export function OriginalityMeterReport({ result }: { result: GitOriginalityMeter
 
       <section aria-labelledby="originality-meter-method-heading" className="space-y-2">
         <h3 id="originality-meter-method-heading" className="font-medium text-sm">
-          How the joke is calculated
+          How it is calculated
         </h3>
         <p className="text-muted-foreground text-sm">
           Changed eligible files between the exact Git merge-base and committed HEAD ÷ eligible
@@ -184,16 +183,14 @@ export function EnvironmentOriginalityMeterSection({
             </span>
           ) : null
         }
-        title="Calculate a parody originality score from factual fork changes"
+        title="Calculate an originality score from factual fork changes"
         onClick={() => setOpen(true)}
       />
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogPopup className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Originality Meter™</DialogTitle>
-            <DialogDescription>
-              A deterministic joke built on exact local Git provenance.
-            </DialogDescription>
+            <DialogDescription>Computed from exact local Git provenance.</DialogDescription>
           </DialogHeader>
           <DialogPanel>
             {originalityQuery.isPending ? (

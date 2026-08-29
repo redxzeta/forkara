@@ -13,27 +13,26 @@ function normalizedMarkup(stageIndex: number): string {
 }
 
 describe("ApologyProgressionReport", () => {
-  it("renders every stage in order and marks the current step as satire", () => {
+  it("renders every stage in order and marks the current step", () => {
     const markup = normalizedMarkup(2);
     const indexes = APOLOGY_PROGRESSION_STAGES.map((stage) => markup.lastIndexOf(stage.title));
 
-    expect(markup).toContain("Satire");
-    expect(markup).toContain("Local only");
     expect(markup).toContain('aria-current="step"');
-    expect(markup).toContain("Current satirical stage");
+    expect(markup).toContain("Current stage");
+    expect(markup).not.toContain("Satire");
+    expect(markup).not.toContain("Local only");
     expect(indexes.every((index) => index >= 0)).toBe(true);
     expect(indexes).toEqual(indexes.toSorted((left, right) => left - right));
   });
 
-  it("makes the final stage about attribution without claiming compliance", () => {
+  it("makes the final stage about attribution without another joke disclaimer", () => {
     const markup = normalizedMarkup(APOLOGY_PROGRESSION_STAGES.length - 1);
 
     expect(markup).toContain("Actual Apology");
     expect(markup).toContain("acknowledge the fork");
     expect(markup).toContain("credit upstream work");
-    expect(markup).toContain("not legal advice or proof of compliance");
-    expect(markup).toContain("Nothing is sent to GitHub, social media, another person");
-    expect(markup).toContain("No person is named or impersonated");
+    expect(markup).not.toContain("not legal advice or proof of compliance");
+    expect(markup).not.toContain("Nothing is sent to GitHub");
   });
 
   it("clamps malformed stage indexes at the presentation boundary", () => {
