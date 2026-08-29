@@ -407,6 +407,7 @@ import {
 } from "./CreateProjectDialog";
 import { CreateProjectDock } from "./CreateProjectDock";
 import { statusHistoryManager } from "../statusHistory";
+import { confirmCoreAction } from "../lib/confirmCoreAction";
 import { SpaceEditorDialog } from "./SpaceEditorDialog";
 import { useSpacesController } from "./useSpacesController";
 import { SpaceEmptyState } from "./SpaceEmptyState";
@@ -3201,12 +3202,22 @@ export default function Sidebar(props: {
           return;
         }
         if (appSettings.confirmThreadArchive) {
-          const confirmed = await api.dialogs.confirm(
-            [
-              `Archive ${archiveIds.length} ${pluralize(archiveIds.length, "thread")}?`,
-              "Archived threads are hidden from the sidebar but can be restored later.",
-            ].join("\n"),
-          );
+          const confirmed = await confirmCoreAction({
+            confirmation: {
+              stableKey: `selected-threads-archive:${archiveIds.toSorted().join(":")}`,
+              title: `Archive ${archiveIds.length} ${pluralize(archiveIds.length, "thread")}?`,
+              description:
+                "Archived threads are hidden from the sidebar but can be restored later.",
+              confirmLabel: "Archive",
+            },
+            defaultConfirm: () =>
+              api.dialogs.confirm(
+                [
+                  `Archive ${archiveIds.length} ${pluralize(archiveIds.length, "thread")}?`,
+                  "Archived threads are hidden from the sidebar but can be restored later.",
+                ].join("\n"),
+              ),
+          });
           if (!confirmed) return;
         }
 
@@ -3220,12 +3231,22 @@ export default function Sidebar(props: {
       if (clicked !== "delete") return;
 
       if (appSettings.confirmThreadDelete) {
-        const confirmed = await api.dialogs.confirm(
-          [
-            `Delete ${count} ${pluralize(count, "thread")}?`,
-            "This permanently clears conversation history for these threads.",
-          ].join("\n"),
-        );
+        const confirmed = await confirmCoreAction({
+          confirmation: {
+            stableKey: `selected-threads-delete:${ids.toSorted().join(":")}`,
+            title: `Delete ${count} ${pluralize(count, "thread")}?`,
+            description: "This permanently clears conversation history for these threads.",
+            confirmLabel: "Delete",
+            destructive: true,
+          },
+          defaultConfirm: () =>
+            api.dialogs.confirm(
+              [
+                `Delete ${count} ${pluralize(count, "thread")}?`,
+                "This permanently clears conversation history for these threads.",
+              ].join("\n"),
+            ),
+        });
         if (!confirmed) return;
       }
 
@@ -3535,14 +3556,26 @@ export default function Sidebar(props: {
       if (clicked !== "delete") return;
 
       const projectThreads = sidebarThreads.filter((thread) => thread.projectId === projectId);
-      const confirmed = await api.dialogs.confirm(
+      const projectRemovalMessage =
         projectThreads.length > 0
           ? [
               `Remove project "${project.name}"?`,
               `This will delete ${projectThreads.length} ${pluralize(projectThreads.length, "thread")} in this folder and remove the project.`,
             ].join("\n")
-          : `Remove project "${project.name}"?`,
-      );
+          : `Remove project "${project.name}"?`;
+      const confirmed = await confirmCoreAction({
+        confirmation: {
+          stableKey: `project-remove:${projectId}`,
+          title: `Remove project “${project.name}”?`,
+          description:
+            projectThreads.length > 0
+              ? `This will delete ${projectThreads.length} ${pluralize(projectThreads.length, "thread")} in this folder and remove the project.`
+              : "This removes the project from Forkara without deleting its folder.",
+          confirmLabel: "Remove",
+          destructive: projectThreads.length > 0,
+        },
+        defaultConfirm: () => api.dialogs.confirm(projectRemovalMessage),
+      });
       if (!confirmed) return;
 
       // Nested function so the `try` body stays free of value blocks — see the comment on

@@ -87,6 +87,9 @@ import {
 import { ComposerPickerMenuPopup } from "~/components/chat/ComposerPickerMenuPopup";
 import { Popover, PopoverPopup, PopoverTrigger } from "~/components/ui/popover";
 import { toastManager } from "~/components/ui/toast";
+import { InlineConfirmation } from "~/components/focus/InlineConfirmation";
+import { InlineBranchCreator } from "~/components/focus/InlineBranchCreator";
+import { DisclosureRegion } from "~/components/ui/DisclosureRegion";
 import { openInPreferredEditor } from "~/editorPreferences";
 import {
   gitBranchesQueryOptions,
@@ -1556,123 +1559,167 @@ export default function GitActionsControl({
         onOpenFile={openChangedFileInEditor}
       />
 
-      <Dialog
-        open={pendingDefaultBranchAction !== null}
-        onOpenChange={(open) => {
-          if (!open) {
-            setPendingDefaultBranchAction(null);
-          }
-        }}
-      >
-        <DialogPopup className="max-w-xl">
-          <DialogHeader>
-            <DialogTitle>
-              {pendingDefaultBranchActionCopy?.title ?? "Run action on default branch?"}
-            </DialogTitle>
-            <DialogDescription>{pendingDefaultBranchActionCopy?.description}</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              size="sm"
-              shape="capsule"
-              onClick={() => setPendingDefaultBranchAction(null)}
-            >
-              Abort
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              shape="capsule"
-              onClick={continuePendingDefaultBranchAction}
-            >
-              {pendingDefaultBranchAction &&
-              requiresFeatureBranchForDefaultBranchAction(pendingDefaultBranchAction.action)
-                ? "Create feature branch & continue"
-                : (pendingDefaultBranchActionCopy?.continueLabel ?? "Continue")}
-            </Button>
-            {pendingDefaultBranchAction &&
-            !requiresFeatureBranchForDefaultBranchAction(pendingDefaultBranchAction.action) ? (
+      {settings.noForksGivenModeEnabled ? (
+        <DisclosureRegion open={pendingDefaultBranchAction !== null}>
+          {pendingDefaultBranchAction ? (
+            <InlineConfirmation
+              className="mt-3"
+              title={pendingDefaultBranchActionCopy?.title ?? "Run action on default branch?"}
+              description={pendingDefaultBranchActionCopy?.description ?? "Review this Git action."}
+              confirmLabel={
+                requiresFeatureBranchForDefaultBranchAction(pendingDefaultBranchAction.action)
+                  ? "Create feature branch & continue"
+                  : (pendingDefaultBranchActionCopy?.continueLabel ?? "Continue")
+              }
+              secondaryLabel={
+                !requiresFeatureBranchForDefaultBranchAction(pendingDefaultBranchAction.action)
+                  ? "Checkout feature branch & continue"
+                  : undefined
+              }
+              onCancel={() => setPendingDefaultBranchAction(null)}
+              onConfirm={continuePendingDefaultBranchAction}
+              onSecondary={checkoutFeatureBranchAndContinuePendingAction}
+            />
+          ) : null}
+        </DisclosureRegion>
+      ) : (
+        <Dialog
+          open={pendingDefaultBranchAction !== null}
+          onOpenChange={(open) => {
+            if (!open) {
+              setPendingDefaultBranchAction(null);
+            }
+          }}
+        >
+          <DialogPopup className="max-w-xl">
+            <DialogHeader>
+              <DialogTitle>
+                {pendingDefaultBranchActionCopy?.title ?? "Run action on default branch?"}
+              </DialogTitle>
+              <DialogDescription>{pendingDefaultBranchActionCopy?.description}</DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
               <Button
+                variant="outline"
                 size="sm"
                 shape="capsule"
-                onClick={checkoutFeatureBranchAndContinuePendingAction}
+                onClick={() => setPendingDefaultBranchAction(null)}
               >
-                Checkout feature branch & continue
+                Abort
               </Button>
-            ) : null}
-          </DialogFooter>
-        </DialogPopup>
-      </Dialog>
+              <Button
+                variant="outline"
+                size="sm"
+                shape="capsule"
+                onClick={continuePendingDefaultBranchAction}
+              >
+                {pendingDefaultBranchAction &&
+                requiresFeatureBranchForDefaultBranchAction(pendingDefaultBranchAction.action)
+                  ? "Create feature branch & continue"
+                  : (pendingDefaultBranchActionCopy?.continueLabel ?? "Continue")}
+              </Button>
+              {pendingDefaultBranchAction &&
+              !requiresFeatureBranchForDefaultBranchAction(pendingDefaultBranchAction.action) ? (
+                <Button
+                  size="sm"
+                  shape="capsule"
+                  onClick={checkoutFeatureBranchAndContinuePendingAction}
+                >
+                  Checkout feature branch & continue
+                </Button>
+              ) : null}
+            </DialogFooter>
+          </DialogPopup>
+        </Dialog>
+      )}
 
-      <Dialog
-        open={isCreateBranchDialogOpen}
-        onOpenChange={(open) => {
-          if (!open) {
+      {settings.noForksGivenModeEnabled ? (
+        <InlineBranchCreator
+          open={isCreateBranchDialogOpen}
+          fieldId={createBranchNameFieldId}
+          description="Create and switch from the current HEAD. Future commits, pushes, and pull requests will use it."
+          value={createBranchName}
+          conflict={createBranchNameConflicts}
+          submitLabel="Create Branch"
+          onChange={setCreateBranchName}
+          onCancel={() => {
             setIsCreateBranchDialogOpen(false);
             setCreateBranchName("");
-          }
-        }}
-      >
-        <DialogPopup className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Create Branch</DialogTitle>
-            <DialogDescription>
-              Create and switch to a branch from the current HEAD. Future commits, pushes, and PRs
-              will use it.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogPanel className="space-y-3">
-            <form
-              className="space-y-3"
-              onSubmit={(event) => {
-                event.preventDefault();
-                const trimmedName = createBranchName.trim();
-                if (!trimmedName || createBranchNameConflicts) {
-                  return;
-                }
-                void createAndCheckoutBranch(trimmedName);
-              }}
-            >
-              <div className="space-y-1.5">
-                <label className="block font-medium text-sm" htmlFor={createBranchNameFieldId}>
-                  Branch name
-                </label>
-                <Input
-                  autoFocus
-                  id={createBranchNameFieldId}
-                  placeholder="feature/my-change"
-                  value={createBranchName}
-                  onChange={(event) => setCreateBranchName(event.target.value)}
-                />
-              </div>
-              {createBranchNameConflicts ? (
-                <p className="text-destructive text-sm">A branch with this name already exists.</p>
-              ) : null}
-              <DialogFooter variant="bare">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  type="button"
-                  onClick={() => {
-                    setIsCreateBranchDialogOpen(false);
-                    setCreateBranchName("");
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={createBranchName.trim().length === 0 || createBranchNameConflicts}
-                >
-                  Create Branch
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogPanel>
-        </DialogPopup>
-      </Dialog>
+          }}
+          onSubmit={(trimmedName) => void createAndCheckoutBranch(trimmedName)}
+        />
+      ) : (
+        <Dialog
+          open={isCreateBranchDialogOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              setIsCreateBranchDialogOpen(false);
+              setCreateBranchName("");
+            }
+          }}
+        >
+          <DialogPopup className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Create Branch</DialogTitle>
+              <DialogDescription>
+                Create and switch to a branch from the current HEAD. Future commits, pushes, and PRs
+                will use it.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogPanel className="space-y-3">
+              <form
+                className="space-y-3"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const trimmedName = createBranchName.trim();
+                  if (!trimmedName || createBranchNameConflicts) {
+                    return;
+                  }
+                  void createAndCheckoutBranch(trimmedName);
+                }}
+              >
+                <div className="space-y-1.5">
+                  <label className="block font-medium text-sm" htmlFor={createBranchNameFieldId}>
+                    Branch name
+                  </label>
+                  <Input
+                    autoFocus
+                    id={createBranchNameFieldId}
+                    placeholder="feature/my-change"
+                    value={createBranchName}
+                    onChange={(event) => setCreateBranchName(event.target.value)}
+                  />
+                </div>
+                {createBranchNameConflicts ? (
+                  <p className="text-destructive text-sm">
+                    A branch with this name already exists.
+                  </p>
+                ) : null}
+                <DialogFooter variant="bare">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    onClick={() => {
+                      setIsCreateBranchDialogOpen(false);
+                      setCreateBranchName("");
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={createBranchName.trim().length === 0 || createBranchNameConflicts}
+                  >
+                    Create Branch
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogPanel>
+          </DialogPopup>
+        </Dialog>
+      )}
     </>
   );
 

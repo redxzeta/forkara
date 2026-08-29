@@ -59,6 +59,10 @@ import {
 } from "./ui/combobox";
 import { Input } from "./ui/input";
 import { toastManager } from "./ui/toast";
+import { useAppSettings } from "../appSettings";
+import { InlineConfirmation } from "./focus/InlineConfirmation";
+import { InlineBranchCreator } from "./focus/InlineBranchCreator";
+import { DisclosureRegion } from "./ui/DisclosureRegion";
 import {
   ENVIRONMENT_ROW_CLASS_NAME,
   ENVIRONMENT_ROW_ICON_CLASS_NAME,
@@ -190,6 +194,15 @@ function handleCheckoutError(
   // (e.g. "Stash & Switch" from a dedicated worktree back to the project root), so every
   // retry passes it as the awaited refresh scope instead of relying on the default.
   const retryRefreshOptions = { refreshCwds: [input.cwd] } as const;
+  const addRecoveryToast = (notification: Parameters<typeof toastManager.add>[0]) =>
+    addBranchRecoveryToast({
+      ...notification,
+      data: {
+        ...notification.data,
+        stableKey: `branch-recovery:${input.cwd}:${input.branch}:${String(notification.title)}`,
+        branch: input.branch,
+      },
+    });
   const retryStashAndCheckout = async (): Promise<void> => {
     await input.api.git.stashAndCheckout({ cwd: input.cwd, branch: input.branch });
     input.onSuccess();
@@ -201,7 +214,7 @@ function handleCheckoutError(
     const lockFileLabel = lockError.lockPath
       ? lockError.lockPath.split("/").slice(-2).join("/")
       : ".git/index.lock";
-    addBranchRecoveryToast({
+    addRecoveryToast({
       type: "error",
       title: "Git index is locked.",
       description: `${lockFileLabel} already exists. Close any running Git operation, remove the stale lock file if none is running, then retry.`,
@@ -223,7 +236,7 @@ function handleCheckoutError(
   };
 
   const addGitIndexWriteToast = (error: unknown): void => {
-    addBranchRecoveryToast({
+    addRecoveryToast({
       type: "error",
       title: "Git index could not be written.",
       description:
@@ -247,7 +260,7 @@ function handleCheckoutError(
   const dirtyWorktree = parseDirtyWorktreeError(error);
   if (dirtyWorktree) {
     const copyText = toBranchActionErrorMessage(error);
-    addBranchRecoveryToast({
+    addRecoveryToast({
       type: "warning",
       title: "Uncommitted changes block checkout.",
       description: formatDirtyWorktreeDescription(dirtyWorktree.files),
@@ -270,7 +283,7 @@ function handleCheckoutError(
               }
               if (isStashConflictError(stashError)) {
                 input.onSuccess();
-                addBranchRecoveryToast({
+                addRecoveryToast({
                   type: "warning",
                   title: "Changes saved, but not reapplied.",
                   description:
@@ -289,7 +302,7 @@ function handleCheckoutError(
                 return;
               }
               if (parseDirtyWorktreeError(stashError)) {
-                addBranchRecoveryToast({
+                addRecoveryToast({
                   type: "error",
                   title: "Cannot switch branches.",
                   description:
@@ -298,7 +311,7 @@ function handleCheckoutError(
                 });
                 return;
               }
-              addBranchRecoveryToast({
+              addRecoveryToast({
                 type: "error",
                 title: "Failed to stash and switch.",
                 description: toBranchActionErrorMessage(stashError),
@@ -321,7 +334,7 @@ function handleCheckoutError(
     return;
   }
 
-  addBranchRecoveryToast({
+  addRecoveryToast({
     type: "error",
     title: isUnresolvedIndexError(error)
       ? "Unresolved conflicts in the repository."
@@ -385,6 +398,7 @@ export function BranchToolbarBranchSelector({
   onComposerFocusRequest,
   variant: variantProp,
 }: BranchToolbarBranchSelectorProps) {
+  const { settings } = useAppSettings();
   const variant = variantProp ?? "toolbar";
   const isPanel = variant === "panel";
   const queryClient = useQueryClient();
@@ -933,173 +947,234 @@ export function BranchToolbarBranchSelector({
           </div>
         ) : null}
       </ComboboxPopup>
-      <Dialog
-        open={isCreateBranchDialogOpen}
-        onOpenChange={(open) => {
-          setIsCreateBranchDialogOpen(open);
-          if (!open) {
+      {settings.noForksGivenModeEnabled ? (
+        <InlineBranchCreator
+          open={isCreateBranchDialogOpen}
+          fieldId="branch-create-name"
+          description={`Create and switch to a new branch from ${resolvedActiveBranch ?? currentGitBranch ?? "the current HEAD"}.`}
+          value={createBranchName}
+          conflict={branchByName.has(createBranchName.trim())}
+          submitLabel="Create and switch"
+          onChange={setCreateBranchName}
+          onCancel={() => {
+            setIsCreateBranchDialogOpen(false);
             setCreateBranchName("");
-          }
-        }}
-      >
-        <DialogPopup className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Create Branch</DialogTitle>
-            <DialogDescription>
-              {`Create and switch to a new branch from ${resolvedActiveBranch ?? currentGitBranch ?? "the current HEAD"}.`}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogPanel className="space-y-3">
-            <form
-              className="space-y-3"
-              onSubmit={(event) => {
-                event.preventDefault();
-                const nextName = createBranchName.trim();
-                if (!nextName || branchByName.has(nextName)) {
-                  return;
-                }
-                setIsCreateBranchDialogOpen(false);
-                createBranch(nextName);
-              }}
-            >
-              <div className="space-y-1.5">
-                <label className="block font-medium text-sm" htmlFor="branch-create-name">
-                  Branch name
-                </label>
-                <Input
-                  autoFocus
-                  id="branch-create-name"
-                  placeholder="feature/my-change"
-                  value={createBranchName}
-                  onChange={(event) => setCreateBranchName(event.target.value)}
-                />
-              </div>
-              {branchByName.has(createBranchName.trim()) ? (
-                <p className="text-destructive text-sm">A branch with this name already exists.</p>
-              ) : null}
-              <DialogFooter variant="bare">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  type="button"
-                  onClick={() => {
-                    setIsCreateBranchDialogOpen(false);
-                    setCreateBranchName("");
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={
-                    createBranchName.trim().length === 0 ||
-                    branchByName.has(createBranchName.trim())
+          }}
+          onSubmit={(nextName) => {
+            setIsCreateBranchDialogOpen(false);
+            createBranch(nextName);
+          }}
+        />
+      ) : (
+        <Dialog
+          open={isCreateBranchDialogOpen}
+          onOpenChange={(open) => {
+            setIsCreateBranchDialogOpen(open);
+            if (!open) {
+              setCreateBranchName("");
+            }
+          }}
+        >
+          <DialogPopup className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Create Branch</DialogTitle>
+              <DialogDescription>
+                {`Create and switch to a new branch from ${resolvedActiveBranch ?? currentGitBranch ?? "the current HEAD"}.`}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogPanel className="space-y-3">
+              <form
+                className="space-y-3"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const nextName = createBranchName.trim();
+                  if (!nextName || branchByName.has(nextName)) {
+                    return;
                   }
-                >
-                  Create and switch
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogPanel>
-        </DialogPopup>
-      </Dialog>
-      <Dialog
-        open={stashDiscardDialog !== null}
-        onOpenChange={(open) => {
-          if (!open) {
-            setStashDiscardDialog(null);
-            setIsDroppingStash(false);
-          }
-        }}
-      >
-        <DialogPopup className="max-w-xl">
-          <DialogHeader>
-            <DialogTitle>Discard saved stash?</DialogTitle>
-            <DialogDescription>
-              This will permanently drop the stash entry that preserved your uncommitted changes.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogPanel className="space-y-4">
-            {stashDiscardDialog?.loading ? (
-              <p className="text-muted-foreground text-sm">Loading stash details...</p>
-            ) : stashDiscardDialog?.error ? (
-              <p className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-destructive text-sm">
-                {stashDiscardDialog.error}
-              </p>
-            ) : stashDiscardDialog?.info ? (
-              <>
-                <div className="grid gap-2 rounded-lg border border-[color:var(--color-border-light)] bg-[var(--color-background-elevated-secondary)] p-3 text-sm">
-                  <div className="flex min-w-0 gap-2">
-                    <span className="w-20 shrink-0 text-muted-foreground">Branch</span>
-                    <span className="min-w-0 truncate font-medium">
-                      {stashDiscardDialog.info.branch ?? currentGitBranch ?? "Detached HEAD"}
-                    </span>
-                  </div>
-                  <div className="flex min-w-0 gap-2">
-                    <span className="w-20 shrink-0 text-muted-foreground">Worktree</span>
-                    <span className="min-w-0 truncate font-mono text-xs">
-                      {stashDiscardDialog.info.cwd}
-                    </span>
-                  </div>
-                  <div className="flex min-w-0 gap-2">
-                    <span className="w-20 shrink-0 text-muted-foreground">Stash</span>
-                    <span className="min-w-0 truncate font-mono text-xs">
-                      {stashDiscardDialog.info.stashRef}
-                    </span>
-                  </div>
-                  <div className="flex min-w-0 gap-2">
-                    <span className="w-20 shrink-0 text-muted-foreground">Name</span>
-                    <span className="min-w-0 truncate">{stashDiscardDialog.info.message}</span>
-                  </div>
+                  setIsCreateBranchDialogOpen(false);
+                  createBranch(nextName);
+                }}
+              >
+                <div className="space-y-1.5">
+                  <label className="block font-medium text-sm" htmlFor="branch-create-name">
+                    Branch name
+                  </label>
+                  <Input
+                    autoFocus
+                    id="branch-create-name"
+                    placeholder="feature/my-change"
+                    value={createBranchName}
+                    onChange={(event) => setCreateBranchName(event.target.value)}
+                  />
                 </div>
-                <div className="space-y-2">
-                  <p className="font-medium text-sm">
-                    Changed files ({stashDiscardDialog.info.files.length})
+                {branchByName.has(createBranchName.trim()) ? (
+                  <p className="text-destructive text-sm">
+                    A branch with this name already exists.
                   </p>
-                  {stashDiscardDialog.info.files.length > 0 ? (
-                    <ul className="max-h-48 overflow-auto rounded-lg border border-[color:var(--color-border-light)] bg-[var(--color-background-control-opaque)] py-1">
-                      {stashDiscardDialog.info.files.map((file) => (
-                        <li
-                          className="truncate px-3 py-1 font-mono text-muted-foreground text-xs"
-                          key={file}
-                          title={file}
-                        >
-                          {file}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="rounded-lg border border-[color:var(--color-border-light)] px-3 py-2 text-muted-foreground text-sm">
-                      Git did not report changed file names for this stash.
-                    </p>
-                  )}
+                ) : null}
+                <DialogFooter variant="bare">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    onClick={() => {
+                      setIsCreateBranchDialogOpen(false);
+                      setCreateBranchName("");
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={
+                      createBranchName.trim().length === 0 ||
+                      branchByName.has(createBranchName.trim())
+                    }
+                  >
+                    Create and switch
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogPanel>
+          </DialogPopup>
+        </Dialog>
+      )}
+      {settings.noForksGivenModeEnabled ? (
+        <DisclosureRegion open={stashDiscardDialog !== null}>
+          {stashDiscardDialog ? (
+            <div className="mt-3 space-y-3 rounded-xl border border-border p-3">
+              {stashDiscardDialog.loading ? (
+                <p className="text-muted-foreground text-sm">Loading stash details...</p>
+              ) : stashDiscardDialog.error ? (
+                <p className="text-destructive text-sm">{stashDiscardDialog.error}</p>
+              ) : stashDiscardDialog.info ? (
+                <div className="space-y-1 text-muted-foreground text-xs">
+                  <p>
+                    <span className="font-medium text-foreground">Stash:</span>{" "}
+                    {stashDiscardDialog.info.stashRef}
+                  </p>
+                  <p>
+                    <span className="font-medium text-foreground">Worktree:</span>{" "}
+                    {stashDiscardDialog.info.cwd}
+                  </p>
+                  <p>{stashDiscardDialog.info.files.length} changed files</p>
                 </div>
-              </>
-            ) : null}
-          </DialogPanel>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => {
-                setStashDiscardDialog(null);
-                setIsDroppingStash(false);
-              }}
-            >
-              Keep stash
-            </Button>
-            <Button
-              variant="destructive"
-              type="button"
-              disabled={!stashDiscardDialog?.info || isDroppingStash}
-              onClick={discardStashFromDialog}
-            >
-              {isDroppingStash ? "Discarding..." : "Discard stash"}
-            </Button>
-          </DialogFooter>
-        </DialogPopup>
-      </Dialog>
+              ) : null}
+              <InlineConfirmation
+                title="Discard saved stash?"
+                description="This permanently drops the stash entry that preserved your uncommitted changes."
+                confirmLabel={isDroppingStash ? "Discarding..." : "Discard stash"}
+                cancelLabel="Keep stash"
+                destructive
+                disabled={!stashDiscardDialog.info || isDroppingStash}
+                onConfirm={discardStashFromDialog}
+                onCancel={() => {
+                  setStashDiscardDialog(null);
+                  setIsDroppingStash(false);
+                }}
+              />
+            </div>
+          ) : null}
+        </DisclosureRegion>
+      ) : (
+        <Dialog
+          open={stashDiscardDialog !== null}
+          onOpenChange={(open) => {
+            if (!open) {
+              setStashDiscardDialog(null);
+              setIsDroppingStash(false);
+            }
+          }}
+        >
+          <DialogPopup className="max-w-xl">
+            <DialogHeader>
+              <DialogTitle>Discard saved stash?</DialogTitle>
+              <DialogDescription>
+                This will permanently drop the stash entry that preserved your uncommitted changes.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogPanel className="space-y-4">
+              {stashDiscardDialog?.loading ? (
+                <p className="text-muted-foreground text-sm">Loading stash details...</p>
+              ) : stashDiscardDialog?.error ? (
+                <p className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-destructive text-sm">
+                  {stashDiscardDialog.error}
+                </p>
+              ) : stashDiscardDialog?.info ? (
+                <>
+                  <div className="grid gap-2 rounded-lg border border-[color:var(--color-border-light)] bg-[var(--color-background-elevated-secondary)] p-3 text-sm">
+                    <div className="flex min-w-0 gap-2">
+                      <span className="w-20 shrink-0 text-muted-foreground">Branch</span>
+                      <span className="min-w-0 truncate font-medium">
+                        {stashDiscardDialog.info.branch ?? currentGitBranch ?? "Detached HEAD"}
+                      </span>
+                    </div>
+                    <div className="flex min-w-0 gap-2">
+                      <span className="w-20 shrink-0 text-muted-foreground">Worktree</span>
+                      <span className="min-w-0 truncate font-mono text-xs">
+                        {stashDiscardDialog.info.cwd}
+                      </span>
+                    </div>
+                    <div className="flex min-w-0 gap-2">
+                      <span className="w-20 shrink-0 text-muted-foreground">Stash</span>
+                      <span className="min-w-0 truncate font-mono text-xs">
+                        {stashDiscardDialog.info.stashRef}
+                      </span>
+                    </div>
+                    <div className="flex min-w-0 gap-2">
+                      <span className="w-20 shrink-0 text-muted-foreground">Name</span>
+                      <span className="min-w-0 truncate">{stashDiscardDialog.info.message}</span>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="font-medium text-sm">
+                      Changed files ({stashDiscardDialog.info.files.length})
+                    </p>
+                    {stashDiscardDialog.info.files.length > 0 ? (
+                      <ul className="max-h-48 overflow-auto rounded-lg border border-[color:var(--color-border-light)] bg-[var(--color-background-control-opaque)] py-1">
+                        {stashDiscardDialog.info.files.map((file) => (
+                          <li
+                            className="truncate px-3 py-1 font-mono text-muted-foreground text-xs"
+                            key={file}
+                            title={file}
+                          >
+                            {file}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="rounded-lg border border-[color:var(--color-border-light)] px-3 py-2 text-muted-foreground text-sm">
+                        Git did not report changed file names for this stash.
+                      </p>
+                    )}
+                  </div>
+                </>
+              ) : null}
+            </DialogPanel>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => {
+                  setStashDiscardDialog(null);
+                  setIsDroppingStash(false);
+                }}
+              >
+                Keep stash
+              </Button>
+              <Button
+                variant="destructive"
+                type="button"
+                disabled={!stashDiscardDialog?.info || isDroppingStash}
+                onClick={discardStashFromDialog}
+              >
+                {isDroppingStash ? "Discarding..." : "Discard stash"}
+              </Button>
+            </DialogFooter>
+          </DialogPopup>
+        </Dialog>
+      )}
     </Combobox>
   );
 }

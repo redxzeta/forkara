@@ -12,6 +12,7 @@ import { getThreadFromState, getThreadsFromState } from "../threadDerivation";
 import type { Thread } from "../types";
 import { formatWorktreePathForDisplay, getOrphanedWorktreePathForThread } from "../worktreeCleanup";
 import { reconcileDeletedThreadFromClient } from "./deletedThreadClientReconciliation";
+import { confirmCoreAction } from "./confirmCoreAction";
 import { newCommandId } from "./utils";
 
 // The terminal runtime pulls in xterm and its addons (~223 KB gzip). Importing it
@@ -71,14 +72,24 @@ export async function deleteActiveThreadFromClient<TPrepared = undefined>(input:
     (input.worktreeCleanupMode ?? "prompt") === "prompt" &&
     orphanedWorktreePath !== null &&
     project !== null &&
-    (await api.dialogs.confirm(
-      [
-        "This thread is the only one linked to this worktree:",
-        displayWorktreePath ?? orphanedWorktreePath,
-        "",
-        "Delete the worktree too?",
-      ].join("\n"),
-    ));
+    (await confirmCoreAction({
+      confirmation: {
+        stableKey: `orphaned-worktree-delete:${orphanedWorktreePath}`,
+        title: "Delete the orphaned worktree too?",
+        description: `This thread is the only one linked to ${displayWorktreePath ?? orphanedWorktreePath}.`,
+        confirmLabel: "Delete worktree",
+        destructive: true,
+      },
+      defaultConfirm: () =>
+        api.dialogs.confirm(
+          [
+            "This thread is the only one linked to this worktree:",
+            displayWorktreePath ?? orphanedWorktreePath,
+            "",
+            "Delete the worktree too?",
+          ].join("\n"),
+        ),
+    }));
 
   const prepared = input.prepareForDelete?.(thread);
   await api.orchestration.dispatchCommand({

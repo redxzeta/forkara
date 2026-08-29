@@ -350,6 +350,7 @@ import {
 import { runProjectCommandInTerminal } from "~/projectTerminalRunner";
 import { newCommandId, newMessageId, newProjectId, newThreadId } from "~/lib/utils";
 import { readNativeApi } from "~/nativeApi";
+import { confirmCoreAction } from "~/lib/confirmCoreAction";
 import { promoteThreadCreate } from "~/lib/threadCreatePromotion";
 import { readFavoriteModelSlugs } from "~/lib/modelFavorites";
 import {
@@ -6781,13 +6782,22 @@ export default function ChatView({
         setThreadError(activeThread.id, "Interrupt the current turn before reverting checkpoints.");
         return;
       }
-      const confirmed = await api.dialogs.confirm(
-        [
-          `Revert this thread to checkpoint ${turnCount}?`,
-          "This will discard newer messages and turn diffs in this thread.",
-          "This action cannot be undone.",
-        ].join("\n"),
-      );
+      const checkpointMessage = [
+        `Revert this thread to checkpoint ${turnCount}?`,
+        "This will discard newer messages and turn diffs in this thread.",
+        "This action cannot be undone.",
+      ].join("\n");
+      const confirmed = await confirmCoreAction({
+        confirmation: {
+          stableKey: `checkpoint-revert:${activeThread.id}:${turnCount}`,
+          title: `Revert to checkpoint ${turnCount}?`,
+          description:
+            "This will discard newer messages and turn diffs in this thread. This action cannot be undone.",
+          confirmLabel: "Revert",
+          destructive: true,
+        },
+        defaultConfirm: () => api.dialogs.confirm(checkpointMessage),
+      });
       if (!confirmed) {
         return;
       }
@@ -6823,14 +6833,23 @@ export default function ChatView({
         setThreadError(activeThread.id, "Interrupt the current turn before undoing file changes.");
         return;
       }
-      const confirmed = await api.dialogs.confirm(
-        [
-          "Undo the file changes shown in this card?",
-          "Earlier file changes will remain available to undo.",
-          "Messages and provider conversation history will be kept.",
-          "This action cannot be undone.",
-        ].join("\n"),
-      );
+      const undoMessage = [
+        "Undo the file changes shown in this card?",
+        "Earlier file changes will remain available to undo.",
+        "Messages and provider conversation history will be kept.",
+        "This action cannot be undone.",
+      ].join("\n");
+      const confirmed = await confirmCoreAction({
+        confirmation: {
+          stableKey: `turn-files-undo:${activeThread.id}:${turnCounts.join(":")}`,
+          title: "Undo these file changes?",
+          description:
+            "Earlier changes and conversation history remain. This action cannot be undone.",
+          confirmLabel: "Undo files",
+          destructive: true,
+        },
+        defaultConfirm: () => api.dialogs.confirm(undoMessage),
+      });
       if (!confirmed) return;
 
       setIsRevertingCheckpoint(true);

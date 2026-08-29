@@ -36,8 +36,14 @@ import {
   resolveVisibleToastThreadIds,
   shouldRenderToastForVisibleThreads,
 } from "./toastRouteVisibility";
+import {
+  createNotificationRouter,
+  type PortalNotificationManager,
+  type RoutedNotificationData,
+} from "~/notificationRouter";
+import { statusHistoryManager } from "~/statusHistory";
 
-type ThreadToastData = {
+type ThreadToastData = RoutedNotificationData & {
   allowCrossThreadVisibility?: boolean;
   compactContextual?: boolean;
   copyText?: string;
@@ -52,8 +58,19 @@ type ThreadToastData = {
   };
 };
 
-const toastManager = Toast.createToastManager<ThreadToastData>();
-const anchoredToastManager = Toast.createToastManager<ThreadToastData>();
+const portalToastManager = Toast.createToastManager<ThreadToastData>();
+const portalAnchoredToastManager = Toast.createToastManager<ThreadToastData>();
+const notificationRouter = createNotificationRouter({
+  portal: portalToastManager as unknown as PortalNotificationManager,
+  history: statusHistoryManager,
+});
+const anchoredNotificationRouter = createNotificationRouter({
+  portal: portalAnchoredToastManager as unknown as PortalNotificationManager,
+  history: statusHistoryManager,
+});
+const toastManager = notificationRouter as unknown as typeof portalToastManager;
+const anchoredToastManager =
+  anchoredNotificationRouter as unknown as typeof portalAnchoredToastManager;
 type ToastId = ReturnType<typeof toastManager.add>;
 const threadToastVisibleTimeoutRemainingMs = new Map<ToastId, number>();
 
@@ -181,7 +198,7 @@ function ThreadToastVisibleAutoDismiss({
       if (closed) return;
       closed = true;
       threadToastVisibleTimeoutRemainingMs.delete(toastId);
-      toastManager.close(toastId);
+      portalToastManager.close(toastId);
     };
 
     const pause = () => {
@@ -510,7 +527,7 @@ function ToastProvider({
 }: ToastProviderProps) {
   const position = positionProp ?? "top-center";
   return (
-    <Toast.Provider timeout={timeout} toastManager={toastManager} {...props}>
+    <Toast.Provider timeout={timeout} toastManager={portalToastManager} {...props}>
       {children}
       <Toasts position={position} />
     </Toast.Provider>
@@ -545,7 +562,7 @@ function Toasts({ position: positionProp }: { position: ToastPosition }) {
     <Toast.Portal data-slot="toast-portal">
       <Toast.Viewport
         className={cn(
-          "fixed z-[200] mx-auto flex w-[calc(100%-var(--toast-inset)*2)] max-w-sm [--toast-inset:--spacing(4)] sm:[--toast-inset:--spacing(8)]",
+          "fixed z-40 mx-auto flex w-[calc(100%-var(--toast-inset)*2)] max-w-sm [--toast-inset:--spacing(4)] sm:[--toast-inset:--spacing(8)]",
           // Vertical positioning
           "data-[position=top-center]:top-4",
           "data-[position=top-left]:top-[calc(var(--toast-inset)+46px)]",
@@ -657,7 +674,7 @@ function Toasts({ position: positionProp }: { position: ToastPosition }) {
                   toastId={toast.id}
                   dismissAfterVisibleMs={toast.data.dismissAfterVisibleMs}
                   hideCollapsedContent={hideCollapsedContent}
-                  onDismiss={() => toastManager.close(toast.id)}
+                  onDismiss={() => portalToastManager.close(toast.id)}
                 />
               ) : (
                 <>
@@ -668,7 +685,7 @@ function Toasts({ position: positionProp }: { position: ToastPosition }) {
                   <ToastSurface
                     compact={compact}
                     hideCollapsedContent={hideCollapsedContent}
-                    onDismiss={() => toastManager.close(toast.id)}
+                    onDismiss={() => portalToastManager.close(toast.id)}
                     toast={toast}
                   />
                 </>
@@ -687,7 +704,7 @@ function AnchoredToastProvider({
   ...props
 }: Toast.Provider.Props) {
   return (
-    <Toast.Provider timeout={timeout} toastManager={anchoredToastManager} {...props}>
+    <Toast.Provider timeout={timeout} toastManager={portalAnchoredToastManager} {...props}>
       {children}
       <AnchoredToasts />
     </Toast.Provider>
@@ -714,7 +731,7 @@ function AnchoredToasts() {
 
             return (
               <Toast.Positioner
-                className="z-50 max-w-[min(--spacing(64),var(--available-width))]"
+                className="z-40 max-w-[min(--spacing(64),var(--available-width))]"
                 data-slot="toast-positioner"
                 key={toast.id}
                 sideOffset={positionerProps.sideOffset ?? 4}
@@ -738,7 +755,7 @@ function AnchoredToasts() {
                     <ToastSurface
                       compact={compact}
                       hideCollapsedContent={false}
-                      onDismiss={() => anchoredToastManager.close(toast.id)}
+                      onDismiss={() => portalAnchoredToastManager.close(toast.id)}
                       toast={toast}
                     />
                   )}
@@ -751,10 +768,22 @@ function AnchoredToasts() {
   );
 }
 
+function setNotificationFocusMode(enabled: boolean): void {
+  notificationRouter.setFocusMode(enabled);
+  anchoredNotificationRouter.setFocusMode(enabled);
+}
+
+function closePortalNotifications(): void {
+  portalToastManager.close();
+  portalAnchoredToastManager.close();
+}
+
 export {
   ToastProvider,
   type ToastPosition,
   toastManager,
   AnchoredToastProvider,
   anchoredToastManager,
+  setNotificationFocusMode,
+  closePortalNotifications,
 };

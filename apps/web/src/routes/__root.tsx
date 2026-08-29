@@ -36,8 +36,15 @@ import { useWhatsNew } from "../whatsNew/useWhatsNew";
 import { WhatsNewPopoutCard } from "../whatsNew/WhatsNewPopoutCard";
 import { shouldRenderTerminalWorkspace } from "../components/ChatView.logic";
 import { Button, dialogActionButtonClassName } from "../components/ui/button";
-import { AnchoredToastProvider, ToastProvider, toastManager } from "../components/ui/toast";
+import {
+  AnchoredToastProvider,
+  closePortalNotifications,
+  setNotificationFocusMode,
+  ToastProvider,
+  toastManager,
+} from "../components/ui/toast";
 import { StatusHistoryDock, StatusHistoryProvider } from "../components/focus/StatusHistory";
+import { ConfirmationQueueProvider } from "../components/focus/ConfirmationQueue";
 import { useGitProgressToastPreview } from "../components/useGitProgressToastPreview";
 import { resolveAndPersistPreferredEditor } from "../editorPreferences";
 import { useFeatureFlags } from "../featureFlags";
@@ -148,6 +155,9 @@ import {
   shouldInvalidateProviderQueriesForEvent,
 } from "./-rootEventInvalidation";
 import { createDesktopProjectRecoveryAttemptGate } from "./-desktopProjectRecoveryAttempt";
+import { setFocusModeRuntimeEnabled } from "../focusModeRuntime";
+import { providerUpdateNotificationSession } from "../providerUpdateNotificationSession";
+import { confirmationQueueManager } from "../confirmationQueue";
 
 const SHELL_SNAPSHOT_BOOTSTRAP_FALLBACK_DELAY_MS = 1_500;
 const THREAD_DETAIL_CATCHUP_INTERVAL_MS = 1_500;
@@ -166,8 +176,6 @@ const THREAD_DETAIL_PROJECTION_RECONCILE_MAX_NOOP_STREAK = 2;
 const PENDING_SHELL_EVENT_BUFFER_LIMIT = 1_024;
 const PENDING_THREAD_EVENT_BUFFER_LIMIT = 512;
 const IMMEDIATE_ASSISTANT_FLUSH_ID_LIMIT = 512;
-const seenProviderUpdateNotificationKeys = new Set<string>();
-
 type ProviderUpdateToastId = ReturnType<typeof toastManager.add>;
 type ActiveProviderUpdateToast =
   | {
@@ -216,6 +224,15 @@ export const Route = createRootRouteWithContext<{
 });
 
 function RootRouteView() {
+  const { settings: rootSettings } = useAppSettings();
+  setFocusModeRuntimeEnabled(rootSettings.noForksGivenModeEnabled);
+  setNotificationFocusMode(rootSettings.noForksGivenModeEnabled);
+  useEffect(() => {
+    if (!rootSettings.noForksGivenModeEnabled) confirmationQueueManager.cancelAll();
+  }, [rootSettings.noForksGivenModeEnabled]);
+  useLayoutEffect(() => {
+    if (rootSettings.noForksGivenModeEnabled) closePortalNotifications();
+  }, [rootSettings.noForksGivenModeEnabled]);
   useAppTypography();
   useAppDensity();
   useChatWidth();
@@ -284,24 +301,26 @@ function RootRouteView() {
 
   return (
     <>
-      <StatusHistoryProvider>
-        <ToastProvider position="top-center">
-          <AnchoredToastProvider>
-            <GitProgressToastPreviewDev />
-            <EventRouter />
-            <ProviderStatusRefreshCoordinator />
-            <GlobalShortcutsDialog />
-            <GlobalFeedbackDialog />
-            <GlobalWhatsNewSurface />
-            <TaskCompletionNotifications />
-            <AppSnapWelcomeDialog />
-            <AppSnapCoordinator />
-            <DesktopProjectBootstrap />
-            <Outlet />
-          </AnchoredToastProvider>
-        </ToastProvider>
-        <StatusHistoryDock />
-      </StatusHistoryProvider>
+      <ConfirmationQueueProvider>
+        <StatusHistoryProvider>
+          <ToastProvider position="top-center">
+            <AnchoredToastProvider>
+              <GitProgressToastPreviewDev />
+              <EventRouter />
+              <ProviderStatusRefreshCoordinator />
+              <GlobalShortcutsDialog />
+              <GlobalFeedbackDialog />
+              <GlobalWhatsNewSurface />
+              <TaskCompletionNotifications />
+              <AppSnapWelcomeDialog />
+              <AppSnapCoordinator />
+              <DesktopProjectBootstrap />
+              <Outlet />
+            </AnchoredToastProvider>
+          </ToastProvider>
+          {rootSettings.noForksGivenModeEnabled ? <StatusHistoryDock /> : null}
+        </StatusHistoryProvider>
+      </ConfirmationQueueProvider>
       {desktopChrome}
     </>
   );
@@ -451,6 +470,10 @@ async function runProviderUpdateAll(params: {
           ? `Updating ${PROVIDER_DISPLAY_NAMES[providers[0]!.provider]}.`
           : `Updating ${providers.length} providers.`,
       timeout: 0,
+      data: {
+        stableKey: `provider-update:${activeNotificationKey}`,
+        providerVersionState: activeNotificationKey,
+      },
     });
   activeToastRef.current = { kind: "update", key: activeNotificationKey, toastId };
   const dismissProgressToast = () => {
@@ -469,7 +492,11 @@ async function runProviderUpdateAll(params: {
         ? `Updating ${PROVIDER_DISPLAY_NAMES[providers[0]!.provider]}.`
         : `Updating ${providers.length} providers.`,
     actionProps: undefined,
-    data: { onClose: dismissProgressToast },
+    data: {
+      stableKey: `provider-update:${activeNotificationKey}`,
+      providerVersionState: activeNotificationKey,
+      onClose: dismissProgressToast,
+    },
     timeout: 0,
   });
 
@@ -628,14 +655,14 @@ function ProviderUpdateNotifications({
       !notificationKey ||
       isUpdatingAll ||
       activeToastRef.current ||
-      seenProviderUpdateNotificationKeys.has(notificationKey)
+      providerUpdateNotificationSession.hasSeen(notificationKey)
     ) {
       return;
     }
 
     // Key the prompt by the complete provider/version set so a partial refresh
     // cannot stack a second "Update all" prompt on top of the first one.
-    seenProviderUpdateNotificationKeys.add(notificationKey);
+    if (!providerUpdateNotificationSession.claim(notificationKey)) return;
 
     const firstProvider = outdatedProviders[0]!;
     const additionalCount = outdatedProviders.length - 1;
@@ -675,6 +702,8 @@ function ProviderUpdateNotifications({
         },
       },
       data: {
+        stableKey: `provider-update:${notificationKey}`,
+        providerVersionState: notificationKey,
         onClose: closeTrackedPrompt,
         secondaryActionProps: {
           children: "Update all",

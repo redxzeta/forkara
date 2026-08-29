@@ -13,6 +13,9 @@ export function InlineConfirmation(props: {
   readonly confirmLabel: string;
   readonly cancelLabel?: string | undefined;
   readonly destructive?: boolean | undefined;
+  readonly disabled?: boolean | undefined;
+  readonly secondaryLabel?: string | undefined;
+  readonly onSecondary?: (() => void) | undefined;
   readonly onConfirm: () => void;
   readonly onCancel: () => void;
   readonly className?: string | undefined;
@@ -43,13 +46,25 @@ export function InlineConfirmation(props: {
             <Button
               variant={props.destructive ? "destructive" : "default"}
               className={dialogActionButtonClassName}
+              disabled={props.disabled}
               onClick={props.onConfirm}
             >
               {props.confirmLabel}
             </Button>
+            {props.secondaryLabel && props.onSecondary ? (
+              <Button
+                variant="outline"
+                className={dialogActionButtonClassName}
+                disabled={props.disabled}
+                onClick={props.onSecondary}
+              >
+                {props.secondaryLabel}
+              </Button>
+            ) : null}
             <Button
               variant="outline"
               className={dialogActionButtonClassName}
+              disabled={props.disabled}
               onClick={props.onCancel}
             >
               {props.cancelLabel ?? "Cancel"}
