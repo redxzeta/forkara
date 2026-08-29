@@ -27,6 +27,7 @@ import { useStore } from "../../store";
 import { useTerminalStateStore } from "../../terminalStateStore";
 import { getThreadFromState } from "../../threadDerivation";
 import { toastManager } from "../ui/toast";
+import { confirmCoreAction } from "~/lib/confirmCoreAction";
 import { isKanbanDraftOnlyCard, type KanbanCard } from "./kanban.logic";
 
 interface RenameTarget {
@@ -181,12 +182,20 @@ export function useKanbanCardContextMenu(): KanbanCardContextMenuController {
       if (clicked === "archive") {
         if (!isThreadActionCard) return;
         if (settings.confirmThreadArchive) {
-          const confirmed = await api.dialogs.confirm(
-            [
-              `Archive thread "${card.title}"?`,
-              "Archived threads are hidden from the sidebar but can be restored later.",
-            ].join("\n"),
-          );
+          const archiveMessage = [
+            `Archive thread "${card.title}"?`,
+            "Archived threads are hidden from the sidebar but can be restored later.",
+          ].join("\n");
+          const confirmed = await confirmCoreAction({
+            confirmation: {
+              stableKey: `thread-archive:${card.threadId}`,
+              title: `Archive thread “${card.title}”?`,
+              description:
+                "Archived threads are hidden from the sidebar but can be restored later.",
+              confirmLabel: "Archive",
+            },
+            defaultConfirm: () => api.dialogs.confirm(archiveMessage),
+          });
           if (!confirmed) return;
         }
         await archiveCardThread(card.threadId);
@@ -194,14 +203,24 @@ export function useKanbanCardContextMenu(): KanbanCardContextMenuController {
       }
       if (clicked !== "delete") return;
       if (settings.confirmThreadDelete) {
-        const confirmed = await api.dialogs.confirm(
-          deletesOnlyDraft
-            ? `Delete this draft? This removes its unsent prompt.`
-            : [
-                `Delete thread "${card.title}"?`,
-                "This permanently clears conversation history for this thread.",
-              ].join("\n"),
-        );
+        const deleteMessage = deletesOnlyDraft
+          ? "Delete this draft? This removes its unsent prompt."
+          : [
+              `Delete thread "${card.title}"?`,
+              "This permanently clears conversation history for this thread.",
+            ].join("\n");
+        const confirmed = await confirmCoreAction({
+          confirmation: {
+            stableKey: `${deletesOnlyDraft ? "draft" : "thread"}-delete:${card.threadId}`,
+            title: deletesOnlyDraft ? "Delete this draft?" : `Delete thread “${card.title}”?`,
+            description: deletesOnlyDraft
+              ? "This removes its unsent prompt."
+              : "This permanently clears conversation history for this thread.",
+            confirmLabel: "Delete",
+            destructive: true,
+          },
+          defaultConfirm: () => api.dialogs.confirm(deleteMessage),
+        });
         if (!confirmed) return;
       }
       await deleteCardThread(card);

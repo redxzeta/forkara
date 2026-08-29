@@ -11,6 +11,7 @@ export function SidebarShellLayout(props: {
   readonly sidebar: ReactNode;
   readonly projectCreationSurface: ReactNode;
   readonly mainContent: ReactNode;
+  readonly bottomRegion?: ReactNode;
   readonly hideMainContentOnNarrowScreens: boolean;
 }) {
   return (
@@ -19,12 +20,13 @@ export function SidebarShellLayout(props: {
       {props.projectCreationSurface}
       <div
         className={cn(
-          "relative flex h-svh min-h-0 min-w-0 flex-1",
+          "relative flex h-svh min-h-0 min-w-0 flex-1 flex-col",
           props.hideMainContentOnNarrowScreens && "max-md:hidden",
         )}
         data-slot="chat-main-content"
       >
-        {props.mainContent}
+        <div className="relative flex min-h-0 min-w-0 flex-1">{props.mainContent}</div>
+        {props.bottomRegion}
       </div>
     </>
   );

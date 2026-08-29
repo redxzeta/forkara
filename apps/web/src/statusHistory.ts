@@ -25,6 +25,7 @@ export interface StatusHistoryEntryInput {
   readonly technicalDetails?: string;
   readonly copyText?: string;
   readonly actions?: ReadonlyArray<StatusHistoryAction>;
+  readonly onDismiss?: (() => void) | undefined;
 }
 
 export interface StatusHistoryEntry extends StatusHistoryEntryInput {
@@ -36,6 +37,7 @@ export interface StatusHistoryEntry extends StatusHistoryEntryInput {
 
 export interface StatusHistoryManager {
   readonly add: (entry: StatusHistoryEntryInput) => string;
+  readonly update: (entryId: string, entry: Partial<StatusHistoryEntryInput>) => void;
   readonly dismiss: (entryId: string) => void;
   readonly clear: () => void;
   readonly getSnapshot: () => ReadonlyArray<StatusHistoryEntry>;
@@ -95,15 +97,33 @@ export function createStatusHistoryManager(options?: {
       publish([created, ...entries].slice(0, limit));
       return id;
     },
+    update: (entryId, input) => {
+      const matchingIndex = entries.findIndex((entry) => entry.id === entryId);
+      if (matchingIndex < 0) return;
+      const current = entries[matchingIndex]!;
+      const updated: StatusHistoryEntry = {
+        ...current,
+        ...input,
+        id: current.id,
+        occurrenceCount: current.occurrenceCount,
+        createdAt: current.createdAt,
+        updatedAt: now(),
+      };
+      publish([updated, ...entries.filter((_, index) => index !== matchingIndex)]);
+    },
     dismiss: (entryId) => {
+      const dismissed = entries.find((entry) => entry.id === entryId);
       const nextEntries = entries.filter((entry) => entry.id !== entryId);
       if (nextEntries.length !== entries.length) {
         publish(nextEntries);
+        dismissed?.onDismiss?.();
       }
     },
     clear: () => {
       if (entries.length > 0) {
+        const dismissed = entries;
         publish([]);
+        for (const entry of dismissed) entry.onDismiss?.();
       }
     },
     getSnapshot: () => entries,

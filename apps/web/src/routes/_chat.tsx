@@ -13,6 +13,7 @@ import { RecentViewSwitcher } from "../components/RecentViewSwitcher";
 import { shouldRenderTerminalWorkspace } from "../components/ChatView.logic";
 import ThreadSidebar, { type SidebarShellRenderContract } from "../components/Sidebar";
 import { SidebarShellLayout } from "../components/SidebarShellLayout";
+import { ConfirmationQueueRegion } from "../components/focus/ConfirmationQueue";
 import { isElectron } from "../env";
 import { useHandleNewChat } from "../hooks/useHandleNewChat";
 import { useHandleNewStudioChat } from "../hooks/useHandleNewStudioChat";
@@ -53,6 +54,7 @@ import {
 } from "~/components/ui/sidebar";
 import type { SidebarResizableOptions } from "~/components/ui/sidebar";
 import { cn, getNavigatorPlatform, isMacPlatform } from "~/lib/utils";
+import { useAppSettings } from "~/appSettings";
 
 const EMPTY_KEYBINDINGS: ResolvedKeybindingsConfig = [];
 const THREAD_SIDEBAR_WIDTH_STORAGE_KEY = "chat_thread_sidebar_width";
@@ -561,6 +563,7 @@ const SIDEBAR_GAP_CLASS =
 const SIDEBAR_INNER_CLASS = "app-sidebar-surface";
 
 function ChatRouteLayout() {
+  const { settings } = useAppSettings();
   const isEditorView = useLocation({
     select: (location) => (location.search as { view?: unknown }).view === "editor",
   });
@@ -591,6 +594,7 @@ function ChatRouteLayout() {
         }
         projectCreationSurface={projectCreationSurface}
         hideMainContentOnNarrowScreens={hideMainContentOnNarrowScreens}
+        bottomRegion={settings.noForksGivenModeEnabled ? <ConfirmationQueueRegion /> : undefined}
         mainContent={
           <>
             {/* The content-seam rail is outside Sidebar so it remains above the route card. */}
@@ -604,7 +608,7 @@ function ChatRouteLayout() {
         }
       />
     ),
-    [isEditorView],
+    [isEditorView, settings.noForksGivenModeEnabled],
   );
 
   return (

@@ -4,6 +4,7 @@
 // Depends on: Native dialog contract from the app shell.
 
 import type { NativeApi } from "@forkara/contracts";
+import { confirmCoreAction } from "./confirmCoreAction";
 
 function formatTerminalCloseSubject(terminalTitle: string | null | undefined): string {
   const trimmedTitle = terminalTitle?.trim();
@@ -60,10 +61,22 @@ export async function confirmTerminalTabClose(options: {
     return true;
   }
 
-  return options.api.dialogs.confirm(
-    buildTerminalCloseConfirmationMessage({
-      terminalTitle: options.terminalTitle,
-      willDeleteThread: options.willDeleteThread ?? false,
-    }),
-  );
+  const willDeleteThread = options.willDeleteThread ?? false;
+  const message = buildTerminalCloseConfirmationMessage({
+    terminalTitle: options.terminalTitle,
+    willDeleteThread,
+  });
+  const terminalTitle = options.terminalTitle?.trim() || "Terminal";
+  return confirmCoreAction({
+    confirmation: {
+      stableKey: `terminal-close:${terminalTitle}`,
+      title: `Close ${terminalTitle}?`,
+      description: willDeleteThread
+        ? "This clears terminal history and removes its empty terminal thread."
+        : "This clears the terminal tab and its history.",
+      confirmLabel: "Close terminal",
+      destructive: true,
+    },
+    defaultConfirm: () => options.api!.dialogs.confirm(message),
+  });
 }

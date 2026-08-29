@@ -18,6 +18,7 @@ import {
   isLatestPinnedThreadMutation,
 } from "../components/Sidebar.logic";
 import { toastManager } from "../components/ui/toast";
+import { confirmCoreAction } from "../lib/confirmCoreAction";
 import { deleteActiveThreadFromClient } from "../lib/activeThreadDelete";
 import { reconcileDeletedThreadsFromClient } from "../lib/deletedThreadClientReconciliation";
 import { gitRemoveWorktreeMutationOptions } from "../lib/gitReactQuery";
@@ -551,9 +552,19 @@ export function useSidebarThreadActions(input: {
           `Delete thread "${thread.title}"?`,
           "This permanently clears conversation history for this thread.",
         ].join("\n");
-        const confirmed = api
-          ? await api.dialogs.confirm(confirmationMessage)
-          : await showConfirmDialogFallback(confirmationMessage);
+        const confirmed = await confirmCoreAction({
+          confirmation: {
+            stableKey: `thread-delete:${threadId}`,
+            title: `Delete thread “${thread.title}”?`,
+            description: "This permanently clears conversation history for this thread.",
+            confirmLabel: "Delete",
+            destructive: true,
+          },
+          defaultConfirm: () =>
+            api
+              ? api.dialogs.confirm(confirmationMessage)
+              : showConfirmDialogFallback(confirmationMessage),
+        });
         if (!confirmed) return;
       }
       await deleteThread(threadId);
@@ -694,9 +705,18 @@ export function useSidebarThreadActions(input: {
           `Archive thread "${thread.title}"?`,
           "Archived threads are hidden from the sidebar but can be restored later.",
         ].join("\n");
-        const confirmed = api
-          ? await api.dialogs.confirm(confirmationMessage)
-          : await showConfirmDialogFallback(confirmationMessage);
+        const confirmed = await confirmCoreAction({
+          confirmation: {
+            stableKey: `thread-archive:${threadId}`,
+            title: `Archive thread “${thread.title}”?`,
+            description: "Archived threads are hidden from the sidebar but can be restored later.",
+            confirmLabel: "Archive",
+          },
+          defaultConfirm: () =>
+            api
+              ? api.dialogs.confirm(confirmationMessage)
+              : showConfirmDialogFallback(confirmationMessage),
+        });
         if (!confirmed) return;
       }
       await archiveThreadWithUndo(threadId);
@@ -724,9 +744,18 @@ export function useSidebarThreadActions(input: {
         `Archive ${projectThreads.length} ${pluralize(projectThreads.length, "thread")} in "${project.name}"?`,
         "Archived threads are hidden from the sidebar but can be restored later.",
       ];
-      const confirmed = api
-        ? await api.dialogs.confirm(archiveLines.join("\n"))
-        : await showConfirmDialogFallback(archiveLines.join("\n"));
+      const confirmed = await confirmCoreAction({
+        confirmation: {
+          stableKey: `project-threads-archive:${projectId}`,
+          title: archiveLines[0]!,
+          description: archiveLines[1]!,
+          confirmLabel: "Archive all",
+        },
+        defaultConfirm: () =>
+          api
+            ? api.dialogs.confirm(archiveLines.join("\n"))
+            : showConfirmDialogFallback(archiveLines.join("\n")),
+      });
       if (!confirmed) return;
 
       let archivedCount = 0;
@@ -794,7 +823,16 @@ export function useSidebarThreadActions(input: {
             ].join("\n")
           : options.confirmMessage;
       if (confirmationMessage !== null) {
-        const confirmed = await api.dialogs.confirm(confirmationMessage);
+        const confirmed = await confirmCoreAction({
+          confirmation: {
+            stableKey: `project-threads-delete:${projectId}`,
+            title: `Delete ${projectThreads.length} ${pluralize(projectThreads.length, "thread")} in “${project.name}”?`,
+            description: "This permanently clears conversation history for these threads.",
+            confirmLabel: "Delete all",
+            destructive: true,
+          },
+          defaultConfirm: () => api.dialogs.confirm(confirmationMessage),
+        });
         if (!confirmed) return null;
       }
 

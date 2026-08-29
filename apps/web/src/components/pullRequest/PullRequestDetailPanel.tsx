@@ -37,6 +37,8 @@ import {
   AlertDialogTitle,
 } from "~/components/ui/alert-dialog";
 import { Button } from "~/components/ui/button";
+import { InlineConfirmation } from "~/components/focus/InlineConfirmation";
+import { DisclosureRegion } from "~/components/ui/DisclosureRegion";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "~/components/ui/empty";
 import { IconButton } from "~/components/ui/icon-button";
 import {
@@ -611,51 +613,87 @@ export function PullRequestDetailPanel({
         )}
       </div>
 
-      <AlertDialog
-        open={confirmAction !== null}
-        onOpenChange={(open) => !open && setConfirmAction(null)}
-      >
-        <AlertDialogPopup>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {confirmAction === "merge"
-                ? detail?.stack
-                  ? `Merge ${stackMergeTargetCount} ${stackMergeTargetCount === 1 ? "pull request" : "pull requests"}?`
-                  : "Merge pull request?"
-                : "Close pull request?"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {confirmAction === "merge"
-                ? detail?.stack
-                  ? `This will atomically merge every open pull request through #${input.number} into ${detail.stack.baseBranch} using ${selectedMergeMethod}.${
-                      detail.stack.position < detail.stack.size
-                        ? " Pull requests above it will remain open and GitHub will retarget them."
-                        : ""
-                    }`
-                  : `This will merge #${input.number} using ${selectedMergeMethod}.`
-                : `This will close #${input.number} without merging it.`}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogClose render={<Button variant="outline" size="sm" />}>
-              Cancel
-            </AlertDialogClose>
-            <Button
-              size="sm"
-              variant={confirmAction === "close" ? "destructive" : "default"}
+      {settings.noForksGivenModeEnabled ? (
+        <DisclosureRegion open={confirmAction !== null}>
+          {confirmAction ? (
+            <InlineConfirmation
+              className="mt-3"
+              title={
+                confirmAction === "merge"
+                  ? detail?.stack
+                    ? `Merge ${stackMergeTargetCount} ${stackMergeTargetCount === 1 ? "pull request" : "pull requests"}?`
+                    : "Merge pull request?"
+                  : "Close pull request?"
+              }
+              description={
+                confirmAction === "merge"
+                  ? detail?.stack
+                    ? `This will atomically merge every open pull request through #${input.number} into ${detail.stack.baseBranch} using ${selectedMergeMethod}.`
+                    : `This will merge #${input.number} using ${selectedMergeMethod}.`
+                  : `This will close #${input.number} without merging it.`
+              }
+              confirmLabel={
+                confirmAction === "merge" ? (detail?.stack ? "Merge stack" : "Merge") : "Close"
+              }
+              destructive={confirmAction === "close"}
               disabled={actionPending}
-              onClick={() => {
+              onCancel={() => setConfirmAction(null)}
+              onConfirm={() => {
                 const action = confirmAction;
                 setConfirmAction(null);
                 if (action === "merge") void runAction("merge", selectedMergeMethod);
                 if (action === "close") void runAction("close");
               }}
-            >
-              {confirmAction === "merge" ? (detail?.stack ? "Merge stack" : "Merge") : "Close"}
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogPopup>
-      </AlertDialog>
+            />
+          ) : null}
+        </DisclosureRegion>
+      ) : (
+        <AlertDialog
+          open={confirmAction !== null}
+          onOpenChange={(open) => !open && setConfirmAction(null)}
+        >
+          <AlertDialogPopup>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {confirmAction === "merge"
+                  ? detail?.stack
+                    ? `Merge ${stackMergeTargetCount} ${stackMergeTargetCount === 1 ? "pull request" : "pull requests"}?`
+                    : "Merge pull request?"
+                  : "Close pull request?"}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {confirmAction === "merge"
+                  ? detail?.stack
+                    ? `This will atomically merge every open pull request through #${input.number} into ${detail.stack.baseBranch} using ${selectedMergeMethod}.${
+                        detail.stack.position < detail.stack.size
+                          ? " Pull requests above it will remain open and GitHub will retarget them."
+                          : ""
+                      }`
+                    : `This will merge #${input.number} using ${selectedMergeMethod}.`
+                  : `This will close #${input.number} without merging it.`}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogClose render={<Button variant="outline" size="sm" />}>
+                Cancel
+              </AlertDialogClose>
+              <Button
+                size="sm"
+                variant={confirmAction === "close" ? "destructive" : "default"}
+                disabled={actionPending}
+                onClick={() => {
+                  const action = confirmAction;
+                  setConfirmAction(null);
+                  if (action === "merge") void runAction("merge", selectedMergeMethod);
+                  if (action === "close") void runAction("close");
+                }}
+              >
+                {confirmAction === "merge" ? (detail?.stack ? "Merge stack" : "Merge") : "Close"}
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogPopup>
+        </AlertDialog>
+      )}
     </div>
   );
 }
