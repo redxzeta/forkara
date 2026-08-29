@@ -24,7 +24,7 @@ function result(overrides: Partial<GitOriginalityMeterResult> = {}): GitOriginal
 }
 
 describe("OriginalityMeterReport", () => {
-  it("shows the parody score, deterministic method, disclaimer, and factual counts", () => {
+  it("shows the score, deterministic method, legal boundary, and factual counts", () => {
     const html = renderToStaticMarkup(<OriginalityMeterReport result={result()} />);
 
     expect(html).toContain("Originality: 25% ✨");
@@ -32,8 +32,8 @@ describe("OriginalityMeterReport", () => {
     expect(html).toContain(
       'aria-label="Certification badge: Inspired By. Originality score 25 percent."',
     );
-    expect(html).toContain("This score is a joke");
-    expect(html).toContain("not a measure of legal originality");
+    expect(html).toContain("Not a legal determination of originality");
+    expect(html).not.toContain("This score is a joke");
     expect(html).toContain("1 of 4");
     expect(html).toContain('aria-label="12 insertions, 3 deletions"');
     expect(html).toContain("Fork-only commits");

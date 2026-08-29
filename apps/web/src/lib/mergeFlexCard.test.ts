@@ -67,7 +67,7 @@ describe("Merge Flex card projection", () => {
       count: 999_999,
       countLabel: "999,999",
       date: "2026-08-24",
-      scopeLabel: "Simulated locally",
+      scopeLabel: "PR Inflation Department",
       headline: "ALLEGED PRs MERGED TODAY",
       marker: "PARODY",
       footer: "Source: vibes · Audited by absolutely nobody.",

@@ -88,8 +88,7 @@ export function AchievementViewer({ snapshot }: { snapshot: AchievementSnapshot 
         ))}
       </ul>
       <p className="text-muted-foreground text-xs">
-        Achievements are stored locally. Unlike Git history, you may actually delete these. No
-        account sync, network request, or telemetry.
+        Stored in this browser. Unlike Git history, you may actually delete these.
       </p>
     </div>
   );

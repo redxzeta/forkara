@@ -235,7 +235,7 @@ export function makeGitOriginalityMeter(input: {
       return {
         state: "ready",
         message:
-          "Parody score calculated from eligible files changed between the exact common ancestor and committed HEAD.",
+          "Score calculated from eligible files changed between the exact common ancestor and committed HEAD.",
         ...calculation,
         forkUniqueCommitCount: overview.forkUniqueCount,
         upstreamUniqueCommitCount: overview.upstreamUniqueCount,

@@ -6,32 +6,32 @@ export const APOLOGY_PROGRESSION_STAGES = [
   {
     id: "denial",
     title: "Denial",
-    copy: "Satirical stance: this repository simply appeared one morning, complete with familiar commit history.",
+    copy: "This repository simply appeared one morning, complete with familiar commit history.",
   },
   {
     id: "clarification",
     title: "Clarification",
-    copy: "Satirical stance: it is not a fork; it merely shares an unusually specific creative lineage.",
+    copy: "It is not a fork; it merely shares an unusually specific creative lineage.",
   },
   {
     id: "double-down",
     title: "Double Down",
-    copy: "Satirical stance: matching history is apparently just parallel invention with excellent timing.",
+    copy: "Matching history is apparently just parallel invention with excellent timing.",
   },
   {
     id: "fork-isnt-that-bad",
     title: "The Fork Isn't That Bad",
-    copy: "Satirical breakthrough: forks are normal, useful, and considerably less awkward when acknowledged.",
+    copy: "Forks are normal, useful, and considerably less awkward when acknowledged.",
   },
   {
     id: "notes-app-screenshot",
     title: "Notes App Screenshot",
-    copy: "Satirical status: a solemn monochrome rectangle has been drafted locally. It has not been posted anywhere.",
+    copy: "A solemn monochrome rectangle has been drafted. The Notes app has done all it can.",
   },
   {
     id: "actual-apology",
     title: "Actual Apology",
-    copy: "Accountability beats evasion: acknowledge the fork, credit upstream work, preserve required notices, and explain what changed. This parody is not legal advice or proof of compliance.",
+    copy: "Accountability beats evasion: acknowledge the fork, credit upstream work, preserve required notices, and explain what changed.",
   },
 ] as const;
 

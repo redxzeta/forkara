@@ -81,9 +81,7 @@ export function EnvironmentReadmeTruthinessSection({
         <DialogPopup className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>README Truthiness Checker</DialogTitle>
-            <DialogDescription>
-              A deterministic parody check over the local README and cached Git facts.
-            </DialogDescription>
+            <DialogDescription>Local README claims meet cached Git facts.</DialogDescription>
           </DialogHeader>
           <DialogPanel>
             {resultQuery.isPending ? (
@@ -140,8 +138,8 @@ export function EnvironmentReadmeTruthinessSection({
                   </p>
                 ) : null}
                 <p className="text-muted-foreground text-xs">
-                  This is a joke, not a legal, ownership, or authorship determination. No network
-                  request is made.
+                  Not a legal determination of ownership or authorship. Uses local README content
+                  and cached Git facts; no network request is made.
                 </p>
               </div>
             ) : null}

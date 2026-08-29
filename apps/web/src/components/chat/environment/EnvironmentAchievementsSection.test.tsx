@@ -34,9 +34,9 @@ describe("achievement viewer", () => {
     });
   });
 
-  it("states the local-only persistence boundary", () => {
+  it("states the browser persistence boundary without over-explaining it", () => {
     expect(renderToStaticMarkup(<AchievementViewer snapshot={[]} />)).toContain(
-      "Unlike Git history, you may actually delete these.",
+      "Stored in this browser. Unlike Git history, you may actually delete these.",
     );
   });
 });

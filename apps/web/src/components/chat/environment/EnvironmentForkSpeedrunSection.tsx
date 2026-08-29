@@ -53,7 +53,9 @@ export function ForkSpeedrunReport({ result }: { result: GitForkSpeedrunResult }
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-muted-foreground text-xs uppercase tracking-wide">Local receipts only</p>
+        <p className="text-muted-foreground text-xs uppercase tracking-wide">
+          Official timing desk
+        </p>
         <p className="mt-1 text-sm">{result.message}</p>
       </div>
       <section aria-labelledby="fork-speedrun-timeline-heading" className="space-y-2">
@@ -107,9 +109,6 @@ export function ForkSpeedrunReport({ result }: { result: GitForkSpeedrunResult }
           milestones use committer timestamps from exact merge-base..HEAD history and only count
           events at or after that start. README changes use Git path history. No branding or PR
           milestone appears because Forkara does not yet retain trustworthy receipts for them.
-        </p>
-        <p className="text-muted-foreground text-xs">
-          Display-only. No telemetry, global ranking, or external leaderboard.
         </p>
       </section>
     </div>
@@ -178,7 +177,7 @@ export function EnvironmentForkSpeedrunSection({
           <DialogHeader>
             <DialogTitle>Fork Speedrun</DialogTitle>
             <DialogDescription>
-              A local, display-only timeline. No telemetry and no leaderboard.
+              Derived from local project and Git receipts. Nothing is uploaded.
             </DialogDescription>
           </DialogHeader>
           <DialogPanel>
@@ -186,8 +185,7 @@ export function EnvironmentForkSpeedrunSection({
               <div className="rounded-xl border border-border bg-muted/20 p-4 text-sm">
                 <p className="font-medium">Fork Speedrun is off</p>
                 <p className="mt-1 text-muted-foreground">
-                  Opt in to derive a timeline from this project's local creation receipt and Git
-                  history. Nothing is uploaded or published.
+                  Opt in to derive a timeline from this project's creation receipt and Git history.
                 </p>
                 <Button className="mt-3" onClick={() => updateOptIn(true)}>
                   Show my local timeline

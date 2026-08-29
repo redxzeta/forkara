@@ -43,8 +43,9 @@ describe("ForkSpeedrunReport", () => {
     expect(html).toContain("08:41");
     expect(html).toContain('aria-label="README changed, 521 seconds after project added"');
     expect(html).toContain("First fork-only commit — no timestamp");
-    expect(html).toContain("No telemetry, global ranking, or external leaderboard");
+    expect(html).toContain("Official timing desk");
     expect(html).toContain("does not yet retain trustworthy receipts");
+    expect(html).not.toContain("No telemetry");
   });
 
   it("formats minute and hour timelines without fake precision", () => {

@@ -52,7 +52,7 @@ export function projectParodyMergeFlexCard(input: {
     count: input.count,
     countLabel: formatMergeFlexCardCount(input.count),
     date: input.date,
-    scopeLabel: "Simulated locally",
+    scopeLabel: "PR Inflation Department",
     headline: "ALLEGED PRs MERGED TODAY",
     marker: "PARODY",
     footer: "Source: vibes · Audited by absolutely nobody.",

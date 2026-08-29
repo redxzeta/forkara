@@ -5,7 +5,6 @@
 import type { ProjectId } from "@forkara/contracts";
 import { useEffect, useState } from "react";
 
-import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
   Dialog,
@@ -40,23 +39,17 @@ export function ApologyProgressionReport({ stageIndex }: { stageIndex: number })
     APOLOGY_PROGRESSION_STAGES[normalizedStageIndex] ?? APOLOGY_PROGRESSION_STAGES[0];
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge variant="warning">Satire</Badge>
-        <Badge variant="outline">Local only</Badge>
-        <span className="text-muted-foreground text-xs">
-          Stage {normalizedStageIndex + 1} of {APOLOGY_PROGRESSION_STAGES.length}
-        </span>
-      </div>
+      <p className="text-muted-foreground text-xs">
+        Stage {normalizedStageIndex + 1} of {APOLOGY_PROGRESSION_STAGES.length}
+      </p>
 
       <div className="rounded-xl border border-border bg-muted/20 p-4" aria-live="polite">
-        <p className="text-muted-foreground text-xs uppercase tracking-wide">
-          Current satirical stage
-        </p>
+        <p className="text-muted-foreground text-xs uppercase tracking-wide">Current stage</p>
         <h3 className="mt-1 font-semibold text-base">{currentStage.title}</h3>
         <p className="mt-2 text-muted-foreground text-sm">{currentStage.copy}</p>
       </div>
 
-      <ol aria-label="Satirical apology progression" className="space-y-2">
+      <ol aria-label="Apology progression" className="space-y-2">
         {APOLOGY_PROGRESSION_STAGES.map((stage, index) => {
           const current = index === normalizedStageIndex;
           const completed = index < normalizedStageIndex;
@@ -84,17 +77,12 @@ export function ApologyProgressionReport({ stageIndex }: { stageIndex: number })
               </span>
               <span className={cn(current && "font-medium")}>{stage.title}</span>
               <span className="sr-only">
-                {current ? "Current satirical stage" : completed ? "Completed" : "Not reached"}
+                {current ? "Current stage" : completed ? "Completed" : "Not reached"}
               </span>
             </li>
           );
         })}
       </ol>
-
-      <div className="rounded-lg border border-dashed border-border p-3 text-muted-foreground text-xs">
-        This is a private UI joke. Nothing is sent to GitHub, social media, another person, or the
-        repository. No person is named or impersonated.
-      </div>
     </div>
   );
 }
@@ -141,16 +129,14 @@ export function EnvironmentApologyProgressionSection({
             {stageIndex + 1}/{APOLOGY_PROGRESSION_STAGES.length}
           </span>
         }
-        title="Open a local, satirical apology progression"
+        title="Open the six-stage apology progression"
         onClick={() => setOpen(true)}
       />
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogPopup className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Apology Progression</DialogTitle>
-            <DialogDescription>
-              Six entirely local stages from denial to acknowledgement. Satire, not a publisher.
-            </DialogDescription>
+            <DialogDescription>Six stages from denial to acknowledgement.</DialogDescription>
           </DialogHeader>
           <DialogPanel>
             <ApologyProgressionReport stageIndex={stageIndex} />
