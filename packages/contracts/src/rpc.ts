@@ -221,6 +221,8 @@ import {
   ProjectReadFileResult,
   ProjectPrewarmSearchIndexInput,
   ProjectPrewarmSearchIndexResult,
+  ProjectResolveWorkspaceFileReferencesInput,
+  ProjectResolveWorkspaceFileReferencesResult,
   ProjectResolveOutOfRootFileReferenceInput,
   ProjectResolveOutOfRootFileReferenceResult,
   ProjectRunDevServerInput,
@@ -488,6 +490,15 @@ export const WsProjectsReadFileRpc = Rpc.make(WS_METHODS.projectsReadFile, {
   success: ProjectReadFileResult,
   error: WsRpcError,
 });
+
+export const WsProjectsResolveWorkspaceFileReferencesRpc = Rpc.make(
+  WS_METHODS.projectsResolveWorkspaceFileReferences,
+  {
+    payload: ProjectResolveWorkspaceFileReferencesInput,
+    success: ProjectResolveWorkspaceFileReferencesResult,
+    error: WsRpcError,
+  },
+);
 
 export const WsProjectsResolveOutOfRootFileReferenceRpc = Rpc.make(
   WS_METHODS.projectsResolveOutOfRootFileReference,
@@ -1467,6 +1478,7 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsProjectsSearchContentRpc,
   WsProjectsPrewarmSearchIndexRpc,
   WsProjectsReadFileRpc,
+  WsProjectsResolveWorkspaceFileReferencesRpc,
   WsProjectsResolveOutOfRootFileReferenceRpc,
   WsProjectsCreateLocalFilePreviewGrantRpc,
   WsProjectsWriteFileRpc,

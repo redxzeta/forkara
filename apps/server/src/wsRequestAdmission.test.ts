@@ -25,6 +25,9 @@ describe("WsRequestAdmission", () => {
     expect(classifyWsRequest(WS_METHODS.gitPreviewUpstreamSync)).toBe("expensive-read");
     expect(classifyWsRequest(WS_METHODS.gitApplyUpstreamSync)).toBe("standard");
     expect(classifyWsRequest(WS_METHODS.serverPrewarmVoice)).toBe("expensive-read");
+    expect(classifyWsRequest(WS_METHODS.projectsResolveWorkspaceFileReferences)).toBe(
+      "expensive-read",
+    );
     expect(classifyWsRequest(WS_METHODS.terminalAckOutput)).toBe("control");
   });
 

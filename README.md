@@ -32,13 +32,13 @@ task-specific conversation, state, files, and history.
 
 Keep the active conversation alongside the surface it is changing:
 
-| Surface            | Purpose                                                                                       |
-| ------------------ | --------------------------------------------------------------------------------------------- |
-| **Changes**        | Inspect diffs, changed files, and review state.                                               |
-| **Terminal**       | Run commands in the project environment.                                                      |
-| **Browser**        | Keep local previews, browser work, and the floating in-chat browser panel next to the thread. |
-| **Files / Editor** | Browse, inspect, and edit project files in context.                                           |
-| **Git**            | Work with branches, commits, pushes, and pull requests.                                       |
+| Surface            | Purpose                                                                                                                              |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| **Changes**        | Inspect diffs, changed files, and review state.                                                                                      |
+| **Terminal**       | Run commands in the project environment.                                                                                             |
+| **Browser**        | Keep local previews and the floating in-chat browser next to the thread, with semantic or page-declared WebMCP tools for agents.     |
+| **Files / Editor** | Browse, inspect, and edit project files in context.                                                                                  |
+| **Git**            | Work with branches, commits, pushes, and pull requests.                                                                              |
 
 Split views, browser previews, and device previews keep execution and verification connected to the
 task that produced them.
