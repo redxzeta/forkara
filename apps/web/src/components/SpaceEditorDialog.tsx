@@ -44,7 +44,7 @@ export interface SpaceEditorValue {
  */
 export type SpaceEditorMode = "create" | "edit" | "void";
 
-export function SpaceEditorDialog(props: {
+export interface SpaceEditorProps {
   open: boolean;
   mode: SpaceEditorMode;
   initialValue?: SpaceEditorValue | undefined;
@@ -52,7 +52,11 @@ export function SpaceEditorDialog(props: {
   existingNames: ReadonlyArray<string>;
   onOpenChange: (open: boolean) => void;
   onSubmit: (value: SpaceEditorValue) => Promise<void> | void;
-}) {
+}
+
+export function SpaceEditorFields(
+  props: SpaceEditorProps & { readonly presentation: "dialog" | "inline" },
+) {
   const isVoid = props.mode === "void";
   const iconOptions = isVoid ? VOID_SPACE_ICON_OPTIONS : SPACE_ICON_OPTIONS;
   const defaultIcon: SpaceIconValue = isVoid ? DEFAULT_VOID_SPACE_ICON : DEFAULT_SPACE_ICON;
@@ -148,6 +152,120 @@ export function SpaceEditorDialog(props: {
     cells[nextIndex]?.click();
   }, []);
 
+  const fields = (
+    <div className="space-y-4">
+      {/* The error sits outside the label on purpose: text inside a wrapping label
+              becomes part of the field's accessible name, so nesting it here would have
+              the field announce itself as "Name A space with this name already exists."
+              and then repeat the message as its description. */}
+      <div className="space-y-1.5">
+        <label htmlFor={nameInputId} className={cn("block", FIELD_LABEL_CLASS_NAME)}>
+          Name
+        </label>
+        <Input
+          id={nameInputId}
+          ref={nameInputRef}
+          value={name}
+          maxLength={SPACE_NAME_MAX_LENGTH}
+          aria-invalid={Boolean(visibleNameError)}
+          {...(visibleNameError ? { "aria-describedby": nameErrorId } : {})}
+          onChange={(event) => {
+            setName(event.target.value);
+            // The icon follows the name until the user pins one from the grid.
+            if (!iconPinned) setIcon(suggestSpaceIcon(event.target.value));
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              void submit();
+            }
+          }}
+          placeholder={isVoid ? "Unfiled" : "Work"}
+        />
+        {visibleNameError ? (
+          <p
+            id={nameErrorId}
+            role="alert"
+            className="text-[length:var(--app-font-size-ui-xs,10px)] text-destructive"
+          >
+            {visibleNameError}
+          </p>
+        ) : null}
+      </div>
+
+      <fieldset>
+        <legend id={iconLegendId} className={cn("mb-2", FIELD_LABEL_CLASS_NAME)}>
+          Icon
+        </legend>
+        <div
+          role="radiogroup"
+          aria-labelledby={iconLegendId}
+          onKeyDown={handleIconKeyDown}
+          className="grid grid-cols-10 gap-1.5 max-sm:grid-cols-5"
+        >
+          {iconOptions.map((option) => {
+            const selected = icon === option.name;
+            return (
+              <button
+                key={option.name}
+                type="button"
+                role="radio"
+                data-space-icon
+                aria-checked={selected}
+                aria-label={option.label}
+                // Roving tabindex: the whole grid is one tab stop.
+                tabIndex={selected ? 0 : -1}
+                onClick={() => {
+                  setIcon(option.name);
+                  setIconPinned(true);
+                }}
+                className={cn(
+                  ICON_CELL_CLASS_NAME,
+                  selected
+                    ? "border-foreground/25 bg-foreground/9 text-foreground"
+                    : "border-transparent bg-foreground/3",
+                )}
+              >
+                <SpaceIcon icon={option.name} />
+              </button>
+            );
+          })}
+        </div>
+      </fieldset>
+      {submitError ? (
+        <p role="alert" className="text-[length:var(--app-font-size-ui-xs,10px)] text-destructive">
+          {submitError}
+        </p>
+      ) : null}
+    </div>
+  );
+  const footer = (
+    <>
+      <Button variant="ghost" onClick={() => props.onOpenChange(false)} disabled={submitting}>
+        Cancel
+      </Button>
+      <Button onClick={() => void submit()} disabled={Boolean(nameError) || submitting}>
+        {submitting ? "Saving…" : props.mode === "create" ? "Create space" : "Save"}
+      </Button>
+    </>
+  );
+
+  return props.presentation === "dialog" ? (
+    <>
+      <DialogPanel className="space-y-4">{fields}</DialogPanel>
+      <DialogFooter>{footer}</DialogFooter>
+    </>
+  ) : (
+    <>
+      {fields}
+      <DialogFooter className="px-0 pb-0">{footer}</DialogFooter>
+    </>
+  );
+}
+
+export function SpaceEditorDialog(props: SpaceEditorProps) {
+  const isVoid = props.mode === "void";
+
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
       <DialogPopup className="max-w-sm">
@@ -163,102 +281,7 @@ export function SpaceEditorDialog(props: {
                 : "Rename this space or give it a different icon. Its projects stay where they are."}
           </DialogDescription>
         </DialogHeader>
-        <DialogPanel className="space-y-4">
-          {/* The error sits outside the label on purpose: text inside a wrapping label
-              becomes part of the field's accessible name, so nesting it here would have
-              the field announce itself as "Name A space with this name already exists."
-              and then repeat the message as its description. */}
-          <div className="space-y-1.5">
-            <label htmlFor={nameInputId} className={cn("block", FIELD_LABEL_CLASS_NAME)}>
-              Name
-            </label>
-            <Input
-              id={nameInputId}
-              ref={nameInputRef}
-              value={name}
-              maxLength={SPACE_NAME_MAX_LENGTH}
-              aria-invalid={Boolean(visibleNameError)}
-              {...(visibleNameError ? { "aria-describedby": nameErrorId } : {})}
-              onChange={(event) => {
-                setName(event.target.value);
-                // The icon follows the name until the user pins one from the grid.
-                if (!iconPinned) setIcon(suggestSpaceIcon(event.target.value));
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  void submit();
-                }
-              }}
-              placeholder={isVoid ? "Unfiled" : "Work"}
-            />
-            {visibleNameError ? (
-              <p
-                id={nameErrorId}
-                role="alert"
-                className="text-[length:var(--app-font-size-ui-xs,10px)] text-destructive"
-              >
-                {visibleNameError}
-              </p>
-            ) : null}
-          </div>
-
-          <fieldset>
-            <legend id={iconLegendId} className={cn("mb-2", FIELD_LABEL_CLASS_NAME)}>
-              Icon
-            </legend>
-            <div
-              role="radiogroup"
-              aria-labelledby={iconLegendId}
-              onKeyDown={handleIconKeyDown}
-              className="grid grid-cols-10 gap-1.5 max-sm:grid-cols-5"
-            >
-              {iconOptions.map((option) => {
-                const selected = icon === option.name;
-                return (
-                  <button
-                    key={option.name}
-                    type="button"
-                    role="radio"
-                    data-space-icon
-                    aria-checked={selected}
-                    aria-label={option.label}
-                    // Roving tabindex: the whole grid is one tab stop.
-                    tabIndex={selected ? 0 : -1}
-                    onClick={() => {
-                      setIcon(option.name);
-                      setIconPinned(true);
-                    }}
-                    className={cn(
-                      ICON_CELL_CLASS_NAME,
-                      selected
-                        ? "border-foreground/25 bg-foreground/9 text-foreground"
-                        : "border-transparent bg-foreground/3",
-                    )}
-                  >
-                    <SpaceIcon icon={option.name} />
-                  </button>
-                );
-              })}
-            </div>
-          </fieldset>
-          {submitError ? (
-            <p
-              role="alert"
-              className="text-[length:var(--app-font-size-ui-xs,10px)] text-destructive"
-            >
-              {submitError}
-            </p>
-          ) : null}
-        </DialogPanel>
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => props.onOpenChange(false)} disabled={submitting}>
-            Cancel
-          </Button>
-          <Button onClick={() => void submit()} disabled={Boolean(nameError) || submitting}>
-            {submitting ? "Saving…" : props.mode === "create" ? "Create space" : "Save"}
-          </Button>
-        </DialogFooter>
+        <SpaceEditorFields {...props} presentation="dialog" />
       </DialogPopup>
     </Dialog>
   );

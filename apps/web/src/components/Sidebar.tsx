@@ -405,6 +405,8 @@ import {
   type CreateProjectSubmitOptions,
   type CreateProjectSubmitValue,
 } from "./CreateProjectDialog";
+import { CreateProjectDock } from "./CreateProjectDock";
+import { statusHistoryManager } from "../statusHistory";
 import { SpaceEditorDialog } from "./SpaceEditorDialog";
 import { useSpacesController } from "./useSpacesController";
 import { SpaceEmptyState } from "./SpaceEmptyState";
@@ -1313,7 +1315,15 @@ export function SidebarSurfacePicker({
   );
 }
 
-export default function Sidebar() {
+export interface SidebarShellRenderContract {
+  readonly sidebarContent: ReactNode;
+  readonly projectCreationSurface: ReactNode;
+  readonly hideMainContentOnNarrowScreens: boolean;
+}
+
+export default function Sidebar(props: {
+  readonly renderShell?: ((contract: SidebarShellRenderContract) => ReactNode) | undefined;
+}) {
   const githubProvisioningAvailable = useSyncExternalStore(
     subscribeGitHubProvisioningCapability,
     readGitHubProvisioningCapability,
@@ -5779,7 +5789,7 @@ export default function Sidebar() {
   const projectContextMenuHasOpenServer =
     projectContextMenuServer !== null && firstLocalServerUrl(projectContextMenuServer) !== null;
 
-  return (
+  const sidebarContent = (
     <>
       {isElectron ? (
         <>
@@ -6327,16 +6337,6 @@ export default function Sidebar() {
         </SidebarMenu>
       </SidebarFooter>
 
-      <CreateProjectDialog
-        open={createProjectDialogOpen}
-        githubProvisioningAvailable={githubProvisioningAvailable}
-        spaces={spaces}
-        activeSpaceId={activeSpaceId}
-        defaultCloneParent={homeDir ?? "~"}
-        onOpenChange={setCreateProjectDialogOpen}
-        onSubmit={handleCreateProjectSubmit}
-      />
-
       <SpaceEditorDialog
         open={spaceEditorOpen}
         mode={spaceEditorMode}
@@ -6742,6 +6742,56 @@ export default function Sidebar() {
           }}
         />
       ) : null}
+    </>
+  );
+  const projectCreationSurface = appSettings.noForksGivenModeEnabled ? (
+    <CreateProjectDock
+      open={createProjectDialogOpen}
+      githubProvisioningAvailable={githubProvisioningAvailable}
+      spaces={spaces}
+      activeSpaceId={activeSpaceId}
+      defaultCloneParent={homeDir ?? "~"}
+      onOpenChange={setCreateProjectDialogOpen}
+      onSubmit={handleCreateProjectSubmit}
+      onSuccess={(value) => {
+        const target =
+          value.source === "github"
+            ? `${value.repository}:${joinProjectPath(value.destinationParent, value.directoryName)}`
+            : value.workspaceRoot;
+        statusHistoryManager.add({
+          stableKey: `project-created:${value.source}:${target}`,
+          tone: "success",
+          title: "Project added",
+          summary:
+            value.source === "github"
+              ? `${value.repository} is ready in ${joinProjectPath(value.destinationParent, value.directoryName)}.`
+              : `${value.workspaceRoot} is ready.`,
+        });
+      }}
+    />
+  ) : (
+    <CreateProjectDialog
+      open={createProjectDialogOpen}
+      githubProvisioningAvailable={githubProvisioningAvailable}
+      spaces={spaces}
+      activeSpaceId={activeSpaceId}
+      defaultCloneParent={homeDir ?? "~"}
+      onOpenChange={setCreateProjectDialogOpen}
+      onSubmit={handleCreateProjectSubmit}
+    />
+  );
+  const shellContract: SidebarShellRenderContract = {
+    sidebarContent,
+    projectCreationSurface,
+    hideMainContentOnNarrowScreens: appSettings.noForksGivenModeEnabled && createProjectDialogOpen,
+  };
+
+  return props.renderShell ? (
+    props.renderShell(shellContract)
+  ) : (
+    <>
+      {sidebarContent}
+      {projectCreationSurface}
     </>
   );
 }

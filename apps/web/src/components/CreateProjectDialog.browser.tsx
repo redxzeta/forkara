@@ -25,6 +25,24 @@ describe("CreateProjectDialog GitHub source", () => {
     nativeApi.onProvisionProgress.mockClear();
   });
 
+  it("keeps the default Add Project modal shell", async () => {
+    await render(
+      <CreateProjectDialog
+        open
+        githubProvisioningAvailable
+        spaces={[]}
+        activeSpaceId={null}
+        defaultCloneParent="/Users/test/Developer"
+        onOpenChange={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
+
+    await expect.element(page.getByRole("dialog")).toBeVisible();
+    expect(document.querySelector('[data-slot="dialog-backdrop"]')).not.toBeNull();
+    expect(document.querySelector('[data-slot="create-project-dock"]')).toBeNull();
+  });
+
   it("disables GitHub when the server does not advertise provisioning", async () => {
     await render(
       <CreateProjectDialog
