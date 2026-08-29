@@ -36,6 +36,44 @@ const CONNECTED_STATUS: XConnectionStatus = {
 };
 
 describe("MergeFlexComposerDialog parody mode", () => {
+  it("[personality-smoke] isolates factual receipts from Enterprise velocity without publishing", async () => {
+    const onPost = vi.fn();
+    await render(
+      <MergeFlexComposerDialog
+        open
+        result={FACTUAL_RESULT}
+        connectionStatus={CONNECTED_STATUS}
+        authorizationUrl={null}
+        onOpenChange={vi.fn()}
+        onBeginConnect={vi.fn().mockResolvedValue(undefined)}
+        onRetryConnectionStatus={vi.fn().mockResolvedValue(undefined)}
+        onOpenAuthorization={vi.fn().mockResolvedValue(undefined)}
+        onPost={onPost}
+        onOpenPost={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+    await expect
+      .element(page.getByLabelText(/FACTUAL RECEIPTS: 1 your prs merged today/i))
+      .toBeInTheDocument();
+    await page.getByRole("radio", { name: "Resume-Driven Development" }).click();
+    await page.getByRole("button", { name: "Enterprise velocity" }).click();
+
+    await expect
+      .element(page.getByRole("spinbutton", { name: "Alleged PRs merged today" }))
+      .toHaveValue(999_999);
+    await expect.element(page.getByText(MERGE_FLEX_PARODY_MARKER)).toBeInTheDocument();
+    expect(document.body.textContent).toContain(
+      "Alleged counts never create pull requests, commits, branches, or GitHub activity.",
+    );
+
+    await page.getByRole("radio", { name: "Receipts · factual" }).click();
+    await expect
+      .element(page.getByLabelText(/FACTUAL RECEIPTS: 1 your prs merged today/i))
+      .toBeInTheDocument();
+    expect(onPost).not.toHaveBeenCalled();
+  });
+
   it("isolates factual and parody drafts while enforcing the final parody payload", async () => {
     const onPost = vi.fn().mockImplementation(async (text: string) => ({
       id: "456",

@@ -77,6 +77,41 @@ describe("ResetDepartmentSettingsPanel", () => {
     document.body.innerHTML = "";
   });
 
+  it("[personality-smoke] exposes only previews and gated reset actions without executing them", async () => {
+    const api = resetApi();
+    await render(
+      <ResetDepartmentSettingsPanel
+        active
+        workspaceRoot="/workspace"
+        resetApi={api}
+        random={() => 0.5}
+      />,
+    );
+
+    await userEvent.click(page.getByRole("button", { name: "Ask the Reset Oracle — SAFE" }));
+    await expect.element(page.getByRole("status")).toBeVisible();
+
+    await userEvent.click(page.getByRole("button", { name: "Reset Codex Quota — LOL" }));
+    await expect.element(page.getByRole("status")).toBeVisible();
+
+    await userEvent.click(
+      page.getByRole("button", { name: "Preview Delete node_modules — LOW RISK" }),
+    );
+    await vi.waitFor(() => expect(api.previewDependencyCleanup).toHaveBeenCalledOnce());
+    expect(document.body.textContent).toContain("/workspace/node_modules");
+    expect(api.executeDependencyCleanup).not.toHaveBeenCalled();
+
+    await userEvent.click(
+      page.getByRole("button", { name: "Inspect git reset --hard impact — DANGER" }),
+    );
+    await vi.waitFor(() => expect(api.inspectHardResetImpact).toHaveBeenCalledOnce());
+    expect(document.body.textContent).toContain("Staged tracked: 1");
+    await expect
+      .element(page.getByRole("button", { name: "Continue to Hard Reset" }))
+      .toBeDisabled();
+    expect(api.executeHardReset).not.toHaveBeenCalled();
+  });
+
   it("keeps every action keyboard reachable and lets the quota ritual stand on its own", async () => {
     await render(
       <ResetDepartmentSettingsPanel active workspaceRoot="/workspace" resetApi={resetApi()} />,

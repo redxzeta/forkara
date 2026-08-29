@@ -1,13 +1,17 @@
 import "../index.css";
 
 import {
+  DEFAULT_SERVER_SETTINGS_VIEW,
   DEVICE_WS_METHODS,
+  EventId,
   ORCHESTRATION_WS_METHODS,
   type MessageId,
   type OrchestrationReadModel,
   type ProjectId,
   type ServerConfig,
+  type ServerSettingsView,
   type ThreadId,
+  TurnId,
   type WsWelcomePayload,
   WS_METHODS,
 } from "@forkara/contracts";
@@ -15,6 +19,7 @@ import { RouterProvider, createMemoryHistory } from "@tanstack/react-router";
 import { ws, http, HttpResponse } from "msw";
 import { setupWorker } from "msw/browser";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { page } from "vitest/browser";
 import { render } from "vitest-browser-react";
 
 import { useComposerDraftStore } from "../composerDraftStore";
@@ -30,6 +35,9 @@ import {
 } from "../test/effectRpcWebSocketMock";
 import { createBrowserTestServerConfig, createFullscreenTestHost } from "../test/browserHarness";
 import { resetWsNativeApiForTest } from "../wsNativeApi";
+import { readNativeApi } from "../nativeApi";
+import { getAchievementSnapshot, resetAchievementState } from "../achievements/engine";
+import { BULLY_MODE_CAPTURE_ACTIVITY_KIND } from "../achievements/bullyMode";
 
 const THREAD_ID = "thread-kb-toast-test" as ThreadId;
 const PROJECT_ID = "project-1" as ProjectId;
@@ -38,6 +46,7 @@ const NOW_ISO = "2026-03-04T12:00:00.000Z";
 interface TestFixture {
   snapshot: OrchestrationReadModel;
   serverConfig: ServerConfig;
+  serverSettings: ServerSettingsView;
   welcome: WsWelcomePayload;
 }
 
@@ -124,6 +133,7 @@ function buildFixture(): TestFixture {
   return {
     snapshot: createMinimalSnapshot(),
     serverConfig: createBaseServerConfig(),
+    serverSettings: DEFAULT_SERVER_SETTINGS_VIEW,
     welcome: {
       cwd: "/repo/project",
       projectName: "Project",
@@ -152,6 +162,9 @@ function resolveWsRpc(tag: string): unknown {
   }
   if (tag === WS_METHODS.serverGetConfig) {
     return fixture.serverConfig;
+  }
+  if (tag === WS_METHODS.serverGetSettings) {
+    return fixture.serverSettings;
   }
   if (tag === WS_METHODS.projectsListDevServers) {
     return { servers: [] };
@@ -303,7 +316,9 @@ async function mountApp(): Promise<{ cleanup: () => Promise<void> }> {
 
   const router = getRouter(createMemoryHistory({ initialEntries: [`/${THREAD_ID}`] }));
 
-  const screen = await render(<RouterProvider router={router} />, { container: host });
+  const screen = await render(<RouterProvider router={router} />, {
+    container: host,
+  });
   try {
     await vi.waitFor(
       () => {
@@ -327,6 +342,65 @@ async function mountApp(): Promise<{ cleanup: () => Promise<void> }> {
       if (host.isConnected) host.remove();
     },
   };
+}
+
+function installPersonalitySendBoundary(input?: { rejectTurnStart?: boolean }): {
+  readonly commands: unknown[];
+  readonly restore: () => void;
+} {
+  const previousNativeApi = window.nativeApi;
+  const api = readNativeApi();
+  if (!api) throw new Error("Expected the browser native API fixture.");
+  const commands: unknown[] = [];
+  Object.defineProperty(window, "nativeApi", {
+    configurable: true,
+    value: {
+      ...api,
+      orchestration: {
+        ...api.orchestration,
+        dispatchCommand: async (
+          command: Parameters<typeof api.orchestration.dispatchCommand>[0],
+        ) => {
+          commands.push(command);
+          if (input?.rejectTurnStart && command.type === "thread.turn.start") {
+            throw new Error("Recoverable provider fixture failure.");
+          }
+          return { sequence: fixture.snapshot.snapshotSequence + 1 };
+        },
+      },
+    },
+  });
+  return {
+    commands,
+    restore: () => {
+      if (previousNativeApi) {
+        Object.defineProperty(window, "nativeApi", {
+          configurable: true,
+          value: previousNativeApi,
+        });
+      } else {
+        Reflect.deleteProperty(window, "nativeApi");
+      }
+    },
+  };
+}
+
+async function waitForPersonalityComposer(): Promise<{
+  readonly editor: HTMLElement;
+  readonly sendButton: HTMLButtonElement;
+}> {
+  let editor: HTMLElement | null = null;
+  let sendButton: HTMLButtonElement | null = null;
+  await vi.waitFor(
+    () => {
+      editor = document.querySelector<HTMLElement>('[contenteditable="true"]');
+      sendButton = document.querySelector<HTMLButtonElement>('button[aria-label="Send message"]');
+      expect(editor).not.toBeNull();
+      expect(sendButton).not.toBeNull();
+    },
+    { timeout: 20_000, interval: 16 },
+  );
+  return { editor: editor!, sendButton: sendButton! };
 }
 
 describe("Keybindings update toast", () => {
@@ -378,6 +452,106 @@ describe("Keybindings update toast", () => {
     document.body.innerHTML = "";
   });
 
+  it("[personality-smoke] sends Bully Mode and per-turn precision through the full app", async () => {
+    fixture = buildFixture();
+    resetAchievementState();
+    fixture.serverSettings = {
+      ...fixture.serverSettings,
+      bullyModeEnabled: true,
+    };
+    const completedTurnId = TurnId.makeUnsafe("turn-personality-bully-completed");
+    fixture.snapshot = {
+      ...fixture.snapshot,
+      threads: fixture.snapshot.threads.map((thread) =>
+        Object.assign({}, thread, {
+          activities: [
+            {
+              id: EventId.makeUnsafe("activity-personality-bully-capture"),
+              createdAt: NOW_ISO,
+              kind: BULLY_MODE_CAPTURE_ACTIVITY_KIND,
+              summary: "Bully Mode captured",
+              tone: "info" as const,
+              turnId: completedTurnId,
+              payload: { bullyModeEnabled: true },
+            },
+            {
+              id: EventId.makeUnsafe("activity-personality-bully-completed"),
+              createdAt: NOW_ISO,
+              kind: "turn.completed",
+              summary: "Turn completed",
+              tone: "info" as const,
+              turnId: completedTurnId,
+              payload: { state: "completed" },
+            },
+          ],
+        }),
+      ),
+    };
+    const boundary = installPersonalitySendBoundary();
+    const app = await mountApp();
+
+    try {
+      await expect
+        .element(page.getByRole("button", { name: "Disable Bully Mode" }))
+        .toBeInTheDocument();
+      await page.getByRole("button", { name: /Make No Mistake is off/u }).click();
+      await page.getByRole("button", { name: /level 1 of 3/u }).click();
+      await page.getByRole("button", { name: /level 2 of 3/u }).click();
+      const { sendButton } = await waitForPersonalityComposer();
+      useComposerDraftStore.getState().setPrompt(THREAD_ID, "Exercise personality composition");
+      await vi.waitFor(() => expect(sendButton.disabled).toBe(false));
+      sendButton.click();
+
+      await vi.waitFor(() => {
+        const turnStart = boundary.commands.find(
+          (command) =>
+            command !== null &&
+            typeof command === "object" &&
+            "type" in command &&
+            command.type === "thread.turn.start",
+        ) as { responseModifiers?: unknown } | undefined;
+        expect(turnStart?.responseModifiers).toEqual({ makeNoMistakeLevel: 3 });
+      });
+      await expect
+        .element(page.getByRole("button", { name: /Make No Mistake is off/u }))
+        .toBeInTheDocument();
+      expect(getAchievementSnapshot().some((unlock) => unlock.id === "dirt_in_your_eye")).toBe(
+        true,
+      );
+    } finally {
+      boundary.restore();
+      resetAchievementState();
+      await app.cleanup();
+    }
+  });
+
+  it("[personality-smoke] keeps a recoverable No Forks Given failure inline", async () => {
+    fixture = buildFixture();
+    localStorage.setItem(
+      "synara:app-settings:v1",
+      JSON.stringify({ noForksGivenModeEnabled: true }),
+    );
+    const boundary = installPersonalitySendBoundary({ rejectTurnStart: true });
+    const app = await mountApp();
+
+    try {
+      await page.getByRole("button", { name: /Make No Mistake is off/u }).click();
+      const { sendButton } = await waitForPersonalityComposer();
+      useComposerDraftStore.getState().setPrompt(THREAD_ID, "Trigger recoverable fixture failure");
+      await vi.waitFor(() => expect(sendButton.disabled).toBe(false));
+      sendButton.click();
+
+      await vi.waitFor(() => {
+        expect(document.body.textContent).toContain("Recoverable provider fixture failure.");
+      });
+      await expect.element(page.getByText("Make No Mistake · 1")).toBeVisible();
+      await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
+    } finally {
+      boundary.restore();
+      await app.cleanup();
+    }
+  });
+
   it("does not show success toasts for passive keybinding reloads", async () => {
     const mounted = await mountApp();
 
@@ -397,7 +571,10 @@ describe("Keybindings update toast", () => {
 
     try {
       await sendServerConfigUpdatedPush([
-        { kind: "keybindings.malformed-config", message: "Expected JSON array" },
+        {
+          kind: "keybindings.malformed-config",
+          message: "Expected JSON array",
+        },
       ]);
       await waitForToast("Invalid keybindings configuration");
     } finally {
