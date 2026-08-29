@@ -2,7 +2,10 @@ import type { GitOriginalityMeterResult } from "@forkara/contracts";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { OriginalityMeterReport } from "./EnvironmentOriginalityMeterSection";
+import {
+  isComputedOriginalityResult,
+  OriginalityMeterReport,
+} from "./EnvironmentOriginalityMeterSection";
 
 function result(overrides: Partial<GitOriginalityMeterResult> = {}): GitOriginalityMeterResult {
   return {
@@ -69,5 +72,29 @@ describe("OriginalityMeterReport", () => {
     expect(html).toContain("Built From Scratch™*");
     expect(html).toContain("* upstream history may apply");
     expect(html).toContain("Upstream history may apply");
+  });
+});
+
+describe("isComputedOriginalityResult", () => {
+  it.each([0, 25, 100])("accepts a genuine computed %i%% result", (scorePercent) => {
+    expect(isComputedOriginalityResult(result({ scorePercent }))).toBe(true);
+  });
+
+  it.each(["missing_upstream", "incomplete_history", "unrelated_history"] as const)(
+    "rejects the %s provenance state",
+    (state) => {
+      expect(isComputedOriginalityResult(result({ state, scorePercent: null }))).toBe(false);
+    },
+  );
+
+  it("rejects loading and read-error paths that have no result", () => {
+    expect(isComputedOriginalityResult(undefined)).toBe(false);
+    expect(isComputedOriginalityResult(null)).toBe(false);
+  });
+
+  it("fails closed for malformed ready scores", () => {
+    expect(isComputedOriginalityResult(result({ scorePercent: Number.NaN }))).toBe(false);
+    expect(isComputedOriginalityResult(result({ scorePercent: -1 }))).toBe(false);
+    expect(isComputedOriginalityResult(result({ scorePercent: 101 }))).toBe(false);
   });
 });
