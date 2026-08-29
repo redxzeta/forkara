@@ -29,7 +29,7 @@ describe("NoForksGivenModeSetting", () => {
     document.body.innerHTML = "";
   });
 
-  it("applies the local preference immediately and resets to its default", async () => {
+  it("[personality-smoke] applies the local preference immediately and resets to its default", async () => {
     await render(<Harness />);
     const toggle = page.getByRole("switch", { name: "Enable No Forks Given Mode" });
 

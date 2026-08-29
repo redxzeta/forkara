@@ -73,6 +73,15 @@ For focused web tests, pass paths relative to `apps/web` through the dedicated r
 bun run test:web:focused src/path/to/example.test.ts
 ```
 
+Run the bounded Playwright-backed Forkara personality workflow suite with:
+
+```bash
+bun run test:personality:smoke
+```
+
+The suite uses disposable browser state and mocked Git/external boundaries. It must not publish,
+push, create pull requests, delete dependencies, or execute a hard reset.
+
 ## Be Realistic
 
 Opening a PR does not create an obligation on our side.
