@@ -72,6 +72,7 @@ import { shouldShowStudioFolderRow } from "./EnvironmentPanel.logic";
 import {
   ENVIRONMENT_ROW_ICON_CLASS_NAME,
   EnvironmentCollapsibleSection,
+  EnvironmentDisclosureGroup,
   EnvironmentLabeledSection,
   EnvironmentPanelTitle,
   EnvironmentRow,
@@ -424,8 +425,6 @@ export function EnvironmentPanel({
         dangling rule. Visibility is gated on the per-section AppSettings flags.
       */}
       {settings.showEnvironmentUsage ? <EnvironmentUsageSection provider={activeProvider} /> : null}
-      <EnvironmentAchievementsSection enabled={open} />
-
       {settings.showEnvironmentRepository && githubRepository && onOpenGithubRepository ? (
         <EnvironmentLabeledSection label="Repository">
           <EnvironmentRow
@@ -452,30 +451,6 @@ export function EnvironmentPanel({
                 })}
           />
         </EnvironmentLabeledSection>
-      ) : null}
-
-      {isGitRepo ? (
-        <div key={gitCwd} className="contents">
-          <EnvironmentForkHealthSection gitCwd={gitCwd} enabled={open} />
-          <EnvironmentUpstreamRadarSection gitCwd={gitCwd} enabled={open} />
-          <EnvironmentAttributionGuardianSection gitCwd={gitCwd} enabled={open} />
-          <EnvironmentForkArchaeologySection gitCwd={gitCwd} enabled={open} />
-          <EnvironmentForkFamilyTreeSection gitCwd={gitCwd} enabled={open} />
-          <EnvironmentOriginalityMeterSection gitCwd={gitCwd} enabled={open} />
-          <EnvironmentReadmeTruthinessSection gitCwd={gitCwd} enabled={open} />
-          <EnvironmentForkSpeedrunSection
-            key={activeProjectId}
-            gitCwd={gitCwd}
-            projectId={activeProjectId}
-            projectCreatedAt={activeProjectCreatedAt}
-            enabled={open}
-          />
-          <EnvironmentApologyProgressionSection
-            key={`apology-${activeProjectId}`}
-            projectId={activeProjectId}
-            enabled={open}
-          />
-        </div>
       ) : null}
 
       {settings.showEnvironmentPullRequest && isGitRepo && onOpenGithubRepository ? (
@@ -571,6 +546,46 @@ export function EnvironmentPanel({
             onChange={onNotesChange}
           />
         </>
+      ) : null}
+
+      {isGitRepo ? (
+        <div key={gitCwd} className="contents">
+          <EnvironmentDisclosureGroup label="Fork Tools">
+            {(groupOpen) => (
+              <>
+                <EnvironmentForkHealthSection gitCwd={gitCwd} enabled={open && groupOpen} />
+                <EnvironmentUpstreamRadarSection gitCwd={gitCwd} enabled={open && groupOpen} />
+                <EnvironmentAttributionGuardianSection
+                  gitCwd={gitCwd}
+                  enabled={open && groupOpen}
+                />
+                <EnvironmentForkArchaeologySection gitCwd={gitCwd} enabled={open && groupOpen} />
+                <EnvironmentForkFamilyTreeSection gitCwd={gitCwd} enabled={open && groupOpen} />
+              </>
+            )}
+          </EnvironmentDisclosureGroup>
+          <EnvironmentDisclosureGroup label="Fork Lore™">
+            {(groupOpen) => (
+              <>
+                <EnvironmentOriginalityMeterSection gitCwd={gitCwd} enabled={open && groupOpen} />
+                <EnvironmentReadmeTruthinessSection gitCwd={gitCwd} enabled={open && groupOpen} />
+                <EnvironmentForkSpeedrunSection
+                  key={activeProjectId}
+                  gitCwd={gitCwd}
+                  projectId={activeProjectId}
+                  projectCreatedAt={activeProjectCreatedAt}
+                  enabled={open && groupOpen}
+                />
+                <EnvironmentApologyProgressionSection
+                  key={`apology-${activeProjectId}`}
+                  projectId={activeProjectId}
+                  enabled={open && groupOpen}
+                />
+                <EnvironmentAchievementsSection enabled={open && groupOpen} />
+              </>
+            )}
+          </EnvironmentDisclosureGroup>
+        </div>
       ) : null}
     </div>
   );
