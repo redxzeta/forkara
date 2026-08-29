@@ -41,8 +41,20 @@ function unavailableTitle(state: GitOriginalityMeterResult["state"]): string {
   }
 }
 
+export function isComputedOriginalityResult(
+  result: GitOriginalityMeterResult | null | undefined,
+): boolean {
+  return (
+    result?.state === "ready" &&
+    typeof result.scorePercent === "number" &&
+    Number.isFinite(result.scorePercent) &&
+    result.scorePercent >= 0 &&
+    result.scorePercent <= 100
+  );
+}
+
 export function OriginalityMeterReport({ result }: { result: GitOriginalityMeterResult }) {
-  const available = result.state === "ready" && result.scorePercent !== null;
+  const available = isComputedOriginalityResult(result);
   const certification = originalityCertification(result);
   return (
     <div className="space-y-4">
@@ -162,7 +174,7 @@ export function EnvironmentOriginalityMeterSection({
     ...GIT_EXPENSIVE_READ_RETRY_OPTIONS,
   });
   useEffect(() => {
-    if (originalityQuery.data) {
+    if (isComputedOriginalityResult(originalityQuery.data)) {
       recordAchievementEvent({ type: "originality_meter.result" });
     }
   }, [originalityQuery.data]);
