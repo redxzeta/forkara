@@ -5,7 +5,13 @@
 //          relocated picker trigger reuses this skin so the rows line up on one grid.
 // Layer: Environment panel UI primitive
 
-import { useState, type ComponentPropsWithoutRef, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  type ComponentPropsWithoutRef,
+  type ReactNode,
+} from "react";
 
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "~/components/ui/collapsible";
 import { DisclosureChevron } from "~/components/ui/DisclosureChevron";
@@ -62,6 +68,12 @@ export function EnvironmentSectionLabel({ children }: { children: ReactNode }) {
   return <p className={ENVIRONMENT_PANEL_SECTION_LABEL_CLASS_NAME}>{children}</p>;
 }
 
+const EnvironmentDisclosureGroupContext = createContext<string | null>(null);
+
+function comparableSectionLabel(label: string): string {
+  return label.replace(/™$/u, "").trim();
+}
+
 /** Section label plus one or more rows beneath it — shared by Editor, Usage, Repository, etc. */
 export function EnvironmentLabeledSection({
   label,
@@ -70,6 +82,25 @@ export function EnvironmentLabeledSection({
   label: ReactNode;
   children: ReactNode;
 }) {
+  const disclosureGroupLabel = useContext(EnvironmentDisclosureGroupContext);
+  if (disclosureGroupLabel !== null) {
+    const repeatsGroupLabel =
+      typeof label === "string" &&
+      comparableSectionLabel(label) === comparableSectionLabel(disclosureGroupLabel);
+    if (repeatsGroupLabel) {
+      return <div className="flex flex-col gap-0.5">{children}</div>;
+    }
+    return (
+      <section
+        className="flex flex-col gap-0.5"
+        aria-label={typeof label === "string" ? label : undefined}
+      >
+        <EnvironmentSectionLabel>{label}</EnvironmentSectionLabel>
+        {children}
+      </section>
+    );
+  }
+
   return (
     <>
       <EnvironmentSectionDivider />
@@ -77,6 +108,51 @@ export function EnvironmentLabeledSection({
         <EnvironmentSectionLabel>{label}</EnvironmentSectionLabel>
         {children}
       </div>
+    </>
+  );
+}
+
+/**
+ * Top-level Environment information-architecture group. Groups default closed so the common
+ * working-state scan stays compact; callers receive the open state so expensive child reads can
+ * remain disabled until requested.
+ */
+export function EnvironmentDisclosureGroup({
+  label,
+  children,
+}: {
+  label: string;
+  children: (open: boolean) => ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <EnvironmentSectionDivider />
+      <Collapsible open={open} onOpenChange={setOpen} className="flex flex-col">
+        <CollapsibleTrigger
+          className={cn(
+            "group/section flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1 text-left",
+            "outline-none",
+            ELEVATED_HOVER_SURFACE_CLASS_NAME,
+            "focus-visible:bg-[var(--color-background-elevated-secondary)]",
+          )}
+        >
+          <span
+            className={cn(ENVIRONMENT_PANEL_SECTION_LABEL_INLINE_CLASS_NAME, "min-w-0 truncate")}
+          >
+            {label}
+          </span>
+          <DisclosureChevron
+            open={open}
+            className="size-3 shrink-0 text-[var(--color-text-foreground-secondary)] opacity-60"
+          />
+        </CollapsibleTrigger>
+        <CollapsiblePanel>
+          <EnvironmentDisclosureGroupContext.Provider value={label}>
+            <div className="flex flex-col gap-1 pt-0.5">{children(open)}</div>
+          </EnvironmentDisclosureGroupContext.Provider>
+        </CollapsiblePanel>
+      </Collapsible>
     </>
   );
 }
