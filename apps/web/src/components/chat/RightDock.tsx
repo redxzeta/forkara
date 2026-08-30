@@ -49,6 +49,7 @@ import {
   resolveRightDockPaneLabel,
 } from "./rightDockPaneMeta";
 import { useDesktopTopBarWindowControlsGutterClassName } from "~/hooks/useDesktopTopBarGutter";
+import { clampRightDockWidth, resolveRightDockMaxWidth } from "~/workspaceLayout";
 
 // Shared sizing defaults for dock hosts: the resize floor for a single readable pane and the
 // "half the shell, but never cramped" opening width. The thread route tunes its own values
@@ -197,26 +198,60 @@ export function RightDock(props: RightDockProps) {
   // pin the dock width to exactly half of it. Mid-session drags still resize
   // freely; the next open re-centers the split.
   const contentRef = useRef<HTMLDivElement | null>(null);
+  const preferredWidthRef = useRef<number | null>(null);
+  const previousOpenRef = useRef(false);
+  const previousActivePaneKindRef = useRef<RightDockPaneKind | null>(null);
+  const [hostWidthPx, setHostWidthPx] = useState(0);
   const minWidth = props.minWidth;
   const activePaneKind = activePane?.kind ?? null;
-  useEffect(() => {
-    if (!props.state.open) {
-      return;
-    }
+  useLayoutEffect(() => {
     const wrapper = contentRef.current?.closest<HTMLElement>("[data-slot='sidebar-wrapper']");
     const shell = wrapper?.parentElement;
     if (!wrapper || !shell) {
       return;
     }
+    const measure = () => setHostWidthPx(Math.round(shell.getBoundingClientRect().width));
+    measure();
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", measure);
+      return () => window.removeEventListener("resize", measure);
+    }
+    const observer = new ResizeObserver(measure);
+    observer.observe(shell);
+    return () => observer.disconnect();
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!props.state.open) {
+      previousOpenRef.current = false;
+      previousActivePaneKindRef.current = activePaneKind;
+      return;
+    }
+    const wrapper = contentRef.current?.closest<HTMLElement>("[data-slot='sidebar-wrapper']");
+    const shell = wrapper?.parentElement;
+    if (!wrapper || !shell) return;
+    const measuredHostWidthPx = hostWidthPx || Math.round(shell.getBoundingClientRect().width);
+    if (measuredHostWidthPx <= 0) return;
     // A phone-shaped pane has a natural width: half the shell leaves the device
     // stranded in empty space, so kinds that render a fixed-aspect object open
     // at their own comfortable size instead of the even split.
-    const preferredWidth = activePaneKind ? RIGHT_DOCK_PREFERRED_WIDTH[activePaneKind] : undefined;
-    const openWidth = preferredWidth ?? Math.round(shell.getBoundingClientRect().width / 2);
-    if (openWidth > 0) {
-      wrapper.style.setProperty("--sidebar-width", `${Math.max(minWidth, openWidth)}px`);
+    const isOpening = !previousOpenRef.current;
+    const paneKindChanged = previousActivePaneKindRef.current !== activePaneKind;
+    if (isOpening || paneKindChanged || preferredWidthRef.current === null) {
+      preferredWidthRef.current =
+        (activePaneKind ? RIGHT_DOCK_PREFERRED_WIDTH[activePaneKind] : undefined) ??
+        Math.round(measuredHostWidthPx / 2);
     }
-  }, [props.state.open, minWidth, activePaneKind]);
+    const nextWidthPx = clampRightDockWidth({
+      requestedWidthPx: preferredWidthRef.current,
+      hostWidthPx: measuredHostWidthPx,
+      minWidthPx: minWidth,
+    });
+    wrapper.style.setProperty("--sidebar-width", `${nextWidthPx}px`);
+    previousOpenRef.current = true;
+    previousActivePaneKindRef.current = activePaneKind;
+  }, [props.state.open, minWidth, activePaneKind, hostWidthPx]);
+  const maxWidth = resolveRightDockMaxWidth(hostWidthPx);
   const renderedPanes = props.state.panes.filter(
     (pane) => pane.id === activePane?.id || keepMountedPaneIds.has(pane.id),
   );
@@ -268,6 +303,10 @@ export function RightDock(props: RightDockProps) {
         transparentSurface
         resizable={{
           minWidth: props.minWidth,
+          ...(maxWidth === null ? {} : { maxWidth }),
+          onResize: (width) => {
+            preferredWidthRef.current = width;
+          },
           shouldAcceptWidth: props.shouldAcceptWidth,
         }}
       >

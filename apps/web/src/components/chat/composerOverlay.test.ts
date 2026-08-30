@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   composerOverlayBottomClearancePx,
   composerOverlayScrollMaskImage,
+  environmentPanelBottomInsetPx,
 } from "./composerOverlay";
 
 describe("composer overlay mask", () => {
@@ -21,6 +22,10 @@ describe("composer overlay mask", () => {
 
   it("keeps the default clearance for a single-line footer", () => {
     expect(composerOverlayBottomClearancePx(200, 170)).toBe(52);
+  });
+
+  it("positions floating environment controls above the composer and its anchor gutter", () => {
+    expect(environmentPanelBottomInsetPx(120, 16)).toBe(148);
   });
 
   it("clamps an oversized footer cut to the overlay instead of inverting the gradient", () => {

@@ -560,7 +560,11 @@ import {
   dispatchThreadMarkerRemove,
 } from "../threadMarkers";
 import { getComposerProviderState } from "./chat/composerProviderRegistry";
-import { composerTranscriptBottomInsetPx, useComposerOverlayHeight } from "./chat/composerOverlay";
+import {
+  composerTranscriptBottomInsetPx,
+  environmentPanelBottomInsetPx,
+  useComposerOverlayHeight,
+} from "./chat/composerOverlay";
 import {
   COMPOSER_COMMAND_MENU_FLOATING_WRAPPER_CLASS_NAME,
   COMPOSER_INPUT_SHELL_CLASS_NAME,
@@ -1251,6 +1255,7 @@ export default function ChatView({
     overlayRef: composerOverlayRef,
     overlayHeightPx: composerOverlayHeightPx,
     overlayBottomClearancePx: composerOverlayBottomClearancePx,
+    overlayAnchorGapPx: composerOverlayAnchorGapPx,
   } = useComposerOverlayHeight();
   const composerTranscriptInsetPx = composerTranscriptBottomInsetPx(composerOverlayHeightPx);
   const navigate = useNavigate();
@@ -12515,6 +12520,10 @@ export default function ChatView({
               {...environmentPanelProps}
               open={environmentPanelVisible}
               variant={environmentOverlayVariant}
+              bottomInsetPx={environmentPanelBottomInsetPx(
+                composerOverlayHeightPx,
+                composerOverlayAnchorGapPx,
+              )}
             />
           ) : null}
         </div>

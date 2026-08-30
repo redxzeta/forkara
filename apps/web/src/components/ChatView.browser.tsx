@@ -67,6 +67,7 @@ import { useTerminalStateStore } from "../terminalStateStore";
 import { resetRetainedThreadDetailSubscriptionsForTests } from "../threadDetailSubscriptionRetention";
 import { useWorkspacePathsStore } from "../workspacePathsStore";
 import { resetWsNativeApiForTest } from "../wsNativeApi";
+import { useRightDockStore } from "../rightDockStore";
 // Pre-transform the compiler-heavy component outside the first case's timeout.
 // The router's auto-split route otherwise requests this module on first mount.
 import "./ChatView";
@@ -2151,6 +2152,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     useTerminalStateStore.setState({
       terminalStateByThreadId: {},
     });
+    useRightDockStore.setState({ dockStateByThreadId: {} });
     useSplitViewStore.setState({
       splitViewsById: {},
       splitViewIdBySourceThreadId: {},
@@ -8653,6 +8655,100 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
       expect(document.body.textContent).toContain("Worked for");
       expect(transitionFrames).toBe(0);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("[geometry:linux] coordinates sidebar, dock, Environment, and composer bounds", async () => {
+    useRightDockStore.getState().openPane(THREAD_ID, {
+      kind: "browser",
+      paneId: "layout-browser",
+    });
+    const mounted = await mountChatView({
+      viewport: { ...DEFAULT_VIEWPORT, width: 1_440, height: 900 },
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-workspace-layout" as MessageId,
+        targetText: "Keep the workspace controls reachable.",
+      }),
+    });
+
+    try {
+      const environmentToggle = await waitForElement(
+        () =>
+          document.querySelector<HTMLButtonElement>(
+            'button[aria-label="Toggle environment panel"]',
+          ),
+        "Environment toggle did not mount.",
+      );
+      await userEvent.click(environmentToggle);
+      const environment = await waitForElement(
+        () =>
+          document.querySelector<HTMLElement>(
+            '[data-environment-panel-variant]:not([aria-hidden="true"])',
+          ),
+        "Environment panel did not open.",
+      );
+      const composer = await waitForElement(
+        () => document.querySelector<HTMLElement>('[data-chat-composer-form="true"]'),
+        "Composer did not mount.",
+      );
+      const dock = await waitForElement(
+        () => document.querySelector<HTMLElement>("[data-right-dock-content]"),
+        "Right dock did not mount.",
+      );
+      const chat = await waitForElement(
+        () => document.querySelector<HTMLElement>('[data-chat-pane-drop-overlay="true"]'),
+        "Chat surface did not mount.",
+      );
+
+      await vi.waitFor(
+        () => {
+          expect(environment.getBoundingClientRect().bottom).toBeLessThanOrEqual(
+            composer.getBoundingClientRect().top + 1,
+          );
+          expect(chat.getBoundingClientRect().width).toBeGreaterThanOrEqual(36 * 16);
+          expect(dock.getBoundingClientRect().width).toBeLessThanOrEqual(608);
+        },
+        { timeout: 8_000, interval: 16 },
+      );
+
+      const forkTools = Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find(
+        (button) => button.textContent?.includes("Fork Tools"),
+      );
+      const forkLore = Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find(
+        (button) => button.textContent?.includes("Fork Lore"),
+      );
+      expect(forkTools?.getAttribute("aria-expanded")).toBe("false");
+      expect(forkLore?.getAttribute("aria-expanded")).toBe("false");
+      if (!forkTools) throw new Error("Fork Tools disclosure did not mount.");
+      await userEvent.click(forkTools);
+      expect(forkTools.getAttribute("aria-expanded")).toBe("true");
+
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1_024, height: 768 });
+      await vi.waitFor(
+        () => {
+          expect(document.querySelector('[data-workspace-sidebar-suppressed="true"]')).toBeTruthy();
+          expect(chat.getBoundingClientRect().width).toBeGreaterThanOrEqual(36 * 16);
+          expect(dock.getBoundingClientRect().width).toBeLessThanOrEqual(448);
+          expect(environment.getBoundingClientRect().bottom).toBeLessThanOrEqual(
+            composer.getBoundingClientRect().top + 1,
+          );
+        },
+        { timeout: 8_000, interval: 16 },
+      );
+
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1_440, height: 900 });
+      await vi.waitFor(
+        () => {
+          expect(document.querySelector('[data-workspace-sidebar-suppressed="true"]')).toBeNull();
+          const sidebarGap = document.querySelector<HTMLElement>(
+            "[data-sidebar-side='left'] [data-slot='sidebar-gap']",
+          );
+          expect(sidebarGap?.getBoundingClientRect().width ?? 0).toBeGreaterThan(0);
+        },
+        { timeout: 8_000, interval: 16 },
+      );
     } finally {
       await mounted.cleanup();
     }
