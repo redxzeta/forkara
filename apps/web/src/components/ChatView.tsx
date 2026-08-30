@@ -12515,6 +12515,7 @@ export default function ChatView({
               {...environmentPanelProps}
               open={environmentPanelVisible}
               variant={environmentOverlayVariant}
+              bottomInsetPx={composerOverlayHeightPx + 12}
             />
           ) : null}
         </div>

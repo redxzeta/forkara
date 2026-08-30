@@ -21,7 +21,7 @@ import type {
   ThreadMarkerId,
 } from "@forkara/contracts";
 import { useNavigate } from "@tanstack/react-router";
-import { type ReactNode, useEffect } from "react";
+import { type CSSProperties, type ReactNode, useEffect } from "react";
 
 import { useAppSettings } from "~/appSettings";
 import { SETTINGS_TARGETS } from "~/settingsNavigation";
@@ -125,6 +125,8 @@ export interface EnvironmentPanelProps {
    * only, no content inset.
    */
   variant: "docked" | "floating";
+  /** Measured composer footprint. The panel's bottom edge stays above this live inset. */
+  bottomInsetPx?: number;
   gitCwd: string | null;
   openInTarget: string | null;
   githubRepository?: {
@@ -250,6 +252,7 @@ function EnvironmentRecapSection({
 export function EnvironmentPanel({
   open,
   variant,
+  bottomInsetPx = 0,
   gitCwd,
   openInTarget,
   githubRepository: githubRepositoryProp,
@@ -597,7 +600,9 @@ export function EnvironmentPanel({
     <div
       className={ENVIRONMENT_PANEL_OVERLAY_WRAPPER_CLASS_NAME}
       data-environment-panel-variant={variant}
+      data-environment-panel-bottom-inset={Math.max(0, Math.round(bottomInsetPx))}
       aria-hidden={!open}
+      style={{ bottom: Math.max(0, Math.round(bottomInsetPx)) } as CSSProperties}
     >
       <div
         className={cn(

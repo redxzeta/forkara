@@ -1,4 +1,4 @@
-import type { ResolvedKeybindingsConfig } from "@forkara/contracts";
+import { ThreadId, type ResolvedKeybindingsConfig } from "@forkara/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { Outlet, createFileRoute, useLocation, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -38,8 +38,15 @@ import { createProjectLastActivityAtSelector } from "../storeSelectors";
 import { useSpacesUiStore } from "../spacesUiStore";
 import { selectThreadTerminalState, useTerminalStateStore } from "../terminalStateStore";
 import { useThreadSelectionStore } from "../threadSelectionStore";
+import { selectRightDockState, useRightDockStore } from "../rightDockStore";
 import { onServerMaintenanceUpdated } from "../wsNativeApi";
 import { useWorkspacePathsStore } from "../workspacePathsStore";
+import {
+  WORKSPACE_DEFAULT_SIDEBAR_WIDTH_PX,
+  WORKSPACE_DOCK_MIN_WIDTH_PX,
+  WORKSPACE_MAIN_MIN_WIDTH_PX,
+  resolveWorkspaceLayout,
+} from "../workspaceLayout";
 import { useProviderStatusesForLocalConfig } from "~/hooks/useProviderStatusesForLocalConfig";
 import { useRefreshProviderStatusesNow } from "~/hooks/useProviderStatusRefresh";
 import { resolveProviderSendAvailabilityWithRefresh } from "~/lib/providerAvailability";
@@ -59,17 +66,6 @@ import { useAppSettings } from "~/appSettings";
 const EMPTY_KEYBINDINGS: ResolvedKeybindingsConfig = [];
 const THREAD_SIDEBAR_WIDTH_STORAGE_KEY = "chat_thread_sidebar_width";
 const THREAD_SIDEBAR_MIN_WIDTH = 13 * 16;
-const THREAD_MAIN_CONTENT_MIN_WIDTH = 40 * 16;
-
-// Single source of truth for the thread sidebar resize behavior. Shared by <Sidebar>
-// and the detached content-seam <SidebarRail> (via SidebarInstanceProvider) so the
-// drag handle keeps working even though the rail lives outside <Sidebar> (above the card).
-const THREAD_SIDEBAR_RESIZABLE: SidebarResizableOptions = {
-  minWidth: THREAD_SIDEBAR_MIN_WIDTH,
-  shouldAcceptWidth: ({ nextWidth, wrapper }) =>
-    wrapper.clientWidth - nextWidth >= THREAD_MAIN_CONTENT_MIN_WIDTH,
-  storageKey: THREAD_SIDEBAR_WIDTH_STORAGE_KEY,
-};
 const MAINTENANCE_EVENT_STALE_MS = 5 * 60 * 1000;
 
 type MaintenanceToastId = ReturnType<typeof toastManager.add>;
@@ -564,11 +560,70 @@ const SIDEBAR_INNER_CLASS = "app-sidebar-surface";
 
 function ChatRouteLayout() {
   const { settings } = useAppSettings();
-  const isEditorView = useLocation({
-    select: (location) => (location.search as { view?: unknown }).view === "editor",
+  const locationState = useLocation({
+    select: (location) => ({
+      pathname: location.pathname,
+      isEditorView: (location.search as { view?: unknown }).view === "editor",
+      splitViewId: (location.search as { splitViewId?: unknown }).splitViewId,
+    }),
   });
+  const isEditorView = locationState.isEditorView;
+  const activeRouteThreadId = useMemo(() => {
+    const match = /^\/([^/]+)$/.exec(locationState.pathname);
+    return match?.[1] ? ThreadId.makeUnsafe(decodeURIComponent(match[1])) : null;
+  }, [locationState.pathname]);
+  const activeRightDockState = useRightDockStore(
+    useMemo(() => selectRightDockState(activeRouteThreadId), [activeRouteThreadId]),
+  );
+  const activeRightDockOpen =
+    activeRouteThreadId !== null &&
+    !isEditorView &&
+    typeof locationState.splitViewId !== "string" &&
+    activeRightDockState.open;
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const resolvedSidebarOpen = isEditorView ? false : sidebarOpen;
+  const [sidebarWidthPx, setSidebarWidthPx] = useState(WORKSPACE_DEFAULT_SIDEBAR_WIDTH_PX);
+  const [shellWidthPx, setShellWidthPx] = useState(() =>
+    typeof window === "undefined" ? 0 : window.innerWidth,
+  );
+  const shellRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const shell = shellRef.current;
+    if (!shell) return;
+    const measure = () => setShellWidthPx(Math.round(shell.getBoundingClientRect().width));
+    measure();
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", measure);
+      return () => window.removeEventListener("resize", measure);
+    }
+    const observer = new ResizeObserver(measure);
+    observer.observe(shell);
+    return () => observer.disconnect();
+  }, []);
+
+  const workspaceLayout = resolveWorkspaceLayout({
+    shellWidthPx,
+    sidebarWidthPx,
+    userSidebarOpen: sidebarOpen && !isEditorView,
+    dockOpen: activeRightDockOpen,
+  });
+  const resolvedSidebarOpen =
+    sidebarOpen && !isEditorView && !workspaceLayout.sidebarTemporarilySuppressed;
+  // Single source of truth for the thread sidebar resize behavior. The right-dock
+  // reservation comes from the same contract that clamps the dock itself.
+  const threadSidebarResizable = useMemo<SidebarResizableOptions>(
+    () => ({
+      minWidth: THREAD_SIDEBAR_MIN_WIDTH,
+      shouldAcceptWidth: ({ nextWidth, wrapper }) =>
+        wrapper.clientWidth -
+          nextWidth -
+          (activeRightDockOpen ? WORKSPACE_DOCK_MIN_WIDTH_PX : 0) >=
+        WORKSPACE_MAIN_MIN_WIDTH_PX,
+      storageKey: THREAD_SIDEBAR_WIDTH_STORAGE_KEY,
+      onResize: setSidebarWidthPx,
+    }),
+    [activeRightDockOpen],
+  );
 
   const renderSidebarShell = useCallback(
     ({
@@ -587,7 +642,7 @@ function ChatRouteLayout() {
             gapClassName={cn(SIDEBAR_GAP_CLASS, SIDEBAR_OFFCANVAS_MOTION_CLASS)}
             innerClassName={SIDEBAR_INNER_CLASS}
             transparentSurface
-            resizable={THREAD_SIDEBAR_RESIZABLE}
+            resizable={threadSidebarResizable}
           >
             {sidebarContent}
           </Sidebar>
@@ -599,7 +654,7 @@ function ChatRouteLayout() {
           <>
             {/* The content-seam rail is outside Sidebar so it remains above the route card. */}
             {isEditorView ? null : (
-              <SidebarInstanceProvider side="left" resizable={THREAD_SIDEBAR_RESIZABLE}>
+              <SidebarInstanceProvider side="left" resizable={threadSidebarResizable}>
                 <SidebarRail placement="content-seam" />
               </SidebarInstanceProvider>
             )}
@@ -608,16 +663,20 @@ function ChatRouteLayout() {
         }
       />
     ),
-    [isEditorView, settings.noForksGivenModeEnabled],
+    [isEditorView, settings.noForksGivenModeEnabled, threadSidebarResizable],
   );
 
   return (
     <SidebarProvider
+      ref={shellRef}
       defaultOpen
       open={resolvedSidebarOpen}
       onOpenChange={setSidebarOpen}
       className="bg-[var(--app-shell-background)]"
       data-sidebar-side="left"
+      data-workspace-sidebar-suppressed={
+        workspaceLayout.sidebarTemporarilySuppressed ? "true" : undefined
+      }
     >
       <ThreadRetentionMaintenanceToast />
       <ChatRouteGlobalShortcuts />
