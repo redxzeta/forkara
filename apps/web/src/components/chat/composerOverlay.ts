@@ -30,6 +30,24 @@ export function composerTranscriptBottomInsetPx(overlayHeightPx: number): number
   return Math.max(0, Math.round(overlayHeightPx) - COMPOSER_OVERLAY_TUCK_PX);
 }
 
+/** Gap between the environment panel and the measured composer footprint. */
+export const ENVIRONMENT_COMPOSER_GAP_PX = 12;
+
+/**
+ * Bottom offset that keeps the environment panel above the entire composer footprint.
+ * The composer is anchored above a responsive trailing gutter, so its measured height
+ * alone is not enough to locate its top edge relative to the chat column's bottom.
+ */
+export function environmentPanelBottomInsetPx(
+  overlayHeightPx: number,
+  overlayAnchorGapPx: number,
+): number {
+  return Math.max(
+    0,
+    Math.round(overlayHeightPx) + Math.round(overlayAnchorGapPx) + ENVIRONMENT_COMPOSER_GAP_PX,
+  );
+}
+
 /**
  * Transcript content is fully dissolved this far above the composer's bottom edge,
  * keeping the footer row (attach, access mode, model picker, send) clear of any
@@ -97,10 +115,12 @@ export function useComposerOverlayHeight(): {
   overlayRef: (node: HTMLElement | null) => void;
   overlayHeightPx: number;
   overlayBottomClearancePx: number;
+  overlayAnchorGapPx: number;
 } {
   const [measurement, setMeasurement] = useState({
     overlayHeightPx: 0,
     overlayBottomClearancePx: COMPOSER_OVERLAY_BOTTOM_CLEARANCE_PX,
+    overlayAnchorGapPx: 0,
   });
   const observerRef = useRef<ResizeObserver | null>(null);
   const overlayRef = useCallback((node: HTMLElement | null) => {
@@ -110,10 +130,13 @@ export function useComposerOverlayHeight(): {
       setMeasurement({
         overlayHeightPx: 0,
         overlayBottomClearancePx: COMPOSER_OVERLAY_BOTTOM_CLEARANCE_PX,
+        overlayAnchorGapPx: 0,
       });
       return;
     }
-    const commit = (height: number) => {
+    const commit = () => {
+      const nodeRect = node.getBoundingClientRect();
+      const anchorRect = node.parentElement?.getBoundingClientRect();
       const footer = node.querySelector<HTMLElement>("[data-chat-composer-footer]");
       const surface = footer?.closest<HTMLElement>(".chat-composer-surface");
       const overlayBottomClearancePx =
@@ -124,27 +147,30 @@ export function useComposerOverlayHeight(): {
             )
           : COMPOSER_OVERLAY_BOTTOM_CLEARANCE_PX;
       const next = {
-        overlayHeightPx: Math.round(height),
+        overlayHeightPx: Math.round(nodeRect.height),
         overlayBottomClearancePx,
+        overlayAnchorGapPx: Math.max(
+          0,
+          Math.round((anchorRect?.bottom ?? nodeRect.bottom) - nodeRect.bottom),
+        ),
       };
       setMeasurement((current) =>
         current.overlayHeightPx === next.overlayHeightPx &&
-        current.overlayBottomClearancePx === next.overlayBottomClearancePx
+        current.overlayBottomClearancePx === next.overlayBottomClearancePx &&
+        current.overlayAnchorGapPx === next.overlayAnchorGapPx
           ? current
           : next,
       );
     };
-    commit(node.getBoundingClientRect().height);
+    commit();
     if (typeof ResizeObserver === "undefined") {
       return;
     }
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (entry) {
-        commit(entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height);
-      }
-    });
+    const observer = new ResizeObserver(commit);
     observer.observe(node);
+    if (node.parentElement) {
+      observer.observe(node.parentElement);
+    }
     observerRef.current = observer;
   }, []);
   return { overlayRef, ...measurement };
