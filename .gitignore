@@ -19,6 +19,7 @@ release/
 /apps/server/.synara-*/
 /.synara/
 /.synara-*/
+/.forkara/contributor/
 .idea/
 apps/web/.playwright
 apps/web/playwright-report

@@ -1,24 +1,24 @@
 # External MCP integrations
 
 External MCP lets another local application—such as Codex, Claude Code, or an MCP-capable desktop
-client—create and inspect restricted Synara tasks through a user-approved integration.
+client—create and inspect restricted Forkara tasks through a user-approved integration.
 
 It is separate from the internal Agent Gateway injected into supported provider sessions already
-running inside Synara.
+running inside Forkara.
 
 ## Internal gateway or external integration
 
-| Surface       | Caller                                  | Authority model                                                                            |
-| ------------- | --------------------------------------- | ------------------------------------------------------------------------------------------ |
-| Agent Gateway | A provider session inside a Synara task | Thread-scoped capabilities and caller-turn authority                                       |
-| External MCP  | Another paired local application        | User-created integration with selected projects, scopes, limits, and revocable credentials |
+| Surface       | Caller                                   | Authority model                                                                            |
+| ------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Agent Gateway | A provider session inside a Forkara task | Thread-scoped capabilities and caller-turn authority                                       |
+| External MCP  | Another paired local application         | User-created integration with selected projects, scopes, limits, and revocable credentials |
 
-Use External MCP when work begins outside Synara but should execute through Synara's durable task
+Use External MCP when work begins outside Forkara but should execute through Forkara's durable task
 and worktree pipeline.
 
 ## Create the integration
 
-1. Start Synara and open **Settings → Integrations**.
+1. Start Forkara and open **Settings → Integrations**.
 2. Name the connection and choose whether it may use every current and future project (the default)
    or only selected projects. Safe execution defaults restrict it to tasks it creates, isolated
    managed worktrees, and approval-required execution. Higher-impact permissions are under
@@ -27,11 +27,11 @@ and worktree pipeline.
 4. For Codex, Claude Code, or another agentic MCP client, copy the generated setup prompt into the
    client. The prompt guides that agent through the one-time pairing, installs the correct local
    stdio configuration, and verifies the connection with `synara_overview`. For Claude Desktop or a
-   client that cannot run the setup prompt, complete pairing in Synara and use the copy-ready JSON
-   configuration instead. Synara uses the exact executable and data directory of the running
+   client that cannot run the setup prompt, complete pairing in Forkara and use the copy-ready JSON
+   configuration instead. Forkara uses the exact executable and data directory of the running
    installation; no global `synara` command, project ID, model slug, request ID, or credential
    path is required from the user.
-5. Synara moves from **Waiting for pairing** to **Paired** after the local credential exchange, then
+5. Forkara moves from **Waiting for pairing** to **Paired** after the local credential exchange, then
    to **Connected** after the client makes its first request.
 
 If the page is reloaded or the pairing code expires, use **Resume pairing** beside the integration.
@@ -92,7 +92,7 @@ For clients that use JSON MCP configuration:
 }
 ```
 
-Synara always includes its actual data directory in generated setup, so multiple installations do not
+Forkara always includes its actual data directory in generated setup, so multiple installations do not
 silently connect to the wrong runtime. A manually written bridge configuration should do the same:
 
 ```json
@@ -115,9 +115,9 @@ The raw integration credential is not placed in MCP client configuration. The pa
 creates the credential locally and persists a private pending record, then exchanges the short-lived
 code with the running loopback server. A lost response or local write failure can therefore be retried
 without consuming a different secret. The final credential is written to
-`<Synara home>/mcp/credentials/<integration-id>.json`. Synara creates its parent directory with mode `0700`
+`<Forkara data directory>/mcp/credentials/<integration-id>.json`. Forkara creates its parent directory with mode `0700`
 and the file with mode `0600` on POSIX systems. On Windows the file remains under the current user
-profile, but Windows does not provide the same POSIX mode guarantee; protect the account and Synara
+profile, but Windows does not provide the same POSIX mode guarantee; protect the account and Forkara
 data directory accordingly.
 
 When exactly one credential is stored, the bridge can select it automatically. When more
@@ -143,7 +143,7 @@ checkout execution and full-access execution are independent, explicit scopes.
 
 ## Security and lifecycle
 
-- `/mcp/external` is available only while Synara itself is loopback-only. Configuring remote or
+- `/mcp/external` is available only while Forkara itself is loopback-only. Configuring remote or
   published access disables the external endpoint instead of exposing it remotely.
 - External credentials have the fixed `synara.external-mcp` audience. They are opaque, expiring,
   revocable, stored as SHA-256 hashes in the server database, and cannot authenticate browser,
@@ -162,7 +162,7 @@ checkout execution and full-access execution are independent, explicit scopes.
 - Revoke an integration from **Settings → Integrations**. Revocation takes effect immediately; pair
   a newly created integration before using the bridge again.
 
-The stdio bridge re-reads Synara's private runtime-state file on each request and requires the
+The stdio bridge re-reads Forkara's private runtime-state file on each request and requires the
 loopback process to answer a fresh HMAC challenge before it sends a credential or pairing code. It
 retries discovery briefly across a server restart or port change, bounds and aborts hung HTTP calls,
 and processes several stdio requests concurrently so a long wait does not block ping or read calls.

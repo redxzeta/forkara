@@ -3,7 +3,7 @@
 
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 const characters = (...codes: number[]): string => String.fromCharCode(...codes);
 const retiredShortName = characters(116, 51);
@@ -183,7 +183,7 @@ export function findVisualBrandAssetViolations(
 function readTrackedFiles(): BrandIdentityBinaryFile[] {
   const paths = execFileSync("git", ["ls-files", "-z"], { encoding: "utf8" })
     .split("\0")
-    .filter(Boolean);
+    .filter((path) => path.length > 0 && existsSync(path));
   return paths.map((path) => ({ path, contents: readFileSync(path) }));
 }
 

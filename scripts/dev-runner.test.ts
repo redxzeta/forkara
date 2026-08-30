@@ -2,10 +2,12 @@ import * as NodeServices from "@effect/platform-node/NodeServices";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
+import { spawnSync } from "node:child_process";
 import { assert, describe, it } from "@effect/vitest";
 import { Effect } from "effect";
 
 import {
+  applyDevRunnerPreset,
   createDevRunnerEnv,
   findFirstAvailableOffset,
   readDevRunnerBooleanEnvironment,
@@ -70,6 +72,94 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
         assert.ok(error.includes("Invalid SYNARA_PORT_OFFSET"));
       }),
     );
+  });
+
+  describe("contributor preset", () => {
+    it("uses repository-local state, non-default ports, and no inherited auth", () => {
+      const preset = applyDevRunnerPreset({
+        mode: "dev:contributor",
+        portOffset: 0,
+        devInstance: "inherited-instance",
+        synaraHome: "/tmp/inherited-home",
+        authToken: "inherited-secret",
+        port: 3773,
+        devUrl: new URL("http://localhost:5733"),
+      });
+
+      assert.deepStrictEqual(preset, {
+        portOffset: 3158,
+        devInstance: undefined,
+        synaraHome: "./.forkara/contributor",
+        authToken: undefined,
+        port: undefined,
+        devUrl: undefined,
+      });
+    });
+
+    it("leaves existing modes unchanged", () => {
+      const devUrl = new URL("http://localhost:7331");
+      const preset = applyDevRunnerPreset({
+        mode: "dev",
+        portOffset: 44,
+        devInstance: "existing",
+        synaraHome: "/tmp/existing-home",
+        authToken: "existing-secret",
+        port: 4222,
+        devUrl,
+      });
+
+      assert.deepStrictEqual(preset, {
+        portOffset: 44,
+        devInstance: "existing",
+        synaraHome: "/tmp/existing-home",
+        authToken: "existing-secret",
+        port: 4222,
+        devUrl,
+      });
+    });
+
+    it.effect("builds the isolated contributor environment without inherited auth", () =>
+      Effect.gen(function* () {
+        const env = yield* createDevRunnerEnv({
+          mode: "dev:contributor",
+          baseEnv: { SYNARA_AUTH_TOKEN: "inherited-secret" },
+          serverOffset: 3158,
+          webOffset: 3158,
+          synaraHome: "./.forkara/contributor",
+          authToken: undefined,
+          noBrowser: undefined,
+          autoBootstrapProjectFromCwd: undefined,
+          logWebSocketEvents: undefined,
+          host: undefined,
+          port: undefined,
+          devUrl: undefined,
+        });
+
+        assert.equal(env.SYNARA_HOME, resolve("./.forkara/contributor"));
+        assert.equal(env.SYNARA_PORT, "6931");
+        assert.equal(env.PORT, "8891");
+        assert.equal(env.SYNARA_AUTH_TOKEN, undefined);
+        assert.equal(env.SYNARA_MODE, "web");
+      }),
+    );
+
+    it("supports the documented contributor dry-run command", () => {
+      const repositoryRoot = resolve(import.meta.dirname, "..");
+      const result = spawnSync("bun", ["run", "dev:contributor", "--", "--dry-run"], {
+        cwd: repositoryRoot,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          SYNARA_AUTH_TOKEN: "must-not-appear",
+        },
+      });
+      const output = `${result.stdout}${result.stderr}`;
+
+      assert.equal(result.status, 0, output);
+      assert.match(output, /mode=dev:contributor/);
+      assert.match(output, /baseDir=.*\.forkara[/\\]contributor/);
+      assert.ok(!output.includes("must-not-appear"));
+    });
   });
 
   describe("boolean precedence", () => {

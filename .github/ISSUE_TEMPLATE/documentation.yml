@@ -1,0 +1,52 @@
+name: Documentation improvement
+description: Report missing, unclear, incorrect, or outdated documentation.
+title: "[Docs]: "
+labels:
+  - documentation
+  - needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping make Forkara easier to understand. Keep the report focused on one documentation gap.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and did not find a duplicate.
+          required: true
+        - label: This is a documentation gap, not a support request or private security report.
+          required: true
+
+  - type: input
+    id: location
+    attributes:
+      label: Documentation location
+      description: Link the page or name the file, screen, command output, or help text.
+      placeholder: docs/development.md or Settings → Providers
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is unclear or incorrect?
+      description: Explain what a reader cannot learn or what information is out of date.
+    validations:
+      required: true
+
+  - type: textarea
+    id: improvement
+    attributes:
+      label: Suggested improvement
+      description: Describe the correction, example, or structure that would help.
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Add related links or screenshots. Redact secrets and private data.

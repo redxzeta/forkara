@@ -20,6 +20,8 @@ import { ChildProcess } from "effect/unstable/process";
 
 const BASE_SERVER_PORT = 3773;
 const BASE_WEB_PORT = 5733;
+const CONTRIBUTOR_PORT_OFFSET = 3158;
+const CONTRIBUTOR_HOME = "./.forkara/contributor";
 const MAX_HASH_OFFSET = 3000;
 const MAX_PORT = 65535;
 
@@ -27,16 +29,19 @@ export const DEFAULT_SYNARA_HOME = Effect.map(Effect.service(Path.Path), (path) 
   path.join(homedir(), ".synara"),
 );
 
+const FULL_DEV_ARGS = [
+  "run",
+  "dev",
+  "--ui=tui",
+  "--filter=@forkara/contracts",
+  "--filter=@forkara/web",
+  "--filter=@forkara/cli",
+  "--parallel",
+] as const;
+
 const MODE_ARGS = {
-  dev: [
-    "run",
-    "dev",
-    "--ui=tui",
-    "--filter=@forkara/contracts",
-    "--filter=@forkara/web",
-    "--filter=@forkara/cli",
-    "--parallel",
-  ],
+  dev: FULL_DEV_ARGS,
+  "dev:contributor": FULL_DEV_ARGS,
   "dev:server": ["run", "dev", "--filter=@forkara/cli"],
   "dev:web": ["run", "dev", "--filter=@forkara/web"],
   "dev:desktop": ["run", "dev", "--filter=@forkara/desktop", "--filter=@forkara/web", "--parallel"],
@@ -240,7 +245,7 @@ export function createDevRunnerEnv({
       delete output.SYNARA_LOG_WS_EVENTS;
     }
 
-    if (mode === "dev") {
+    if (mode === "dev" || mode === "dev:contributor") {
       output.SYNARA_MODE = "web";
       delete output.SYNARA_DESKTOP_WS_URL;
     }
@@ -400,6 +405,40 @@ interface DevRunnerCliInput {
   readonly turboArgs: ReadonlyArray<string>;
 }
 
+interface DevRunnerPresetInput {
+  readonly mode: DevMode;
+  readonly portOffset: number | undefined;
+  readonly devInstance: string | undefined;
+  readonly synaraHome: string | undefined;
+  readonly authToken: string | undefined;
+  readonly port: number | undefined;
+  readonly devUrl: URL | undefined;
+}
+
+export function applyDevRunnerPreset(
+  input: DevRunnerPresetInput,
+): Omit<DevRunnerPresetInput, "mode"> {
+  if (input.mode !== "dev:contributor") {
+    return {
+      portOffset: input.portOffset,
+      devInstance: input.devInstance,
+      synaraHome: input.synaraHome,
+      authToken: input.authToken,
+      port: input.port,
+      devUrl: input.devUrl,
+    };
+  }
+
+  return {
+    portOffset: CONTRIBUTOR_PORT_OFFSET,
+    devInstance: undefined,
+    synaraHome: CONTRIBUTOR_HOME,
+    authToken: undefined,
+    port: undefined,
+    devUrl: undefined,
+  };
+}
+
 interface DevRunnerBooleanEnv {
   readonly noBrowser: boolean | undefined;
   readonly autoBootstrapProjectFromCwd: boolean | undefined;
@@ -425,7 +464,7 @@ export function resolveDevRunnerBooleanOverrides(
 
 export function runDevRunnerWithInput(input: DevRunnerCliInput) {
   return Effect.gen(function* () {
-    const { portOffset, devInstance } = yield* OffsetConfig.asEffect().pipe(
+    const configuredOffset = yield* OffsetConfig.asEffect().pipe(
       Effect.mapError(
         (cause) =>
           new DevRunnerError({
@@ -435,8 +474,21 @@ export function runDevRunnerWithInput(input: DevRunnerCliInput) {
       ),
     );
 
+    const preset = applyDevRunnerPreset({
+      mode: input.mode,
+      ...configuredOffset,
+      synaraHome: input.synaraHome,
+      authToken: input.authToken,
+      port: input.port,
+      devUrl: input.devUrl,
+    });
+
     const { offset, source } = yield* Effect.try({
-      try: () => resolveOffset({ portOffset, devInstance }),
+      try: () =>
+        resolveOffset({
+          portOffset: preset.portOffset,
+          devInstance: preset.devInstance,
+        }),
       catch: (cause) =>
         new DevRunnerError({
           message: cause instanceof Error ? cause.message : String(cause),
@@ -449,8 +501,8 @@ export function runDevRunnerWithInput(input: DevRunnerCliInput) {
     const { serverOffset, webOffset } = yield* resolveModePortOffsets({
       mode: input.mode,
       startOffset: offset,
-      hasExplicitServerPort: input.port !== undefined,
-      hasExplicitDevUrl: input.devUrl !== undefined,
+      hasExplicitServerPort: preset.port !== undefined,
+      hasExplicitDevUrl: preset.devUrl !== undefined,
     });
     const booleanOverrides = resolveDevRunnerBooleanOverrides(input, envOverrides);
 
@@ -459,14 +511,14 @@ export function runDevRunnerWithInput(input: DevRunnerCliInput) {
       baseEnv: process.env,
       serverOffset,
       webOffset,
-      synaraHome: input.synaraHome,
-      authToken: input.authToken,
+      synaraHome: preset.synaraHome,
+      authToken: preset.authToken,
       noBrowser: booleanOverrides.noBrowser,
       autoBootstrapProjectFromCwd: booleanOverrides.autoBootstrapProjectFromCwd,
       logWebSocketEvents: booleanOverrides.logWebSocketEvents,
       host: input.host,
-      port: input.port,
-      devUrl: input.devUrl,
+      port: preset.port,
+      devUrl: preset.devUrl,
     });
 
     const selectionSuffix =

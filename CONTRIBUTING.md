@@ -1,91 +1,59 @@
-# Contributing
+# Contributing to Forkara
 
-## Read This First
+Thanks for considering a contribution. Forkara is maintained in limited spare time, so the project
+uses a focused, issue-first workflow to make review sustainable and to avoid asking contributors to
+build work that does not fit the roadmap.
 
-We are accepting focused contributions, especially small bug fixes, reliability fixes, performance improvements, and maintenance work.
+## Choose suitable work
 
-You can open an issue or PR, but please do so knowing that Synara is still early and we are keeping scope, quality, and direction tight.
+You may open a pull request directly for a small bug fix, test improvement, or documentation change.
+Features, architectural changes, and work likely to receive a `size:L` or larger label need an issue
+accepted by the maintainer before implementation starts. Unsolicited roadmap-scale pull requests
+will be closed so contributor and review time can stay focused on agreed work.
 
-Large, unfocused, or direction-changing PRs may still be closed quickly.
+Only `good first issue` and `help wanted` issues with concrete acceptance criteria and available
+review capacity are advertised as contributor-ready. To claim one, comment on the issue before
+starting. A claim expires after 30 days without a progress update, after which someone else may
+claim it.
 
-PRs are automatically labeled with a `vouch:*` trust status and a `size:*` diff size based on changed lines.
+The maintainer reviews the contribution queue in monthly batches. Replies may arrive earlier when
+time permits, but there is no faster response guarantee.
 
-If you are an external contributor, expect `vouch:unvouched` until we explicitly add you to [.github/VOUCHED.td](.github/VOUCHED.td).
+Use [GitHub Discussions](https://github.com/redxzeta/forkara/discussions/categories/q-a) for setup
+and support questions. Issues should stay focused on reproducible bugs, scoped improvements, and
+documentation gaps. Never report a vulnerability publicly; follow [SECURITY.md](SECURITY.md).
 
-## What We Are Most Likely To Accept
+## Before you code
 
-Small, focused bug fixes.
+Read the [development guide](docs/development.md). It covers the supported Bun and Node versions,
+fork setup, repository architecture, the isolated contributor server, provider requirements, and
+focused verification commands.
 
-Small reliability fixes.
+Pull requests must target `redxzeta/forkara:built-from-scratch`. Keep each pull request focused on
+one agreed outcome and avoid mixing unrelated cleanup into the change.
 
-Small performance improvements.
+## Prepare the pull request
 
-Tightly scoped maintenance work that clearly improves the project without changing its direction.
+Include:
 
-## What We Are Least Likely To Accept
+- the linked issue, or a short explanation of why the change is eligible for direct submission;
+- a clear summary of the implementation;
+- the exact commands and manual checks you ran;
+- compatibility or migration risks, especially around sessions, reconnects, persisted data, and
+  provider behavior; and
+- before/after screenshots for visual changes, plus a short recording for motion or interaction
+  changes.
 
-Large PRs.
+CI runs workspace quality/build, Windows process regression, migration lineage, and release-smoke
+jobs. A pull request is ready to merge only when the required jobs pass and review conversations are
+resolved. GitHub may require approval before workflows run for a first-time contributor.
 
-Drive-by feature work.
+## Review expectations
 
-Opinionated rewrites.
+Review may ask you to narrow the scope, add evidence, preserve compatibility, or split unrelated
+changes. The maintainer makes the final product and architecture decisions and may decline work that
+no longer fits, even after an issue was discussed. When that happens, the review will explain the
+reason directly.
 
-Anything that expands product scope without us asking for it first.
-
-If you open a 1,000+ line PR full of new features, we will probably close it quickly and remember that you ignored the clearly written instructions.
-
-## If You Still Want To Open A PR
-
-Keep it small.
-
-Explain exactly what changed.
-
-Explain exactly why the change should exist.
-
-Do not mix unrelated fixes together.
-
-If the PR makes anything resembling a UI change, include clear before/after images.
-
-If the change depends on motion, timing, transitions, or interaction details, include a short video.
-
-If we have to guess what changed, we are much less likely to review it.
-
-For required upstream refresh PRs, follow [Upstream sync playbook](./docs/upstream-sync-playbook.md)
-and target `built-from-scratch`.
-
-## Issues First
-
-If you are thinking about a non-trivial change, open an issue first.
-
-That gives you a chance to check whether the direction fits before spending time on a larger patch.
-
-## Testing
-
-Run the full workspace test suite from the repository root with:
-
-```bash
-bun run test
-```
-
-For focused web tests, pass paths relative to `apps/web` through the dedicated root command:
-
-```bash
-bun run test:web:focused src/path/to/example.test.ts
-```
-
-Run the bounded Playwright-backed Forkara personality workflow suite with:
-
-```bash
-bun run test:personality:smoke
-```
-
-The suite uses disposable browser state and mocked Git/external boundaries. It must not publish,
-push, create pull requests, delete dependencies, or execute a hard reset.
-
-## Be Realistic
-
-Opening a PR does not create an obligation on our side.
-
-We may close it. We may ignore it. We may ask you to shrink it. We may reimplement the idea ourselves later.
-
-If you are fine with that, proceed.
+For upstream refresh pull requests, follow the
+[upstream sync playbook](docs/upstream-sync-playbook.md) and target `built-from-scratch`.
