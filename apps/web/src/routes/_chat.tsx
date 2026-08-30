@@ -615,9 +615,7 @@ function ChatRouteLayout() {
     () => ({
       minWidth: THREAD_SIDEBAR_MIN_WIDTH,
       shouldAcceptWidth: ({ nextWidth, wrapper }) =>
-        wrapper.clientWidth -
-          nextWidth -
-          (activeRightDockOpen ? WORKSPACE_DOCK_MIN_WIDTH_PX : 0) >=
+        wrapper.clientWidth - nextWidth - (activeRightDockOpen ? WORKSPACE_DOCK_MIN_WIDTH_PX : 0) >=
         WORKSPACE_MAIN_MIN_WIDTH_PX,
       storageKey: THREAD_SIDEBAR_WIDTH_STORAGE_KEY,
       onResize: setSidebarWidthPx,

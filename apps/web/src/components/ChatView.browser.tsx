@@ -8728,9 +8728,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1_024, height: 768 });
       await vi.waitFor(
         () => {
-          expect(
-            document.querySelector('[data-workspace-sidebar-suppressed="true"]'),
-          ).toBeTruthy();
+          expect(document.querySelector('[data-workspace-sidebar-suppressed="true"]')).toBeTruthy();
           expect(chat.getBoundingClientRect().width).toBeGreaterThanOrEqual(36 * 16);
           expect(dock.getBoundingClientRect().width).toBeLessThanOrEqual(448);
           expect(environment.getBoundingClientRect().bottom).toBeLessThanOrEqual(
@@ -8743,9 +8741,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1_440, height: 900 });
       await vi.waitFor(
         () => {
-          expect(
-            document.querySelector('[data-workspace-sidebar-suppressed="true"]'),
-          ).toBeNull();
+          expect(document.querySelector('[data-workspace-sidebar-suppressed="true"]')).toBeNull();
           const sidebarGap = document.querySelector<HTMLElement>(
             "[data-sidebar-side='left'] [data-slot='sidebar-gap']",
           );

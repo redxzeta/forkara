@@ -32,8 +32,7 @@ export function resolveWorkspaceLayout(input: {
     supportedDesktop &&
     input.userSidebarOpen &&
     input.dockOpen &&
-    shellWidthPx <
-      sidebarWidthPx + WORKSPACE_MAIN_MIN_WIDTH_PX + WORKSPACE_DOCK_MIN_WIDTH_PX;
+    shellWidthPx < sidebarWidthPx + WORKSPACE_MAIN_MIN_WIDTH_PX + WORKSPACE_DOCK_MIN_WIDTH_PX;
   const effectiveSidebarWidthPx =
     input.userSidebarOpen && !sidebarTemporarilySuppressed ? sidebarWidthPx : 0;
   const mainAndDockWidthPx = Math.max(0, shellWidthPx - effectiveSidebarWidthPx);
@@ -55,10 +54,7 @@ export function resolveWorkspaceLayout(input: {
  */
 export function resolveRightDockMaxWidth(hostWidthPx: number): number | null {
   const normalizedHostWidthPx = Math.max(0, hostWidthPx);
-  if (
-    normalizedHostWidthPx <
-    WORKSPACE_MAIN_MIN_WIDTH_PX + WORKSPACE_DOCK_MIN_WIDTH_PX
-  ) {
+  if (normalizedHostWidthPx < WORKSPACE_MAIN_MIN_WIDTH_PX + WORKSPACE_DOCK_MIN_WIDTH_PX) {
     return null;
   }
   return normalizedHostWidthPx - WORKSPACE_MAIN_MIN_WIDTH_PX;
