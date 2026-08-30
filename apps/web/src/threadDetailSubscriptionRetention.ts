@@ -323,13 +323,17 @@ export function resolveThreadDetailSubscriptionLeaseIds(input: {
   readonly visibleThreadIds: readonly ThreadId[];
   readonly retainedThreadIds: readonly ThreadId[];
   readonly serverThreadIds: ReadonlySet<ThreadId>;
+  readonly localDraftThreadIds: ReadonlySet<ThreadId>;
 }): ThreadId[] {
   const threadIds = new Set<ThreadId>();
   for (const threadId of input.visibleThreadIds) {
     if (threadIds.size >= WS_STREAM_LIMITS.threadPerClient) break;
-    // A visible draft needs a lease before its shell row exists so its first
-    // provider events cannot outrun promotion into the server snapshot.
-    threadIds.add(threadId);
+    // A registered draft needs a lease before its shell row exists so its first
+    // provider events cannot outrun promotion into the server snapshot. Unknown
+    // route IDs are neither drafts nor server rows and must never open a stream.
+    if (input.serverThreadIds.has(threadId) || input.localDraftThreadIds.has(threadId)) {
+      threadIds.add(threadId);
+    }
   }
   for (const threadId of input.retainedThreadIds) {
     if (threadIds.size >= WS_STREAM_LIMITS.threadPerClient) break;

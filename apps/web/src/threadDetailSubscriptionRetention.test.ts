@@ -327,12 +327,28 @@ describe("threadDetailSubscriptionRetention", () => {
       resolveThreadDetailSubscriptionLeaseIds({
         visibleThreadIds: visible,
         retainedThreadIds: retained,
-        serverThreadIds: new Set(retained),
+        serverThreadIds: new Set([visible[0]!, ...retained]),
+        localDraftThreadIds: new Set([visible[1]!]),
       }),
     ).toEqual([
       ...visible,
       ...retained.slice(0, WS_STREAM_LIMITS.threadPerClient - visible.length),
     ]);
+  });
+
+  it("rejects visible stale route IDs that are neither server threads nor local drafts", () => {
+    const serverThreadId = ThreadId.makeUnsafe("visible-server");
+    const draftThreadId = ThreadId.makeUnsafe("visible-draft");
+    const staleThreadId = ThreadId.makeUnsafe("visible-stale");
+
+    expect(
+      resolveThreadDetailSubscriptionLeaseIds({
+        visibleThreadIds: [serverThreadId, staleThreadId, draftThreadId],
+        retainedThreadIds: [],
+        serverThreadIds: new Set([serverThreadId]),
+        localDraftThreadIds: new Set([draftThreadId]),
+      }),
+    ).toEqual([serverThreadId, draftThreadId]);
   });
 
   it("notifies eviction subscribers so lease owners can refresh wiped detail", () => {

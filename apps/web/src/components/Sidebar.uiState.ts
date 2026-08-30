@@ -18,6 +18,8 @@ export type SidebarUiState = {
   activityViewEnabled: boolean;
 };
 
+const sameWindowListeners = new Set<(state: SidebarUiState) => void>();
+
 const DEFAULT_SIDEBAR_UI_STATE: SidebarUiState = {
   chatSectionExpanded: false,
   chatThreadListExtraPages: 0,
@@ -153,13 +155,17 @@ export function subscribeSidebarUiState(listener: (state: SidebarUiState) => voi
     if (event.key !== SIDEBAR_UI_STATE_STORAGE_KEY) return;
     listener(readSidebarUiState());
   };
+  sameWindowListeners.add(listener);
   window.addEventListener("storage", handleStorage);
-  return () => window.removeEventListener("storage", handleStorage);
+  return () => {
+    sameWindowListeners.delete(listener);
+    window.removeEventListener("storage", handleStorage);
+  };
 }
 
-export function persistSidebarUiState(input: SidebarUiState): void {
+function writeSidebarUiState(input: SidebarUiState): boolean {
   if (typeof window === "undefined") {
-    return;
+    return false;
   }
 
   try {
@@ -187,7 +193,34 @@ export function persistSidebarUiState(input: SidebarUiState): void {
         activityViewEnabled: input.activityViewEnabled,
       }),
     );
+    return true;
   } catch {
     // Ignore storage errors so sidebar rendering keeps working when persistence is unavailable.
+    return false;
   }
+}
+
+export function persistSidebarUiState(input: SidebarUiState): void {
+  writeSidebarUiState(input);
+}
+
+/**
+ * Atomically clears a stale remembered route without overwriting unrelated sidebar state.
+ * Storage events do not fire in the window that performed the write, so same-window consumers
+ * receive an explicit notification after the persisted compare-and-clear succeeds.
+ */
+export function clearLastThreadRouteIfMatches(threadId: string): boolean {
+  const current = readSidebarUiState();
+  if (current.lastThreadRoute?.threadId !== threadId) {
+    return false;
+  }
+
+  const next: SidebarUiState = { ...current, lastThreadRoute: null };
+  if (!writeSidebarUiState(next)) {
+    return false;
+  }
+  for (const listener of sameWindowListeners) {
+    listener(next);
+  }
+  return true;
 }

@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
+  clearLastThreadRouteIfMatches,
   normalizeSidebarProjectThreadListCwd,
   persistSidebarUiState,
   readSidebarUiState,
+  subscribeSidebarUiState,
 } from "./Sidebar.uiState";
 
 describe("Sidebar.uiState", () => {
@@ -14,6 +16,8 @@ describe("Sidebar.uiState", () => {
     Object.defineProperty(globalThis, "window", {
       configurable: true,
       value: {
+        addEventListener: () => {},
+        removeEventListener: () => {},
         localStorage: {
           clear: () => {
             storage.clear();
@@ -162,5 +166,49 @@ describe("Sidebar.uiState", () => {
       lastThreadRoute: null,
       activityViewEnabled: false,
     });
+  });
+
+  it("atomically clears only a matching remembered route and preserves unrelated state", () => {
+    persistSidebarUiState({
+      chatSectionExpanded: true,
+      chatThreadListExtraPages: 3,
+      projectThreadListExtraPagesByCwd: { "/repo": 2 },
+      dismissedThreadStatusKeyByThreadId: { "thread-other": "ready:turn-1" },
+      lastThreadRoute: { threadId: "thread-stale", splitViewId: "split-stale" },
+      activityViewEnabled: true,
+    });
+
+    expect(clearLastThreadRouteIfMatches("thread-other")).toBe(false);
+    expect(readSidebarUiState().lastThreadRoute?.threadId).toBe("thread-stale");
+    expect(clearLastThreadRouteIfMatches("thread-stale")).toBe(true);
+    expect(readSidebarUiState()).toEqual({
+      chatSectionExpanded: true,
+      chatThreadListExtraPages: 3,
+      projectThreadListExtraPagesByCwd: {
+        [normalizeSidebarProjectThreadListCwd("/repo")]: 2,
+      },
+      dismissedThreadStatusKeyByThreadId: { "thread-other": "ready:turn-1" },
+      lastThreadRoute: null,
+      activityViewEnabled: true,
+    });
+  });
+
+  it("notifies same-window sidebar consumers after a matching clear", () => {
+    persistSidebarUiState({
+      chatSectionExpanded: false,
+      chatThreadListExtraPages: 0,
+      projectThreadListExtraPagesByCwd: {},
+      dismissedThreadStatusKeyByThreadId: {},
+      lastThreadRoute: { threadId: "thread-stale" },
+      activityViewEnabled: false,
+    });
+    const observed: Array<ReturnType<typeof readSidebarUiState>> = [];
+    const unsubscribe = subscribeSidebarUiState((state) => observed.push(state));
+
+    expect(clearLastThreadRouteIfMatches("thread-stale")).toBe(true);
+    expect(observed).toHaveLength(1);
+    expect(observed[0]?.lastThreadRoute).toBeNull();
+
+    unsubscribe();
   });
 });

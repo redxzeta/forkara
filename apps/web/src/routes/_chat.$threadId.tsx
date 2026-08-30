@@ -24,6 +24,7 @@ import { useStore } from "../store";
 import { createThreadExistsSelector, createThreadProjectIdSelector } from "../storeSelectors";
 import { SingleChatSurface } from "../components/chat/SingleChatSurface";
 import { SplitChatSurface } from "../components/chat/SplitChatSurface";
+import { clearLastThreadRouteIfMatches } from "../components/Sidebar.uiState";
 import { resolveSingleProjectId } from "./-chatThreadRoute.logic";
 
 function ChatThreadRouteView() {
@@ -150,6 +151,7 @@ function ChatThreadRouteView() {
     }
 
     if (!routeThreadExists) {
+      clearLastThreadRouteIfMatches(threadId);
       void navigate({ to: "/", replace: true });
     }
   }, [
