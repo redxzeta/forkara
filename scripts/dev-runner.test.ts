@@ -82,6 +82,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
         devInstance: "inherited-instance",
         synaraHome: "/tmp/inherited-home",
         authToken: "inherited-secret",
+        host: "0.0.0.0",
         port: 3773,
         devUrl: new URL("http://localhost:5733"),
       });
@@ -91,6 +92,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
         devInstance: undefined,
         synaraHome: "./.forkara/contributor",
         authToken: undefined,
+        host: undefined,
         port: undefined,
         devUrl: undefined,
       });
@@ -104,6 +106,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
         devInstance: "existing",
         synaraHome: "/tmp/existing-home",
         authToken: "existing-secret",
+        host: "192.168.1.50",
         port: 4222,
         devUrl,
       });
@@ -113,6 +116,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
         devInstance: "existing",
         synaraHome: "/tmp/existing-home",
         authToken: "existing-secret",
+        host: "192.168.1.50",
         port: 4222,
         devUrl,
       });
@@ -122,7 +126,12 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
       Effect.gen(function* () {
         const env = yield* createDevRunnerEnv({
           mode: "dev:contributor",
-          baseEnv: { SYNARA_AUTH_TOKEN: "inherited-secret" },
+          baseEnv: {
+            SYNARA_AUTH_TOKEN: "inherited-secret",
+            SYNARA_HOST: "0.0.0.0",
+            SYNARA_PUBLIC_URL: "https://forkara.example.com",
+            SYNARA_ALLOW_INSECURE_REMOTE: "1",
+          },
           serverOffset: 3158,
           webOffset: 3158,
           synaraHome: "./.forkara/contributor",
@@ -139,6 +148,9 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
         assert.equal(env.SYNARA_PORT, "6931");
         assert.equal(env.PORT, "8891");
         assert.equal(env.SYNARA_AUTH_TOKEN, undefined);
+        assert.equal(env.SYNARA_HOST, "127.0.0.1");
+        assert.equal(env.SYNARA_PUBLIC_URL, undefined);
+        assert.equal(env.SYNARA_ALLOW_INSECURE_REMOTE, undefined);
         assert.equal(env.SYNARA_MODE, "web");
       }),
     );

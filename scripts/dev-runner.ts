@@ -250,6 +250,11 @@ export function createDevRunnerEnv({
       delete output.SYNARA_DESKTOP_WS_URL;
     }
 
+    if (mode === "dev:contributor") {
+      delete output.SYNARA_PUBLIC_URL;
+      delete output.SYNARA_ALLOW_INSECURE_REMOTE;
+    }
+
     if (mode === "dev:server" || mode === "dev:web") {
       output.SYNARA_MODE = "web";
       delete output.SYNARA_DESKTOP_WS_URL;
@@ -411,6 +416,7 @@ interface DevRunnerPresetInput {
   readonly devInstance: string | undefined;
   readonly synaraHome: string | undefined;
   readonly authToken: string | undefined;
+  readonly host: string | undefined;
   readonly port: number | undefined;
   readonly devUrl: URL | undefined;
 }
@@ -424,6 +430,7 @@ export function applyDevRunnerPreset(
       devInstance: input.devInstance,
       synaraHome: input.synaraHome,
       authToken: input.authToken,
+      host: input.host,
       port: input.port,
       devUrl: input.devUrl,
     };
@@ -434,6 +441,7 @@ export function applyDevRunnerPreset(
     devInstance: undefined,
     synaraHome: CONTRIBUTOR_HOME,
     authToken: undefined,
+    host: undefined,
     port: undefined,
     devUrl: undefined,
   };
@@ -479,6 +487,7 @@ export function runDevRunnerWithInput(input: DevRunnerCliInput) {
       ...configuredOffset,
       synaraHome: input.synaraHome,
       authToken: input.authToken,
+      host: input.host,
       port: input.port,
       devUrl: input.devUrl,
     });
@@ -516,7 +525,7 @@ export function runDevRunnerWithInput(input: DevRunnerCliInput) {
       noBrowser: booleanOverrides.noBrowser,
       autoBootstrapProjectFromCwd: booleanOverrides.autoBootstrapProjectFromCwd,
       logWebSocketEvents: booleanOverrides.logWebSocketEvents,
-      host: input.host,
+      host: preset.host,
       port: preset.port,
       devUrl: preset.devUrl,
     });
