@@ -1,38 +1,19 @@
-<!--
-⚠️ READ BEFORE OPENING ⚠️
+## Linked issue or agreed scope
 
-We are not actively accepting contributions right now.
+<!-- Link the accepted issue. For an eligible small bug, test, or docs change, explain the scope. -->
 
-You can still open a PR, but please do so knowing there is a high chance
-we may close it without merging it, or never review it.
+## Change summary
 
-- Small, focused PRs are strongly preferred. Bug fixes are most likely to be merged.
-- New features will most likely just annoy us.
-- 1,000+ line PRs with a bunch of new features will probably get you banned from the repo.
--->
-
-## What Changed
-
-<!-- Describe the change clearly and keep scope tight. -->
-
-## Why
-
-<!-- Explain the problem being solved and why this approach is the right one. -->
-
-## UI Changes
-
-<!-- If this PR changes UI, include clear before/after screenshots.
-     If the change involves motion or interaction, include a short video.
-     Delete this section if not applicable. -->
+<!-- What changed, and why is this the smallest useful implementation? -->
 
 ## Verification
 
-<!-- List the checks you ran. For focused web tests from the repository root:
-     bun run test:web:focused src/path/to/example.test.ts -->
+<!-- List exact automated commands and manual checks, including results. -->
 
-## Checklist
+## Compatibility risks
 
-- [ ] This PR is small and focused
-- [ ] I explained what changed and why
-- [ ] I included before/after screenshots for any UI changes
-- [ ] I included a video for animation/interaction changes
+<!-- Note session, reconnect, persisted-data, migration, provider, or platform risks. Write "None" if not applicable. -->
+
+## UI evidence
+
+<!-- Add before/after images for visual changes and a short recording for motion or interaction changes. Write "Not applicable" otherwise. -->

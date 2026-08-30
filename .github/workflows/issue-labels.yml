@@ -1,9 +1,9 @@
-name: Issue Labels
+name: Repository Labels
 
 on:
   push:
     branches:
-      - main
+      - built-from-scratch
     paths:
       - .github/ISSUE_TEMPLATE/**
       - .github/workflows/issue-labels.yml
@@ -14,11 +14,11 @@ permissions:
 
 jobs:
   sync:
-    name: Sync issue labels
+    name: Sync repository labels
     runs-on: ubuntu-24.04
     steps:
-      - name: Ensure managed issue labels exist
-        uses: actions/github-script@v7
+      - name: Ensure managed labels exist
+        uses: actions/github-script@v8
         with:
           script: |
             const managedLabels = [
@@ -33,9 +33,54 @@ jobs:
                 description: "Requested improvement or new capability.",
               },
               {
+                name: "documentation",
+                color: "0075ca",
+                description: "Documentation is missing, unclear, or incorrect.",
+              },
+              {
                 name: "needs-triage",
                 color: "fbca04",
-                description: "Issue needs maintainer review and initial categorization.",
+                description: "Needs maintainer review and initial categorization.",
+              },
+              {
+                name: "good first issue",
+                color: "7057ff",
+                description: "Scoped, newcomer-friendly work with concrete acceptance criteria.",
+              },
+              {
+                name: "help wanted",
+                color: "008672",
+                description: "Contributor-ready work with acceptance criteria and review capacity.",
+              },
+              {
+                name: "size:XS",
+                color: "0e8a16",
+                description: "0-9 effective changed lines (test files excluded in mixed PRs).",
+              },
+              {
+                name: "size:S",
+                color: "5ebd3e",
+                description: "10-29 effective changed lines (test files excluded in mixed PRs).",
+              },
+              {
+                name: "size:M",
+                color: "fbca04",
+                description: "30-99 effective changed lines (test files excluded in mixed PRs).",
+              },
+              {
+                name: "size:L",
+                color: "fe7d37",
+                description: "100-499 effective changed lines (test files excluded in mixed PRs).",
+              },
+              {
+                name: "size:XL",
+                color: "d93f0b",
+                description: "500-999 effective changed lines (test files excluded in mixed PRs).",
+              },
+              {
+                name: "size:XXL",
+                color: "b60205",
+                description: "1,000+ effective changed lines (test files excluded in mixed PRs).",
               },
             ];
 

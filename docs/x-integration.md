@@ -6,7 +6,8 @@ directly, and Forkara does not schedule or publish posts automatically.
 ## Configure an OAuth app
 
 1. Create an X OAuth 2.0 app that supports Authorization Code with PKCE.
-2. Set `SYNARA_X_CLIENT_ID` to the app's public client ID before starting Forkara.
+2. Set the compatibility variable `SYNARA_X_CLIENT_ID` to the app's public client ID before starting
+   Forkara. This name is retained so existing installations and automation keep working.
 3. In **Settings → Social accounts**, copy the callback URI shown by Forkara and register that exact
    URI in the X developer app.
 4. Select **Connect X account** and complete the user-driven authorization in the browser.
