@@ -163,6 +163,16 @@ import {
 } from "../lib/composerSend";
 import { composerImageBlobKey, persistComposerImageBlob } from "../lib/composerImageBlobStore";
 import { reconcileDeletedThreadFromClient } from "../lib/deletedThreadClientReconciliation";
+import {
+  armQueuedComposerSteerGate,
+  claimQueuedComposerAutoDispatch,
+  clearQueuedComposerSteerGate,
+  getQueuedComposerSteerGate,
+  isQueuedComposerAwaitingTurnStart,
+  releaseQueuedComposerAutoDispatch,
+  runLockedQueuedComposerAutoDispatch,
+  tryBeginQueuedComposerAutoDispatch,
+} from "../lib/queuedComposerDrain";
 import { extractChatAutomationInvocation } from "../lib/automationIntent";
 import {
   automationClarificationPrompt,
@@ -481,6 +491,13 @@ import {
   type AutomationFormState,
 } from "../routes/-automations.shared";
 import { ChatTranscriptPane } from "./chat/ChatTranscriptPane";
+import { ChatThreadFindHost } from "./chat/ThreadFindBar";
+import {
+  createThreadFindHighlightStore,
+  eventTargetsInAppBrowser,
+  shouldCaptureChatFindShortcut,
+  type ThreadFindMatch,
+} from "./chat/threadFind.logic";
 import { ThreadDetailHydrationState } from "./chat/ThreadDetailHydrationState";
 import type { MessagesTimelineController } from "./chat/MessagesTimeline";
 import { buildTurnDiffSummaryByAssistantMessageId } from "./chat/MessagesTimeline.logic";
@@ -599,6 +616,7 @@ import {
   PullRequestDialogState,
   type QueuedSteerGate,
   resolveQueuedSteerGateTransition,
+  resolveQueuedComposerAutoDispatchHold,
   shouldRenderProviderHealthBanner,
   resolveRuntimeModeAfterApprovalDecision,
   revokeBlobPreviewUrl,
@@ -1571,6 +1589,19 @@ export default function ChatView({
   const [isTraitsPickerOpen, setIsTraitsPickerOpen] = useState(false);
   const legendListRef = useRef<LegendListRef | null>(null);
   const timelineControllerRef = useRef<MessagesTimelineController | null>(null);
+  const [threadFindOpen, setThreadFindOpen] = useState(false);
+  const [threadFindFocusNonce, setThreadFindFocusNonce] = useState(0);
+  const [threadFindHighlightStore] = useState(() => createThreadFindHighlightStore());
+  const handleThreadFindJump = (match: ThreadFindMatch) => {
+    timelineControllerRef.current?.scrollToMessage(match.messageId, {
+      ...(match.segmentIndex === undefined ? {} : { segmentIndex: match.segmentIndex }),
+      fineScrollFind: true,
+    });
+  };
+  const handleThreadFindActiveMatchChange = (match: ThreadFindMatch | null) => {
+    threadFindHighlightStore.setActiveMatch(match);
+    timelineControllerRef.current?.setActiveFindMatch(match);
+  };
   const isAtEndRef = useRef(true);
   const autoFollowThreadIdRef = useRef<ThreadId | null>(null);
   const pendingInteractionAnchorRef = useRef<{
@@ -1589,9 +1620,11 @@ export default function ChatView({
       setComposerCommandPicker(null);
       setIsModelPickerOpen(false);
       setIsTraitsPickerOpen(false);
+      setThreadFindOpen(false);
+      threadFindHighlightStore.set(null);
     }, 0);
     return () => window.clearTimeout(settle);
-  }, [threadId]);
+  }, [threadId, threadFindHighlightStore]);
   useEffect(() => {
     const scrollDebouncer = showScrollDebouncer.current;
     return () => {
@@ -1632,8 +1665,11 @@ export default function ChatView({
   const autoDispatchingQueuedTurnRef = useRef(false);
   // Holds queued-composer auto-dispatch through a non-natively-steerable
   // provider steer's interrupt→re-dispatch gap; see
-  // resolveQueuedSteerGateTransition.
-  const [queuedSteerGate, setQueuedSteerGate] = useState<QueuedSteerGate | null>(null);
+  // resolveQueuedSteerGateTransition. Seed from the shared map so a remount
+  // during the interrupt gap still sees the gate the watcher has been holding.
+  const [queuedSteerGate, setQueuedSteerGate] = useState<QueuedSteerGate | null>(() =>
+    getQueuedComposerSteerGate(threadId),
+  );
   // Bumped to re-evaluate auto-dispatch when only non-reactive guards (refs)
   // blocked it; nothing else re-triggers the effect once they reset.
   const [queuedAutoDispatchTick, setQueuedAutoDispatchTick] = useState(0);
@@ -5644,12 +5680,14 @@ export default function ChatView({
 
   useEffect(() => {
     autoDispatchingQueuedTurnRef.current = false;
-    // Async setState (post-paint) keeps this thread-change reset out of the
-    // render->effect->render cascade.
-    const settle = window.setTimeout(() => {
-      setQueuedSteerGate(null);
-    }, 0);
-    return () => window.clearTimeout(settle);
+  }, [threadId]);
+
+  useLayoutEffect(() => {
+    claimQueuedComposerAutoDispatch(threadId);
+    setQueuedSteerGate(getQueuedComposerSteerGate(threadId));
+    return () => {
+      releaseQueuedComposerAutoDispatch(threadId);
+    };
   }, [threadId]);
 
   useEffect(() => {
@@ -6412,6 +6450,23 @@ export default function ChatView({
         return;
       }
 
+      if (command === "chat.find") {
+        if (
+          !shouldCaptureChatFindShortcut({
+            shouldRenderChatPaneContent,
+            terminalWorkspaceTerminalTabActive,
+            inAppBrowserFocused: eventTargetsInAppBrowser(event.target),
+          })
+        ) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        setThreadFindOpen(true);
+        setThreadFindFocusNonce((current) => current + 1);
+        return;
+      }
+
       if (command === "modelPicker.toggle") {
         if (!composerPickerShortcutActive) return;
         event.preventDefault();
@@ -6646,6 +6701,7 @@ export default function ChatView({
     hasLiveTurn,
     handleModelPickerOpenChange,
     handleTraitsPickerOpenChange,
+    shouldRenderChatPaneContent,
     isComposerApprovalState,
     isVoiceRecording,
     isVoiceTranscribing,
@@ -8601,11 +8657,13 @@ export default function ChatView({
         dispatchMode === "steer" &&
         !providerSupportsNativeTurnSteering(liveProviderForSteerGate)
       ) {
-        setQueuedSteerGate({
+        const nextSteerGate = {
           sawInterruptGap: false,
           gapStartedAt: null,
           armedActiveTurnId: activeThread?.session?.activeTurnId ?? null,
-        });
+        };
+        setQueuedSteerGate(nextSteerGate);
+        armQueuedComposerSteerGate(threadId, nextSteerGate);
       }
       if (sourceProposedPlanForSend) {
         planSidebarDismissedForTurnRef.current = null;
@@ -9148,11 +9206,13 @@ export default function ChatView({
         dispatchMode === "steer" &&
         !providerSupportsNativeTurnSteering(livePlanProviderForSteerGate)
       ) {
-        setQueuedSteerGate({
+        const nextSteerGate = {
           sawInterruptGap: false,
           gapStartedAt: null,
           armedActiveTurnId: activeThread?.session?.activeTurnId ?? null,
-        });
+        };
+        setQueuedSteerGate(nextSteerGate);
+        armQueuedComposerSteerGate(threadId, nextSteerGate);
       }
       // Optimistically open the plan sidebar when implementing (not refining).
       // "default" mode here means the agent is executing the plan, which produces
@@ -9407,6 +9467,7 @@ export default function ChatView({
     });
     if (transition.kind === "clear") {
       setQueuedSteerGate(null);
+      clearQueuedComposerSteerGate(threadId);
       return;
     }
     if (
@@ -9415,26 +9476,37 @@ export default function ChatView({
       transition.gate.armedActiveTurnId !== queuedSteerGate.armedActiveTurnId
     ) {
       setQueuedSteerGate(transition.gate);
+      armQueuedComposerSteerGate(threadId, transition.gate);
       return;
     }
     if (transition.expiresInMs === null) {
       return;
     }
-    const timer = window.setTimeout(() => setQueuedSteerGate(null), transition.expiresInMs);
+    const timer = window.setTimeout(() => {
+      setQueuedSteerGate(null);
+      clearQueuedComposerSteerGate(threadId);
+    }, transition.expiresInMs);
     return () => window.clearTimeout(timer);
-  }, [activeTurnIdForSteerGate, phase, queuedSteerGate, sessionErroredForSteerGate]);
+  }, [activeTurnIdForSteerGate, phase, queuedSteerGate, sessionErroredForSteerGate, threadId]);
 
   useEffect(() => {
     if (
-      hasQueueableLiveTurn ||
-      phase === "disconnected" ||
-      isSendBusy ||
-      isConnecting ||
-      queuedSteerGate !== null ||
-      activePendingApproval !== null ||
-      activePendingProgress !== null ||
-      pendingUserInputs.length > 0 ||
-      queuedComposerTurns.length === 0
+      isQueuedComposerAwaitingTurnStart(threadId) ||
+      resolveQueuedComposerAutoDispatchHold({
+        localDispatch,
+        phase,
+        latestTurn: activeLatestTurn,
+        session: activeThread?.session ?? null,
+        messages: activeThread?.messages ?? EMPTY_MESSAGES,
+        isConnecting,
+        queuedSteerGate: getQueuedComposerSteerGate(threadId) ?? queuedSteerGate,
+        hasPendingApproval: activePendingApproval !== null,
+        hasPendingProgress: activePendingProgress !== null,
+        hasPendingUserInput: pendingUserInputs.length > 0,
+        queuedTurnCount: queuedComposerTurns.length,
+        threadError: activeThread?.error,
+        now: Date.now(),
+      })
     ) {
       return;
     }
@@ -9453,23 +9525,37 @@ export default function ChatView({
     if (!nextQueuedTurn) {
       return;
     }
+    if (!tryBeginQueuedComposerAutoDispatch(threadId)) {
+      // The watcher already owns this thread's queue head (background drain
+      // started before this ChatView claimed). Poll until that send settles.
+      const timer = window.setTimeout(() => setQueuedAutoDispatchTick((tick) => tick + 1), 250);
+      return () => window.clearTimeout(timer);
+    }
     autoDispatchingQueuedTurnRef.current = true;
-    void (async () => {
-      const succeeded = await dispatchQueuedComposerTurn(nextQueuedTurn, "queue");
-      if (succeeded) {
-        removeQueuedComposerTurnFromDraft(threadId, nextQueuedTurn.id);
-      }
-      autoDispatchingQueuedTurnRef.current = false;
-    })();
+    void runLockedQueuedComposerAutoDispatch({
+      threadId,
+      run: async () => {
+        const succeeded = await dispatchQueuedComposerTurn(nextQueuedTurn, "queue");
+        if (succeeded) {
+          removeQueuedComposerTurnFromDraft(threadId, nextQueuedTurn.id);
+        }
+      },
+      onSettled: () => {
+        autoDispatchingQueuedTurnRef.current = false;
+      },
+    });
   }, [
+    activeLatestTurn,
     activePendingApproval,
     activePendingProgress,
+    activeThread?.error,
+    activeThread?.messages,
+    activeThread?.session,
     dispatchQueuedComposerTurn,
-    phase,
     isConnecting,
-    isSendBusy,
+    localDispatch,
     pendingUserInputs.length,
-    hasQueueableLiveTurn,
+    phase,
     queuedAutoDispatchTick,
     queuedComposerTurns,
     queuedSteerGate,
@@ -12108,6 +12194,25 @@ export default function ChatView({
         />
       </header>
 
+      {/* Floating find panel — a root-level overlay so it sits on top of the
+          header and the docked Environment panel at the pane's top-right. */}
+      {shouldRenderChatPaneContent ? (
+        <ChatThreadFindHost
+          open={threadFindOpen}
+          focusNonce={threadFindFocusNonce}
+          timelineEntries={timelineEntries}
+          threadId={threadId}
+          className={cn(
+            terminalWorkspaceTerminalTabActive && "invisible",
+            !isEditorRail && desktopTopBarWindowControlsGutterClassName,
+          )}
+          onClose={() => setThreadFindOpen(false)}
+          onJump={handleThreadFindJump}
+          onHighlightChange={threadFindHighlightStore.set}
+          onActiveMatchChange={handleThreadFindActiveMatchChange}
+        />
+      ) : null}
+
       <RenameThreadDialog
         open={renameDialogOpen}
         currentTitle={activeThread.title}
@@ -12253,6 +12358,7 @@ export default function ChatView({
                     activeTurnStartedAt={activeWorkStartedAt}
                     listRef={legendListRef}
                     timelineControllerRef={timelineControllerRef}
+                    findHighlightStore={threadFindHighlightStore}
                     pinnedMessageIds={pinnedMessageIds}
                     canPinMessage={canPinMessage}
                     onTogglePinMessage={handleTogglePinMessageGuarded}
