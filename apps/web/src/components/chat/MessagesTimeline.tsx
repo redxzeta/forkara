@@ -72,6 +72,7 @@ import { buildExpandedImagePreview, ExpandedImagePreview } from "./ExpandedImage
 import { ProposedPlanCard } from "./ProposedPlanCard";
 import { DiffStatLabel } from "./DiffStatLabel";
 import { ReviewChangesButton } from "./ReviewChangesButton";
+import { EditedFileActions } from "./EditedFileActions";
 import { FileEntryIcon } from "./FileEntryIcon";
 import { InlineMentionChip } from "./InlineMentionChip";
 import { InlineSkillChip } from "./InlineSkillChip";
@@ -2273,21 +2274,26 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                 {inlineEditedFilesFromTurnSummary.length > 0 && (
                   <div className="mt-2 space-y-0.5">
                     {inlineEditedFilesFromTurnSummary.map((file) => (
-                      <button
+                      <div
                         key={`inline-summary-edit:${row.message.id}:${file.path}`}
-                        type="button"
-                        className="group/file-row flex w-full max-w-full items-center gap-2 px-0 py-1.5 text-left transition-colors duration-150 focus-visible:outline-none"
-                        title={file.path}
-                        onClick={() => onOpenTurnDiff(turnSummary!.turnId, file.path)}
+                        className="group/changed-file-row flex w-full max-w-full items-center"
                       >
-                        <EditedFileRowContent
-                          filePath={file.path}
-                          additions={file.additions}
-                          deletions={file.deletions}
-                          fontSizePx={normalizedChatFontSizePx}
-                          compact={false}
-                        />
-                      </button>
+                        <button
+                          type="button"
+                          className="group/file-row flex min-w-0 flex-1 items-center gap-2 px-0 py-1.5 text-left transition-colors duration-150 focus-visible:outline-none"
+                          title={file.path}
+                          onClick={() => onOpenTurnDiff(turnSummary!.turnId, file.path)}
+                        >
+                          <EditedFileRowContent
+                            filePath={file.path}
+                            additions={file.additions}
+                            deletions={file.deletions}
+                            fontSizePx={normalizedChatFontSizePx}
+                            compact={false}
+                          />
+                        </button>
+                        <EditedFileActions filePath={file.path} workspaceRoot={workspaceRoot} />
+                      </div>
                     ))}
                   </div>
                 )}
@@ -2352,37 +2358,42 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                     const deletions = file.deletions ?? 0;
                     const hasDiffStat = additions + deletions > 0;
                     return (
-                      <button
+                      <div
                         key={file.path}
-                        type="button"
                         className={cn(
-                          "group/file-row flex w-full items-center gap-2 border-t border-[color:var(--color-border-light)] bg-transparent px-3 py-2.5 text-left transition-colors hover:bg-[var(--color-background-button-secondary-hover)] dark:bg-transparent dark:hover:bg-transparent",
+                          "group/changed-file-row flex w-full items-center border-t border-[color:var(--color-border-light)] bg-transparent pr-2 transition-colors hover:bg-[var(--color-background-button-secondary-hover)] dark:bg-transparent dark:hover:bg-transparent",
                           withFirstReset && "first:border-t-0",
                         )}
-                        onClick={() => onOpenTurnDiff(turnSummary.turnId, file.path)}
                       >
-                        <FileEntryIcon
-                          pathValue={file.path}
-                          kind="file"
-                          theme={resolvedTheme}
-                          colorMode="inherit"
-                          className="size-4 shrink-0 text-[var(--color-text-foreground)] opacity-70 dark:opacity-80"
-                        />
-                        <span
-                          className="font-system-ui truncate font-normal text-[var(--color-text-foreground)] underline-offset-2 group-hover/file-row:underline group-focus-visible/file-row:underline"
-                          style={{ fontSize: chatTypographyStyle.fontSize }}
+                        <button
+                          type="button"
+                          className="group/file-row flex min-w-0 flex-1 items-center gap-2 px-3 py-2.5 text-left focus-visible:outline-none"
+                          onClick={() => onOpenTurnDiff(turnSummary.turnId, file.path)}
                         >
-                          {file.path}
-                        </span>
-                        {hasDiffStat && (
+                          <FileEntryIcon
+                            pathValue={file.path}
+                            kind="file"
+                            theme={resolvedTheme}
+                            colorMode="inherit"
+                            className="size-4 shrink-0 text-[var(--color-text-foreground)] opacity-70 dark:opacity-80"
+                          />
                           <span
-                            className="font-system-ui ml-auto shrink-0 tabular-nums"
+                            className="font-system-ui truncate font-normal text-[var(--color-text-foreground)] underline-offset-2 group-hover/file-row:underline group-focus-visible/file-row:underline"
                             style={{ fontSize: chatTypographyStyle.fontSize }}
                           >
-                            <DiffStatLabel additions={additions} deletions={deletions} />
+                            {file.path}
                           </span>
-                        )}
-                      </button>
+                          {hasDiffStat && (
+                            <span
+                              className="font-system-ui ml-auto shrink-0 tabular-nums"
+                              style={{ fontSize: chatTypographyStyle.fontSize }}
+                            >
+                              <DiffStatLabel additions={additions} deletions={deletions} />
+                            </span>
+                          )}
+                        </button>
+                        <EditedFileActions filePath={file.path} workspaceRoot={workspaceRoot} />
+                      </div>
                     );
                   };
                   return (
