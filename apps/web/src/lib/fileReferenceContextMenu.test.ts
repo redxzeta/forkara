@@ -6,14 +6,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const harness = vi.hoisted(() => ({
   clicked: null as string | null,
-  copyText: vi.fn(),
+  copyPath: vi.fn(),
   showContextMenu: vi.fn(),
   showInFolder: vi.fn(),
   toast: vi.fn(),
 }));
 
 vi.mock("~/hooks/useCopyToClipboard", () => ({
-  copyTextToClipboard: harness.copyText,
+  copyPathToClipboard: harness.copyPath,
 }));
 
 vi.mock("~/nativeApi", () => ({
@@ -33,12 +33,12 @@ beforeEach(() => {
   vi.stubGlobal("window", { desktopBridge: {} });
   vi.stubGlobal("navigator", { platform: "Win32" });
   harness.clicked = null;
-  harness.copyText.mockReset();
+  harness.copyPath.mockReset();
   harness.showContextMenu.mockReset();
   harness.showInFolder.mockReset();
   harness.toast.mockReset();
   harness.showContextMenu.mockImplementation(async () => harness.clicked);
-  harness.copyText.mockResolvedValue(undefined);
+  harness.copyPath.mockResolvedValue(true);
   harness.showInFolder.mockResolvedValue(undefined);
 });
 
@@ -99,7 +99,7 @@ describe("showFileReferenceContextMenu", () => {
     });
 
     expect(harness.showInFolder).toHaveBeenCalledWith("/repo/output/video.mp4");
-    expect(harness.copyText).not.toHaveBeenCalled();
+    expect(harness.copyPath).not.toHaveBeenCalled();
   });
 
   it("reports a stale file without leaking the shell rejection", async () => {
@@ -132,7 +132,7 @@ describe("showFileReferenceContextMenu", () => {
       onReferenceInChat: undefined,
     });
 
-    expect(harness.copyText).toHaveBeenCalledWith("/repo/output/video.mp4");
+    expect(harness.copyPath).toHaveBeenCalledWith("/repo/output/video.mp4");
     expect(harness.showInFolder).not.toHaveBeenCalled();
   });
 });

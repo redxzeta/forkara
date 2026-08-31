@@ -169,17 +169,36 @@ function useCopyWithToasts(): (value: string, labels: CopyToastLabels) => void {
 }
 
 /**
- * Copy a filesystem path and surface the shared success/error toast. Single source
- * of truth for the "Path copied" affordance used by the sidebar and the kanban board.
+ * Copy a filesystem path and surface the shared success/error toast. This is the
+ * imperative primitive used by both React and non-React path actions, so every
+ * file surface has the same fallback and visible feedback behavior.
  */
-export function useCopyPathToClipboard(): (path: string) => void {
-  const copy = useCopyWithToasts();
-  return (path: string) =>
-    copy(path, {
-      successTitle: "Path copied",
-      successDescription: path,
-      errorTitle: "Failed to copy path",
+export async function copyPathToClipboard(path: string): Promise<boolean> {
+  try {
+    if (path.length === 0) {
+      throw new Error("Path is empty.");
+    }
+    await copyTextToClipboard(path);
+    toastManager.add({
+      type: "success",
+      title: "Path copied",
+      description: path,
     });
+    return true;
+  } catch (error) {
+    toastManager.add({
+      type: "error",
+      title: "Failed to copy path",
+      description: error instanceof Error ? error.message : "An error occurred.",
+    });
+    return false;
+  }
+}
+
+export function useCopyPathToClipboard(): (path: string) => void {
+  return React.useCallback((path: string) => {
+    void copyPathToClipboard(path);
+  }, []);
 }
 
 /**
