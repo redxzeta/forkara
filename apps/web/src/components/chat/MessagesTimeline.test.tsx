@@ -3354,13 +3354,15 @@ describe("MessagesTimeline", () => {
         markdownCwd={undefined}
         resolvedTheme="dark"
         timestampFormat="locale"
-        workspaceRoot={undefined}
+        workspaceRoot="/repo"
       />,
     );
 
     expect(markup).toContain("Edited 1 file");
     expect(markup).toContain("Undo");
     expect(markup).toContain("Review");
+    expect(markup).toContain('aria-label="Open Sidebar.tsx in file preview"');
+    expect(markup).toContain('aria-label="More actions for Sidebar.tsx"');
     expect(markup).toContain('aria-expanded="true"');
     expect(markup).toContain("font-system-ui truncate font-normal");
     expect(markup).toContain("apps/web/src/components/Sidebar.tsx");
