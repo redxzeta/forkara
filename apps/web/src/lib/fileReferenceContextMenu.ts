@@ -5,7 +5,7 @@
 // Exports: showFileReferenceContextMenu, getRevealInFolderLabel
 
 import { formatSelectionLabel, type ChatFileReference } from "~/lib/chatReferences";
-import { copyTextToClipboard } from "~/hooks/useCopyToClipboard";
+import { copyPathToClipboard } from "~/hooks/useCopyToClipboard";
 import { getNavigatorPlatform, isMacPlatform, isWindowsPlatform } from "~/lib/utils";
 import { readNativeApi } from "~/nativeApi";
 import { toastManager } from "~/components/ui/toast";
@@ -104,6 +104,6 @@ export async function showFileReferenceContextMenu(input: {
     return;
   }
   if (clicked === "copy-path") {
-    await copyTextToClipboard(input.path);
+    await copyPathToClipboard(input.path);
   }
 }

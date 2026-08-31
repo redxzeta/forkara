@@ -17,7 +17,7 @@ import { isWorkspaceRelativePathSafe, joinWorkspaceRelativePath } from "@forkara
 import { Fragment, useLayoutEffect, useRef, useState } from "react";
 
 import { basenameOfPath } from "~/file-icons";
-import { useCopyFileContentsToClipboard } from "~/hooks/useCopyToClipboard";
+import { useCopyFileContentsToClipboard, useCopyPathToClipboard } from "~/hooks/useCopyToClipboard";
 import type { ChatFileReference } from "~/lib/chatReferences";
 import { ChevronRightIcon, CodeIcon, EllipsisIcon, EyeOpenIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
@@ -260,9 +260,9 @@ export const WorkspaceFilePreviewHeader = function WorkspaceFilePreviewHeader(
     onAskWhyInChat?.({ path: filePath });
   };
   const copyFileContents = useCopyFileContentsToClipboard();
+  const copyPath = useCopyPathToClipboard();
 
   const canCopyContents = contentsForCopy != null;
-  const hasOverflowMenu = canCopyContents || Boolean(onReferenceInChat || onAskWhyInChat);
 
   return (
     <div
@@ -323,32 +323,33 @@ export const WorkspaceFilePreviewHeader = function WorkspaceFilePreviewHeader(
           </div>
         ) : null}
 
-        {hasOverflowMenu ? (
-          <Menu>
-            <MenuTrigger render={<ChatHeaderIconButton label="More actions" tone="plain" />}>
-              <EllipsisIcon aria-hidden="true" className="size-3.5" />
-            </MenuTrigger>
-            <ComposerPickerMenuPopup align="end" side="bottom" className="w-52 min-w-52">
-              {canCopyContents ? (
-                <MenuItem
-                  onClick={() =>
-                    copyFileContents(contentsForCopy ?? "", fileSegment, {
-                      partial: props.truncated ?? false,
-                    })
-                  }
-                >
-                  Copy contents
-                </MenuItem>
-              ) : null}
-              {onReferenceInChat ? (
-                <MenuItem onClick={referenceWholeFile}>Reference in chat</MenuItem>
-              ) : null}
-              {onAskWhyInChat ? (
-                <MenuItem onClick={askWhyWholeFile}>Ask why this changed</MenuItem>
-              ) : null}
-            </ComposerPickerMenuPopup>
-          </Menu>
-        ) : null}
+        <Menu>
+          <MenuTrigger render={<ChatHeaderIconButton label="More actions" tone="plain" />}>
+            <EllipsisIcon aria-hidden="true" className="size-3.5" />
+          </MenuTrigger>
+          <ComposerPickerMenuPopup align="end" side="bottom" className="w-52 min-w-52">
+            <MenuItem onClick={() => copyPath(filePath)}>
+              {fileIsOutsideWorkspace ? "Copy absolute path" : "Copy relative path"}
+            </MenuItem>
+            {canCopyContents ? (
+              <MenuItem
+                onClick={() =>
+                  copyFileContents(contentsForCopy ?? "", fileSegment, {
+                    partial: props.truncated ?? false,
+                  })
+                }
+              >
+                Copy contents
+              </MenuItem>
+            ) : null}
+            {onReferenceInChat ? (
+              <MenuItem onClick={referenceWholeFile}>Reference in chat</MenuItem>
+            ) : null}
+            {onAskWhyInChat ? (
+              <MenuItem onClick={askWhyWholeFile}>Ask why this changed</MenuItem>
+            ) : null}
+          </ComposerPickerMenuPopup>
+        </Menu>
 
         {/* Responsive (default) mode: the "Open" label rides the same
             `header-actions` container declared on this header, so it shows on a
