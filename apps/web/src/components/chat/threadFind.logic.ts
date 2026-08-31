@@ -377,12 +377,15 @@ function decodedOffsetToHtmlOffset(raw: string, decodedOffset: number): number {
 type HtmlTextRun = {
   htmlStart: number;
   htmlEnd: number;
+  decodedStart: number;
+  decodedEnd: number;
   decoded: string;
 };
 
 function collectHtmlTextRuns(html: string): HtmlTextRun[] {
   const runs: HtmlTextRun[] = [];
   let index = 0;
+  let decodedOffset = 0;
   while (index < html.length) {
     if (html[index] === "<") {
       const end = html.indexOf(">", index);
@@ -396,7 +399,15 @@ function collectHtmlTextRuns(html: string): HtmlTextRun[] {
     const htmlEnd = nextTag === -1 ? html.length : nextTag;
     const raw = html.slice(index, htmlEnd);
     if (raw.length > 0) {
-      runs.push({ htmlStart: index, htmlEnd, decoded: decodeHtmlText(raw) });
+      const decoded = decodeHtmlText(raw);
+      runs.push({
+        htmlStart: index,
+        htmlEnd,
+        decodedStart: decodedOffset,
+        decodedEnd: decodedOffset + decoded.length,
+        decoded,
+      });
+      decodedOffset += decoded.length;
     }
     index = htmlEnd;
   }
@@ -445,21 +456,30 @@ export function wrapFindQueryInHtml(
   }
 
   const insertions: Array<{ htmlStart: number; htmlEnd: number; open: string }> = [];
+  let firstCandidateRun = 0;
   for (const range of ranges) {
     const matchStartOffset = sourceOffset + range.startOffset;
     const active =
       activeRange !== null &&
       activeRange.startOffset === matchStartOffset &&
       activeRange.endOffset === sourceOffset + range.endOffset;
-    let decodedCursor = 0;
-    for (const run of runs) {
-      const runDecodedEnd = decodedCursor + run.decoded.length;
-      const overlapStart = Math.max(range.startOffset, decodedCursor);
-      const overlapEnd = Math.min(range.endOffset, runDecodedEnd);
+    while (
+      firstCandidateRun < runs.length &&
+      runs[firstCandidateRun]!.decodedEnd <= range.startOffset
+    ) {
+      firstCandidateRun += 1;
+    }
+    for (let runIndex = firstCandidateRun; runIndex < runs.length; runIndex += 1) {
+      const run = runs[runIndex]!;
+      if (run.decodedStart >= range.endOffset) {
+        break;
+      }
+      const overlapStart = Math.max(range.startOffset, run.decodedStart);
+      const overlapEnd = Math.min(range.endOffset, run.decodedEnd);
       if (overlapStart < overlapEnd) {
         const raw = html.slice(run.htmlStart, run.htmlEnd);
-        const localStart = overlapStart - decodedCursor;
-        const localEnd = overlapEnd - decodedCursor;
+        const localStart = overlapStart - run.decodedStart;
+        const localEnd = overlapEnd - run.decodedStart;
         insertions.push({
           htmlStart: run.htmlStart + decodedOffsetToHtmlOffset(raw, localStart),
           htmlEnd: run.htmlStart + decodedOffsetToHtmlOffset(raw, localEnd),
@@ -471,13 +491,12 @@ export function wrapFindQueryInHtml(
           ),
         });
       }
-      decodedCursor = runDecodedEnd;
     }
   }
 
   const segments: string[] = [];
   let cursor = 0;
-  for (const insertion of insertions.toSorted((left, right) => left.htmlStart - right.htmlStart)) {
+  for (const insertion of insertions) {
     segments.push(
       html.slice(cursor, insertion.htmlStart),
       insertion.open,
