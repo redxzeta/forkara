@@ -822,7 +822,8 @@ label:has(> select#reasoning-effort) select {
 
 /* Find hits: yellow for every match, orange for the active one — dark text on
    both so highlights stay readable over prose and syntax-colored code. */
-.chat-markdown .chat-find-match {
+.chat-markdown .chat-find-match,
+.editor-file-viewer .chat-find-match {
   border-radius: 0.45em;
   padding: 0.06em 0.2em;
   box-decoration-break: clone;
@@ -831,18 +832,21 @@ label:has(> select#reasoning-effort) select {
   color: var(--color-stone-900);
 }
 
-.chat-markdown .chat-find-match-active {
+.chat-markdown .chat-find-match-active,
+.editor-file-viewer .chat-find-match-active {
   background-color: color-mix(in srgb, var(--color-orange-500) 68%, transparent);
   color: var(--color-stone-950);
 }
 
-.chat-markdown .chat-find-match-continues-before {
+.chat-markdown .chat-find-match-continues-before,
+.editor-file-viewer .chat-find-match-continues-before {
   padding-left: 0;
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
 }
 
-.chat-markdown .chat-find-match-continues-after {
+.chat-markdown .chat-find-match-continues-after,
+.editor-file-viewer .chat-find-match-continues-after {
   padding-right: 0;
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;

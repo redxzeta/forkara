@@ -29,18 +29,24 @@ import {
   type ReactNode,
   use,
   useCallback,
+  useDeferredValue,
   useEffect,
+  useLayoutEffect,
+  useMemo,
   useRef,
   useState,
+  type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 
 import { basenameOfPath } from "~/file-icons";
 import { useTheme } from "~/hooks/useTheme";
 import { getSelectionWithin, type ChatFileReference } from "~/lib/chatReferences";
 import { resolveDiffThemeName, type DiffThemeName } from "~/lib/diffRendering";
+import { isEditableEventTarget } from "~/lib/editableEventTarget";
 import { formatFileCommentRange, type FileCommentSelection } from "~/lib/fileComments";
 import { showFileReferenceContextMenu } from "~/lib/fileReferenceContextMenu";
 import { PlusIcon } from "~/lib/icons";
+import { repairMarkdownTableDelimiters } from "~/lib/markdownTableRepair";
 import { toggleMarkdownTaskMarker } from "~/lib/markdownTaskList";
 import { isRpcCapacityExceededError } from "~/lib/expensiveReadRetry";
 import {
@@ -58,18 +64,29 @@ import {
   getSyntaxLanguageForPath,
   highlightCodeToHtmlWithFallback,
 } from "~/lib/syntaxHighlighting";
-import { cn } from "~/lib/utils";
+import { cn, getNavigatorPlatform } from "~/lib/utils";
 import { readNativeApi } from "~/nativeApi";
 import ChatMarkdown from "./ChatMarkdown";
 import { FileLineCommentBox } from "./chat/FileLineCommentBox";
+import { CompactFindBar } from "./chat/CompactFindBar";
 import { PanelStateMessage } from "./chat/PanelStateMessage";
+import {
+  applyActiveChatFindMatch,
+  collectCaseInsensitiveSubstringRanges,
+  normalizeFindQuery,
+  stepThreadFindIndex,
+  type ThreadFindRange,
+  wrapFindQueryInHtml,
+} from "./chat/threadFind.logic";
 import { useFileLineCommenting } from "./chat/useFileLineCommenting";
+import { isWorkspaceFileFindShortcut } from "./chat/workspaceFileFind.logic";
 import { WorkspaceFilePreviewHeader } from "./chat/WorkspaceFilePreviewHeader";
 import { TranscriptSelectionAction } from "./chat/TranscriptSelectionAction";
 import { useCodeSelectionAction } from "./chat/useCodeSelectionAction";
 import { LocalImagePreview } from "./LocalImagePreview";
 import { PdfFilePreview } from "./PdfFilePreview";
 import { Skeleton } from "./ui/skeleton";
+import { DisclosureRegion } from "./ui/DisclosureRegion";
 
 const MARKDOWN_PREVIEW_EXTENSIONS = new Set([".markdown", ".md", ".mdx"]);
 
@@ -134,7 +151,7 @@ function escapeHtml(value: string): string {
     .replaceAll('"', "&quot;");
 }
 
-function PlainFileContents(props: { contents: string }) {
+function PlainFileContents(props: { contents: string; findQuery: string }) {
   // Wrap each line in a .line span (mirroring Shiki output) so the CSS
   // counter gutter applies. Built as an HTML string to avoid per-line React
   // nodes; the trailing \n stays inside each span so selection math and
@@ -152,11 +169,23 @@ function PlainFileContents(props: { contents: string }) {
           .join("")}</code>`;
 
   if (numberedHtml !== null) {
+    const html = wrapFindQueryInHtml(numberedHtml, props.findQuery);
     return (
       <pre
         className="editor-file-viewer__plain"
         aria-readonly="true"
-        dangerouslySetInnerHTML={{ __html: numberedHtml }}
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    );
+  }
+
+  if (normalizeFindQuery(props.findQuery).length > 0) {
+    const html = wrapFindQueryInHtml(`<code>${escapeHtml(props.contents)}</code>`, props.findQuery);
+    return (
+      <pre
+        className="editor-file-viewer__plain"
+        aria-readonly="true"
+        dangerouslySetInnerHTML={{ __html: html }}
       />
     );
   }
@@ -172,6 +201,8 @@ function SyntaxHighlightedFileContents(props: {
   path: string;
   contents: string;
   themeName: DiffThemeName;
+  findQuery: string;
+  activeRange: ThreadFindRange | null;
 }) {
   const language = getSyntaxLanguageForPath(props.path);
   const cacheKey = createSyntaxHighlightCacheKey(props.contents, language, props.themeName);
@@ -182,7 +213,9 @@ function SyntaxHighlightedFileContents(props: {
       <div
         className="editor-file-viewer__highlight"
         data-syntax-highlighted="true"
-        dangerouslySetInnerHTML={{ __html: cachedHighlightedHtml }}
+        dangerouslySetInnerHTML={{
+          __html: wrapFindQueryInHtml(cachedHighlightedHtml, props.findQuery),
+        }}
       />
     );
   }
@@ -195,6 +228,8 @@ function SyntaxHighlightedFileContents(props: {
       contents={props.contents}
       language={language}
       themeName={props.themeName}
+      findQuery={props.findQuery}
+      activeRange={props.activeRange}
     />
   );
 }
@@ -204,7 +239,10 @@ function UncachedSyntaxHighlightedFileContents(props: {
   contents: string;
   language: string;
   themeName: DiffThemeName;
+  findQuery: string;
+  activeRange: ThreadFindRange | null;
 }) {
+  const rootRef = useRef<HTMLDivElement>(null);
   const highlighter = use(getSyntaxHighlighterPromise(props.language));
   const highlightedHtml = highlightCodeToHtmlWithFallback(
     highlighter,
@@ -217,11 +255,18 @@ function UncachedSyntaxHighlightedFileContents(props: {
     cacheSyntaxHighlightedHtml(props.cacheKey, highlightedHtml, props.contents);
   }, [props.cacheKey, highlightedHtml, props.contents]);
 
+  useLayoutEffect(() => {
+    applyActiveChatFindMatch(rootRef.current, props.activeRange);
+  }, [highlightedHtml, props.activeRange, props.findQuery]);
+
   return (
     <div
+      ref={rootRef}
       className="editor-file-viewer__highlight"
       data-syntax-highlighted="true"
-      dangerouslySetInnerHTML={{ __html: highlightedHtml }}
+      dangerouslySetInnerHTML={{
+        __html: wrapFindQueryInHtml(highlightedHtml, props.findQuery),
+      }}
     />
   );
 }
@@ -229,8 +274,14 @@ function UncachedSyntaxHighlightedFileContents(props: {
 // The highlighted body (and its cache lookup) is skipped across selection and
 // diff-warming re-renders because its inputs (path, contents, themeName) are
 // stable unless the file changes — the React Compiler handles the memoization.
-function FileContentsView(props: { path: string; contents: string; themeName: DiffThemeName }) {
-  const plain = <PlainFileContents contents={props.contents} />;
+function FileContentsView(props: {
+  path: string;
+  contents: string;
+  themeName: DiffThemeName;
+  findQuery: string;
+  activeRange: ThreadFindRange | null;
+}) {
+  const plain = <PlainFileContents contents={props.contents} findQuery={props.findQuery} />;
   if (props.contents.length === 0 || props.contents.length > MAX_SYNTAX_HIGHLIGHT_INPUT_CHARS) {
     return plain;
   }
@@ -242,6 +293,8 @@ function FileContentsView(props: { path: string; contents: string; themeName: Di
           path={props.path}
           contents={props.contents}
           themeName={props.themeName}
+          findQuery={props.findQuery}
+          activeRange={props.activeRange}
         />
       </Suspense>
     </FilePreviewHighlightErrorBoundary>
@@ -327,6 +380,22 @@ interface FileEditBuffer extends EditableFileDocument {
   error: string | null;
 }
 
+interface WorkspaceFileFindSession {
+  filePath: string | null;
+  open: boolean;
+  focusNonce: number;
+  query: string;
+  activeIndex: number;
+}
+
+const CLOSED_FILE_FIND_SESSION: WorkspaceFileFindSession = {
+  filePath: null,
+  open: false,
+  focusNonce: 0,
+  query: "",
+  activeIndex: 0,
+};
+
 function makeFileEditBuffer(document: EditableFileDocument): FileEditBuffer {
   return {
     ...document,
@@ -358,11 +427,13 @@ function readFileSaveError(error: unknown): string {
 export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
   const { resolvedTheme } = useTheme();
   const diffThemeName = resolveDiffThemeName(resolvedTheme);
+  const previewRootRef = useRef<HTMLDivElement>(null);
   const contentsRef = useRef<HTMLDivElement>(null);
   const taskWriteQueueRef = useRef<Promise<void>>(Promise.resolve());
   const latestTaskWriteVersionRef = useRef({ next: 0, byFile: new Map<string, number>() });
   const taskFileDiskVersionRef = useRef(new Map<string, string>());
   const [editBuffer, setEditBuffer] = useState<FileEditBuffer | null>(null);
+  const [fileFindSession, setFileFindSession] = useState(CLOSED_FILE_FIND_SESSION);
   const {
     filePath: requestedFilePath,
     onAskWhyInChat,
@@ -491,6 +562,7 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
   }, [relocationRequestKey]);
 
   const fileContents = fileQuery.data?.contents ?? "";
+  const hasFileContents = fileQuery.data !== undefined;
   const showMarkdownPreview = fileIsMarkdown && markdownPreviewEnabled;
   const editableDocument: EditableFileDocument | null =
     props.editable &&
@@ -532,6 +604,142 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
             : fileQuery.data.version === null || fileQuery.data.encoding === null
               ? "This file format is read-only."
               : null;
+
+  const editableSourceVisible =
+    activeEditBuffer !== null && editableDocument !== null && !showMarkdownPreview;
+  const fileFindEnabled = hasFileContents && !fileIsImage && !editableSourceVisible;
+  const fileFindSessionIsCurrent = fileFindSession.filePath === filePath;
+  const fileFindOpen = fileFindEnabled && fileFindSessionIsCurrent && fileFindSession.open;
+  const fileFindQuery = fileFindSessionIsCurrent ? fileFindSession.query : "";
+  const deferredFileFindQuery = useDeferredValue(fileFindQuery);
+  const fileFindRenderQuery = fileFindOpen ? deferredFileFindQuery : "";
+  const searchableFileContents = useMemo(
+    () =>
+      showMarkdownPreview
+        ? repairMarkdownTableDelimiters(displayedFileContents)
+        : displayedFileContents,
+    [displayedFileContents, showMarkdownPreview],
+  );
+  const fileFindMatches = useMemo(
+    () =>
+      fileFindOpen
+        ? collectCaseInsensitiveSubstringRanges(searchableFileContents, deferredFileFindQuery)
+        : [],
+    [deferredFileFindQuery, fileFindOpen, searchableFileContents],
+  );
+  const fileFindMatchCount = fileFindMatches.length;
+  const requestedFileFindIndex = fileFindSessionIsCurrent ? fileFindSession.activeIndex : 0;
+  const safeFileFindIndex =
+    fileFindMatchCount === 0
+      ? -1
+      : Math.min(Math.max(requestedFileFindIndex, 0), fileFindMatchCount - 1);
+  const activeFileFindRange: ThreadFindRange | null =
+    fileFindOpen && safeFileFindIndex >= 0 ? (fileFindMatches[safeFileFindIndex] ?? null) : null;
+  const fileFindHasQuery = normalizeFindQuery(deferredFileFindQuery).length > 0;
+
+  useEffect(() => {
+    if (!fileFindOpen || filePath === null) {
+      return;
+    }
+    const clampedIndex = safeFileFindIndex < 0 ? 0 : safeFileFindIndex;
+    setFileFindSession((current) =>
+      current.filePath === filePath && current.activeIndex !== clampedIndex
+        ? { ...current, activeIndex: clampedIndex }
+        : current,
+    );
+  }, [fileFindOpen, filePath, safeFileFindIndex]);
+
+  const openFileFind = () => {
+    if (!fileFindEnabled || filePath === null) {
+      return;
+    }
+    setFileFindSession((current) => {
+      const preserveCurrentQuery = current.filePath === filePath && current.open && fileFindOpen;
+      return {
+        filePath,
+        open: true,
+        focusNonce: current.focusNonce + 1,
+        query: preserveCurrentQuery ? current.query : "",
+        activeIndex: preserveCurrentQuery ? current.activeIndex : 0,
+      };
+    });
+  };
+
+  const closeFileFind = () => {
+    setFileFindSession((current) =>
+      current.filePath === filePath
+        ? { ...current, open: false, query: "", activeIndex: 0 }
+        : current,
+    );
+    window.requestAnimationFrame(() => previewRootRef.current?.focus({ preventScroll: true }));
+  };
+
+  const handleFileFindQueryChange = (query: string) => {
+    setFileFindSession((current) =>
+      current.filePath === filePath ? { ...current, query, activeIndex: 0 } : current,
+    );
+  };
+
+  const handleFileFindStep = (direction: "next" | "previous") => {
+    if (deferredFileFindQuery !== fileFindQuery || fileFindMatchCount === 0 || filePath === null) {
+      return;
+    }
+    const nextIndex = stepThreadFindIndex(fileFindMatchCount, safeFileFindIndex, direction);
+    setFileFindSession((current) =>
+      current.filePath === filePath ? { ...current, activeIndex: nextIndex } : current,
+    );
+  };
+
+  const handlePreviewKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (event.defaultPrevented || !isWorkspaceFileFindShortcut(event, getNavigatorPlatform())) {
+      return;
+    }
+    const target = event.target;
+    const targetIsFindInput =
+      target instanceof Element && target.closest('[data-file-find-layout="panel"]') !== null;
+    if (!targetIsFindInput && isEditableEventTarget(event.nativeEvent)) {
+      return;
+    }
+    if (!fileFindEnabled) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    openFileFind();
+  };
+
+  const handlePreviewMouseDown = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (event.button !== 0 || !fileFindEnabled || !(event.target instanceof Element)) {
+      return;
+    }
+    if (
+      event.target.closest(
+        "a, button, input, textarea, select, [contenteditable='true'], [role='menuitem']",
+      )
+    ) {
+      return;
+    }
+    previewRootRef.current?.focus({ preventScroll: true });
+  };
+
+  useEffect(() => {
+    applyActiveChatFindMatch(contentsRef.current, activeFileFindRange);
+    if (!fileFindOpen || activeFileFindRange === null) {
+      return;
+    }
+    const frame = window.requestAnimationFrame(() => {
+      contentsRef.current
+        ?.querySelector<HTMLElement>('[data-chat-find-match="active"]')
+        ?.scrollIntoView({ block: "center", inline: "nearest" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [
+    activeFileFindRange,
+    displayedFileContents,
+    fileFindOpen,
+    fileFindRenderQuery,
+    showMarkdownPreview,
+  ]);
 
   const handleEditBufferChange = (contents: string) => {
     if (!editableDocument) return;
@@ -828,14 +1036,22 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
 
   const hoveredCommentLine = lineCommenting.hoveredLine;
   const activeCommentLine = lineCommenting.activeLine;
-  const hasFileContents = fileQuery.data !== undefined;
   const fileReadError = fileQuery.error;
   const fileReadCapacityError = isRpcCapacityExceededError(fileReadError);
   const showFileReadErrorIndicator =
     hasFileContents && fileReadError !== null && !activeEditBuffer?.error;
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col bg-[var(--color-background-surface)]">
+    <div
+      ref={previewRootRef}
+      data-workspace-file-preview="true"
+      role={fileFindEnabled ? "region" : undefined}
+      className="relative flex h-full min-h-0 min-w-0 flex-1 flex-col bg-[var(--color-background-surface)] focus:outline-none"
+      tabIndex={fileFindEnabled ? 0 : undefined}
+      aria-label={fileFindEnabled ? `File preview: ${filePath}` : undefined}
+      onKeyDown={handlePreviewKeyDown}
+      onMouseDownCapture={handlePreviewMouseDown}
+    >
       <WorkspaceFilePreviewHeader
         workspaceRoot={props.workspaceRoot}
         filePath={filePath}
@@ -849,6 +1065,31 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
         dirty={editBufferDirty}
         readOnlyReason={readOnlyReason}
       />
+      <div data-file-find-host="true" className="pointer-events-none absolute top-0 right-0 z-40">
+        <DisclosureRegion open={fileFindOpen} contentClassName="pointer-events-auto p-3">
+          <CompactFindBar
+            open={fileFindOpen}
+            focusNonce={fileFindSession.focusNonce}
+            query={fileFindQuery}
+            placeholder="Search file..."
+            inputLabel="Find in file"
+            testId="file-find-bar"
+            layout="file"
+            resultsLabel={
+              fileFindHasQuery
+                ? fileFindMatchCount === 0
+                  ? "No results"
+                  : `${safeFileFindIndex + 1} / ${fileFindMatchCount} results`
+                : ""
+            }
+            canStep={deferredFileFindQuery === fileFindQuery && fileFindMatchCount > 0}
+            seedFromSelection
+            onQueryChange={handleFileFindQueryChange}
+            onStep={handleFileFindStep}
+            onClose={closeFileFind}
+          />
+        </DisclosureRegion>
+      </div>
       {activeEditBuffer?.error ? (
         <div
           role="alert"
@@ -947,11 +1188,19 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
                 cwd={markdownPreviewCwd(props.workspaceRoot, filePath)}
                 isStreaming={false}
                 className="editor-markdown-preview__body text-sm leading-relaxed"
+                findQuery={fileFindRenderQuery}
+                findActiveRange={activeFileFindRange}
                 {...(canToggleTasks ? { onTaskToggle: handleTaskToggle } : {})}
               />
             </div>
           ) : (
-            <FileContentsView path={filePath} contents={fileContents} themeName={diffThemeName} />
+            <FileContentsView
+              path={filePath}
+              contents={fileContents}
+              themeName={diffThemeName}
+              findQuery={fileFindRenderQuery}
+              activeRange={activeFileFindRange}
+            />
           )}
           {!showMarkdownPreview && lineCount > 0 ? (
             <span className="sr-only">{lineCount} lines</span>
