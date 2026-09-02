@@ -159,7 +159,7 @@ describe("agent gateway MCP injection", () => {
     assert.isTrue(configHasTomlTableHeader('[mcp_servers."forkara"]', "[mcp_servers.forkara]"));
     assert.isTrue(configHasTomlTableHeader("['mcp_servers'.'forkara']", "[mcp_servers.forkara]"));
     assert.isTrue(
-      configHasTomlTableHeader('[mcp_servers."syn\\u0061ra"]', "[mcp_servers.forkara]"),
+      configHasTomlTableHeader('[mcp_servers."fork\\u0061ra"]', "[mcp_servers.forkara]"),
     );
     assert.isTrue(
       configHasTomlTableHeader('["shell_environment_policy"]', "[shell_environment_policy]"),
