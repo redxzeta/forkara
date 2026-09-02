@@ -82,6 +82,7 @@ focused tests, and the pull-request base branch.
 - [Core concepts](docs/core-concepts.md)
 - [Providers](docs/providers.md)
 - [External MCP integrations](docs/external-mcp.md)
+- [Canonical architecture](.docs/architecture.md) — current runtime boundaries, state ownership, and #174 migration scope
 - [X integration](docs/x-integration.md)
 - [Development and testing](docs/development.md)
 - [Downstream rebrand guide](docs/rebrand-checklist.md)

@@ -1,171 +1,136 @@
-# Architecture
+# Forkara architecture
 
-Synara is a local-first orchestration application with three main runtime surfaces:
+**This is the canonical description of Forkara's current runtime architecture.**
+When it disagrees with an older plan, current source, contracts, migrations, and deterministic tests win. It describes present behavior; [roadmap #174](https://github.com/redxzeta/forkara/issues/174) owns agentic-convergence work that is not implemented yet. See [plan status](../.plans/architecture-status.md) before treating a `.plans` document as executable work.
 
-- the React web client in `apps/web`;
-- the server/runtime in `apps/server`;
-- the Electron desktop shell in `apps/desktop`.
+Forkara is a local-first, event-driven modular monolith. It runs one server-authoritative application locally (or under the desktop host), uses SQLite for durable application state, and exposes typed interfaces to the web client, desktop host, automations, external MCP clients, and in-thread agents. It is **not** a collection of microservices and does not require a second workflow engine, event store, workflow database, distributed queue, or replacement provider framework.
 
-The server owns durable orchestration, provider sessions, Git/worktree state, terminals, automation, device/browser integrations, and the typed HTTP/WebSocket RPC surface. Provider-native protocols stay behind adapter boundaries; the web app consumes Synara contracts rather than talking to coding-agent CLIs directly.
-
-```text
-┌──────────────────────────────────────────────┐
-│ apps/web                                     │
-│ React UI · wsTransport · client stores       │
-│ shell/thread subscriptions · editor/dock UI  │
-└───────────────────┬──────────────────────────┘
-                    │ typed HTTP/WebSocket RPC
-┌───────────────────▼──────────────────────────┐
-│ apps/server                                  │
-│ wsRpc / HTTP routes                          │
-│ OrchestrationEngine + projections            │
-│ ProviderService + ProviderAdapterRegistry    │
-│ Git · terminals · automation · workspace     │
-│ browser/device/external-MCP integrations     │
-└──────────────┬───────────────────────┬───────┘
-               │                       │
-       provider-native protocols       │ SQLite / filesystem / Git
-               │                       │
-┌──────────────▼────────────────┐      │
-│ Codex / Claude / Cursor / ... │      │
-│ provider adapters and CLIs    │      │
-└───────────────────────────────┘      │
-                                      ▼
-                              durable local state
-
-┌──────────────────────────────────────────────┐
-│ apps/desktop                                 │
-│ Electron shell · backend supervision         │
-│ native window/OS integrations                │
-│ loads the same web client                    │
-└──────────────────────────────────────────────┘
-```
-
-## Runtime boundaries
-
-### Web client
-
-`apps/web` renders the application and owns browser-side transport/state coordination.
-
-Important boundaries include:
-
-- `wsTransport.ts` — connection state, negotiation, reconnect, and request transport;
-- `wsNativeApi.ts` / `nativeApi.ts` — typed client API exposed to the rest of the UI;
-- `routes/__root.tsx` — application-level event/subscription routing and shell/thread projection ownership;
-- Zustand/React Query stores that cache or project server-authoritative state;
-- client-owned persisted UI state such as unsent composer drafts, sticky local model choices, and right-dock layout, which is not reconstructible from server snapshots.
-
-The client does not own provider session truth or durable orchestration state. When the socket reconnects, snapshots and resumable streams rebuild server-derived client projections, while browser-persisted drafts/layout remain a separate client-owned state class.
-
-### Server and RPC surface
-
-`apps/server/src/wsRpc.ts` is the main typed feature-RPC boundary. It merges the shared contract groups, applies request/stream admission, authentication/session context, and exposes orchestration plus server services on one feature socket.
-
-The HTTP/WebSocket layer also owns:
-
-- protocol negotiation and compatibility fencing;
-- trusted-origin/authentication policy;
-- static asset delivery;
-- bounded stream/backpressure behavior;
-- device frame transport and other specialized routes.
-
-`serverLayers.ts` assembles the long-lived service graph used by the server runtime.
-
-### Orchestration
-
-The orchestration layer is provider-independent and durable.
-
-A typical state-changing request follows this shape:
+## Runtime and dependency direction
 
 ```text
-client request
-    ↓
-OrchestrationEngine command
-    ↓
-durable event / projection update
-    ↓
-ProviderCommandReactor (when provider work is required)
-    ↓
-ProviderService
-    ↓
-ProviderAdapter
+Web / Desktop / External MCP / Automation triggers
+                         |
+                         v
+              typed contracts and interface adapters
+                         |
+                         v
+       OrchestrationEngine + SQLite durable event store
+                         |
+              +----------+----------+
+              |          |          |
+              v          v          v
+        projections   reactors   receipts
+                         |
+             +-----------+------------+
+             |           |            |
+             v           v            v
+       environments   providers   validation/delivery
+                         |
+                  ProviderAdapter
+                         |
+                  provider kernels
 ```
 
-Provider output travels back in the opposite direction:
+The diagram names application responsibilities, not new packages. The current paths are:
+
+- `apps/web` renders server-derived projections and keeps browser-only state. `wsTransport.ts` negotiates/reconnects; `wsNativeApi.ts` exposes typed feature APIs.
+- `apps/desktop` hosts the shared web client, supervises a desktop-scoped server, and owns Electron/OS lifecycle. It is not a second orchestration implementation.
+- `apps/server` contains the application services: WebSocket/HTTP interfaces, orchestration, persistence, automation, provider adapters, Git/worktrees, terminals, workspace files, MCP gateways, and service composition in `src/serverLayers.ts`.
+- `packages/contracts` is schema/protocol-only data shared across process boundaries. `packages/shared` contains explicit cross-runtime utilities; neither is an application-state owner.
+
+The intended dependency direction is interface adapters -> application services -> contracts/domain data. The web app does not import server implementation, adapters invoke owning services instead of mutating projection tables directly, and orchestration depends on canonical commands/events/capabilities rather than a concrete provider.
+
+## Current execution paths
+
+### Commands, events, reads, and recovery — implemented
+
+`apps/server/src/wsRpc.ts` is the primary typed feature-RPC boundary; HTTP routes also serve negotiation, static assets, and specialized transports. MCP gateways are separate interface adapters but call the same services.
+
+For a state-changing operation, the path is:
 
 ```text
-provider-native event
-    ↓
-ProviderAdapter canonical ProviderRuntimeEvent
-    ↓
-ProviderRuntimeIngestion
-    ↓
-orchestration command/event
-    ↓
-projection stream
-    ↓
-web client
+interface adapter
+  -> OrchestrationEngine.dispatch(command)
+  -> admission, invariant checks, command fingerprint/receipt lookup
+  -> durable orchestration event append in SQLite
+  -> synchronous/deferred projection work and domain-event publication
+  -> reactors for owned side effects
 ```
 
-Key files:
+`orchestration/Layers/OrchestrationEngine.ts` serializes bounded command admission, rejects identity collisions, and uses `OrchestrationCommandReceipts` to make repeated command IDs replay-safe. `persistence/Services/OrchestrationEventStore.ts` owns append/replay. `ProjectionPipeline.ts` derives projection tables from the event journal; `ProjectionSnapshotQuery.ts` is the read owner for snapshots. `repairState()` rebuilds derived projections under a durable event high-water fence and restores staged projections on failure. A projection is therefore a derived read model, not competing durable business truth.
 
-- `orchestration/Layers/OrchestrationEngine.ts` — command admission, durable event processing, read-model lifecycle;
-- `orchestration/Layers/ProviderCommandReactor.ts` — turns durable provider intents into adapter operations;
-- `orchestration/Layers/ProviderRuntimeIngestion.ts` — converts canonical runtime events back into durable orchestration state;
-- `orchestration/Services/ProjectionSnapshotQuery.ts` — authoritative projection reads used by RPC/subscription recovery.
+The in-memory command read model and live event/pubsub streams are runtime caches/transport aids. A restart must recover from SQLite events and projections, not from a browser store or provider callback.
 
-## Provider layer
+### Provider work — implemented
 
-`ProviderService` is the session-aware routing layer. It resolves the thread/provider relationship and delegates native work through `ProviderAdapterRegistry`.
+Provider-facing commands become effects through `ProviderCommandReactor.ts`. `provider/Layers/ProviderService.ts` resolves the thread/provider binding and routes to `ProviderAdapterRegistry.ts`; concrete native protocols stay behind `provider/Services/ProviderAdapter.ts`. Adapters normalize output into `ProviderRuntimeEvent`; `ProviderRuntimeIngestion.ts` turns those canonical events back into orchestration commands/events. Native frames do not mutate orchestration directly.
 
-Each concrete adapter implements the shared contract in `provider/Services/ProviderAdapter.ts` and translates one provider's native protocol into canonical runtime events. `ProviderAdapterRegistryLive` is the source of truth for the currently registered first-class provider set; [provider-architecture.md](./provider-architecture.md) documents the provider boundary and integration patterns but should not be treated as a stronger inventory authority than the registry itself.
+`ProviderSessionRuntime` persists the thread-keyed provider binding, adapter key, runtime mode, lifecycle generation, and opaque resume/runtime payload. It is durable Forkara metadata, not a claim that a provider child process is still alive. Processes, native session objects, cursors, and wire-protocol state remain adapter/provider-native state and are reconciled on startup. See [provider architecture](./provider-architecture.md) for the registered providers and protocol families.
 
-Provider-specific session ids, process lifecycle, wire formats, model discovery, approvals, tools, and resume details should stay inside the provider layer whenever possible. Orchestration should depend on capabilities and canonical events rather than provider names.
+### Automations — implemented with a bounded gap
 
-## Persistence and local resources
+`automation/Layers/AutomationService.ts` and `persistence/Layers/AutomationRepository.ts` own durable definitions, schedules, permission snapshots, run records, claims, deferred execution, completion accounting, and reconciliation. `AutomationScheduler.ts` calculates the next wakeup from the durable next-run value, reconciles active runs, then claims due work; `AutomationRunReactor.ts` also reconciles runs when relevant orchestration events arrive and recovers pending runs after restart.
 
-Synara's server owns the local durable state and resource lifecycles:
+Automation dispatches normal orchestration commands. It does not introduce another command bus or task store. Automation modes explicitly distinguish a continued target thread from an automation-owned thread. Current definitions persist retry policy data, but executable generalized retry policies are deliberately rejected except for `none`; durable multi-attempt retry semantics are future work under #174. Today, separately created runs keep their own IDs and prior outcomes rather than overwriting them.
 
-- SQLite persistence and projections under `apps/server/src/persistence`;
-- managed Git/worktree operations under `apps/server/src/git` and checkpointing/orchestration services;
-- terminal processes under `apps/server/src/terminal`;
-- attachments and workspace files through server-owned filesystem services;
-- provider processes/sessions through adapter scopes and provider runtime services.
+### MCP and agent gateway — implemented
 
-This ownership is why the web client can reload or reconnect without becoming the source of truth for an active turn.
+`externalMcp/Layers/ExternalMcpGateway.ts` serves scoped loopback external MCP access. `ExternalMcpService` and `ExternalMcpRepository` own hashed credentials, integration/project scope, capability grants, audit records, request idempotency, and task-capacity limits. The gateway creates or reads work only by calling existing orchestration, projection, provider, Git, and operation services.
 
-## Desktop shell
+`agentGateway/Layers/AgentGateway.ts` is the internal MCP tool surface injected into provider sessions. Its bearer token and operations are thread/caller scoped. It uses the same application services and prevents a caller from driving a more privileged runtime mode or an incompatible shared-checkout target. Neither gateway becomes an independent orchestration authority.
 
-`apps/desktop` is a native host, not a second orchestration implementation. It supervises a desktop-scoped Synara backend, loads the shared web UI, and provides OS/Electron integrations such as window lifecycle, native menus/shortcuts, updates, and platform-specific bridges.
+### Local resources and evidence — implemented
 
-Browser/web mode and desktop mode therefore share the same server contracts and most UI code.
+`git/Layers/GitCore.ts` owns Git operations and managed-worktree primitives; a task/thread's projected environment fields identify its selected local checkout or worktree. `checkpointing/Layers/CheckpointStore.ts` owns hidden Git-ref capture, restore, and diff mechanics, while orchestration events/projections carry user-facing checkpoint metadata. `terminal` owns live terminal processes; `workspace` owns bounded filesystem operations and attachment handling. These processes/files are local resources, not SQLite projections.
 
-## Connection and recovery model
+Runtime receipts such as checkpoint/diff/turn-quiescence completion flow through `RuntimeReceiptBus`; delivery and validation side effects must produce identity-bound evidence rather than rely on an agent's assertion. Forkara does not currently provide the complete durable multi-stage validation/delivery workflow described by #174.
 
-The feature socket is negotiated before use and server restarts are fenced by server-instance/protocol compatibility. See [transport.md](./transport.md) for the detailed handshake.
+## State ownership matrix
 
-For orchestration state, the client uses two principal subscription shapes:
+| State category                                                                                                                     | Authoritative owner                                                                             | State class and boundary                                                                                                                                                                                                              |
+| ---------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Projects, threads/tasks, turns, messages, goals, and current workflow-like lifecycle                                               | Orchestration event store through `OrchestrationEngine`                                         | Durable event truth in SQLite; projection rows and snapshots are derived. A first-class durable workflow aggregate is planned under #174.                                                                                             |
+| Automation definitions, schedules, due calculation, run claims, permission snapshots, misfire handling, run outcomes, and recovery | `AutomationService` + `AutomationRepository`                                                    | Durable SQLite automation state. Scheduler/reactor are runtime executors and reconciliation mechanisms, not separate authorities. General retry execution is planned/partial as described above.                                      |
+| Provider-native processes, session objects, native IDs/cursors, and protocols                                                      | Concrete `ProviderAdapter` / provider kernel                                                    | Provider-native/runtime state. The server retains only an opaque, thread-keyed durable binding needed for recovery.                                                                                                                   |
+| Durable thread/provider binding                                                                                                    | `ProviderSessionRuntimeRepository`                                                              | Durable Forkara compatibility/recovery metadata keyed by thread; `ProjectionThreadSessions` is a derived projection of session status.                                                                                                |
+| Task environment and managed worktree selection                                                                                    | Orchestration events/projections plus `GitCore` operations                                      | Durable selected environment metadata is server-owned; the mutable checkout/worktree on disk is the actual resource. Stronger task-exclusive environment ownership/recovery is planned under #174.                                    |
+| Git state and checkpoints                                                                                                          | Git repository and hidden refs via `GitCore`/`CheckpointStore`                                  | External/local resource truth. Checkpoint catalog/activity visible to Forkara is durable event/projection metadata, not a substitute for Git refs.                                                                                    |
+| Validation and delivery evidence                                                                                                   | Owning side-effect service; `OrchestrationEventDeliveryRepository` for durable delivery records | `RuntimeReceiptBus` is a transient runtime receipt, while durable event-delivery records record delivery state. A model completion message is not validation; full identity-bound validation/delivery evidence is planned under #174. |
+| Server-derived shell, thread-detail, activity, session, and snapshot views                                                         | `ProjectionPipeline` / projection tables                                                        | Derived projections, rebuildable from the orchestration event store; in-memory read model is a cache/compatibility aid.                                                                                                               |
+| Client drafts, sticky local model choices, dock/layout state                                                                       | `apps/web` browser storage and UI stores                                                        | Client-only state. It survives a browser reload by local persistence but is not server orchestration truth.                                                                                                                           |
+| External MCP credentials, scopes, idempotency, audit, and task limits                                                              | `ExternalMcpService` + `ExternalMcpRepository`                                                  | Durable server-owned external-integration state; raw pairing/credential material is not stored as application-readable truth.                                                                                                         |
+| Internal gateway caller-turn capabilities                                                                                          | Injected `AgentGatewayCredentials` and gateway policy                                           | Scoped capability/compatibility state tied to the caller context; durable operation records support recovery, but no gateway grants global authority.                                                                                 |
 
-- a lightweight shell stream for projects/thread summaries and application-level navigation state;
-- scoped thread-detail streams for full conversation/activity state.
+## Agentic architecture rules
 
-Streams support snapshot/replay recovery and client-side sequence fences. A late query or replay must not roll the client behind a newer live sequence; when recovery cannot be proven safe, Synara prefers a fresh snapshot.
+These are current invariants where the corresponding mechanism exists and binding design rules for #174 where it does not yet:
 
-## Design rules
+1. Workflow recipes must compile to existing orchestration commands/events; workflow state must not live in a second engine or database.
+2. Provider/model output becomes durable task state only through canonical adapter normalization and `ProviderRuntimeIngestion`.
+3. Validation evidence and receipts outrank a model's claim that work is complete.
+4. Provider, model, runtime mode, environment, branch, and capability changes must be explicit in commands, bindings, or durable context—not silent fallback.
+5. Parallel mutable work requires isolated environment ownership. Today worktree selection exists; enforcing durable task-exclusive ownership is #174 work.
+6. Retries must create distinct attempts and retain previous failures. Existing automation runs preserve outcomes; general retry execution remains planned.
+7. Provider fallback must be visible. Orchestration must use capabilities and canonical events, while provider-native behavior stays behind `ProviderAdapter`.
+8. High-impact actions remain approval- and capability-scoped. External MCP and internal gateway scopes cannot bypass normal service admission.
+9. Private model chain-of-thought is neither required nor persisted. Store bounded structured results, diagnostics, receipts, and concise handoff/validation evidence instead.
+10. UI surfaces consume projections and evidence. They do not reconstruct or mutate durable authority independently.
 
-When adding a feature, keep these ownership rules explicit:
+## Current, partial, planned, and out of scope
 
-1. durable domain truth belongs to server orchestration/persistence, not React state; client-owned drafts/layout remain explicitly local;
-2. provider-native behavior belongs behind `ProviderAdapter` unless it is genuinely cross-provider orchestration;
-3. state-changing side effects should have one authoritative server path and idempotent/replay-safe semantics;
-4. client subscriptions may cache/project state but must respect server sequence/version fences;
-5. resource lifecycles (processes, worktrees, sessions, streams) need deterministic cleanup and bounded queues/timeouts;
-6. shared contracts belong in `packages/contracts`; cross-runtime utilities belong in `packages/shared`.
+| Area                                                                                                                                                                                                                        | Status                                                               | Boundary                                                                                 |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Server-authoritative commands, durable events/receipts, projections, replay/repair, and provider-reactor ingestion                                                                                                          | Implemented                                                          | Existing `apps/server/src/orchestration` and SQLite layers.                              |
+| Adapter registry, capability-driven provider operations, Codex implementation, ACP family, and OpenCode-compatible family                                                                                                   | Implemented                                                          | Provider-native lifecycle remains inside adapters; exact inventory is the live registry. |
+| Durable automation scheduling, claims, permission snapshots, misfire handling, and recovery                                                                                                                                 | Implemented                                                          | Existing automation service/repository/scheduler/reactor.                                |
+| Explicit task-exclusive environments, full provider lifecycle kernel decomposition, identity-bound validation/delivery, registered durable workflows, generalized retries, bounded workflow concurrency/cancellation/canary | Planned under [#174](https://github.com/redxzeta/forkara/issues/174) | Follow its staged child epics; do not infer implementation from this document.           |
+| Retry-policy persistence and enforcement of mutable-work isolation                                                                                                                                                          | Partially implemented                                                | Current data/selection exist; the broader execution/ownership contract is not complete.  |
+| Microservices, Redis, Kafka, RabbitMQ, Temporal, distributed queues, a second event store/workflow database, replacement provider framework, broad directory rewrite, or generic cross-project agent SDK                    | Intentionally out of scope                                           | These are not implied implementation options for Forkara.                                |
 
-## Related documentation
+## Related documents
 
-- [provider-architecture.md](./provider-architecture.md) — provider adapter boundary and integration flow
-- [transport.md](./transport.md) — WebSocket negotiation, compression, subscriptions, and resume
-- [runtime-modes.md](./runtime-modes.md) — permission/runtime modes
-- [workspace-layout.md](./workspace-layout.md) — repository package layout
-- [ci.md](./ci.md) — pull-request quality gates
+- [Provider architecture](./provider-architecture.md) — adapter contract, registry, capabilities, and provider-family detail.
+- [Transport](./transport.md) — WebSocket negotiation, compatibility, compression, and replay-safe subscriptions.
+- [Runtime modes](./runtime-modes.md) — provider permission-mode mappings.
+- [Workspace layout](./workspace-layout.md) — workspace ownership map.
+- [Historical plan status](../.plans/architecture-status.md) — disposition of plans that make architecture claims.
