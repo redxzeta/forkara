@@ -1,5 +1,7 @@
 # Provider architecture
 
+This document expands the provider boundary in the [canonical architecture](./architecture.md); it does not define a second ownership model. Current registry/adapters and their deterministic tests are the inventory authority.
+
 Synara treats provider integrations as adapters behind server-owned orchestration and discovery boundaries. The web app does not talk to Codex, Claude, Cursor, or another coding-agent runtime directly: provider operations enter the server through the typed contracts in `@forkara/contracts`. Session and turn lifecycle calls route through `ProviderService`; model, agent, skill, command, and plugin discovery routes through `ProviderDiscoveryService`; both ultimately resolve concrete `ProviderAdapter` implementations from the registry. Voice operations may access the registry directly where the provider capability is itself the boundary.
 
 ## Implemented providers
