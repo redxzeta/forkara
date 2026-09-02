@@ -78,13 +78,7 @@ const legacyMigrationAllowlist = new Set([
   "packages/shared/src/legacyProfileMigration.ts",
   "packages/shared/src/legacyProfileMigration.test.ts",
 ]);
-const historicalLegacyPaths = [
-  "CHANGELOG.md",
-  "docs/archive/",
-  "audit/",
-  "plans/",
-  ".plans/",
-];
+const historicalLegacyPaths = ["CHANGELOG.md", "docs/archive/", "audit/", "plans/", ".plans/"];
 const legacyIdentityPattern = new RegExp(
   `${characters(83, 121, 110, 97, 114, 97)}|${characters(115, 121, 110, 97, 114, 97)}`,
   "i",
