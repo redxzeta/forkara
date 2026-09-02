@@ -35,7 +35,7 @@ bun run dev:contributor
 
 This mode uses `./.forkara/contributor` for application state, starts from server port 6931 and web
 port 8891, advances to another free port pair when needed, and ignores an inherited
-`SYNARA_AUTH_TOKEN`. The `SYNARA_*` names are retained runtime compatibility identifiers.
+`FORKARA_AUTH_TOKEN`. The `FORKARA_*` names are retained runtime compatibility identifiers.
 
 Inspect the resolved setup without starting Turbo or any application process:
 

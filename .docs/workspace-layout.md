@@ -1,10 +1,10 @@
 # Workspace layout
 
-Synara is a Bun/Turbo monorepo. Runtime ownership is split across the app workspaces, while shared schemas and cross-runtime helpers live under `packages`.
+Forkara is a Bun/Turbo monorepo. Runtime ownership is split across the app workspaces, while shared schemas and cross-runtime helpers live under `packages`.
 
-- `/apps/server` — The authoritative Synara backend and published `@forkara/cli` package. Owns orchestration/persistence, provider adapters and health/discovery, Git/worktrees, terminals, automation, workspace files, HTTP/WebSocket RPC, and the bundled web client used outside Vite development.
+- `/apps/server` — The authoritative Forkara backend and published `@forkara/cli` package. Owns orchestration/persistence, provider adapters and health/discovery, Git/worktrees, terminals, automation, workspace files, HTTP/WebSocket RPC, and the bundled web client used outside Vite development.
 - `/apps/web` — React + Vite application. Owns presentation, client transport/state coordination, chat/composer/editor/dock surfaces, and subscription-driven projection of server-authoritative state.
-- `/apps/desktop` — Electron host for the shared web client. Supervises a desktop-scoped Synara server process and provides native window, update, IPC, browser-automation, and other OS/Electron integrations.
+- `/apps/desktop` — Electron host for the shared web client. Supervises a desktop-scoped Forkara server process and provides native window, update, IPC, browser-automation, and other OS/Electron integrations.
 - `/apps/marketing` — Public marketing/download site. Kept separate from the product runtime and desktop/web application bundles.
 - `/packages/contracts` — Shared Effect Schema and TypeScript contracts for orchestration, provider/session/model data, RPC methods, settings, keybindings, automation, device/browser surfaces, and other cross-process payloads.
 - `/packages/shared` — Shared runtime utilities consumed by multiple apps/packages, including pure helpers as well as intentionally cross-runtime logging, worker, filesystem/network, and platform-boundary utilities. Uses explicit subpath exports (for example `@forkara/shared/git` and `@forkara/shared/threadWorkspace`) rather than one catch-all barrel.

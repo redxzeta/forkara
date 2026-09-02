@@ -14,7 +14,7 @@ Record the old and new value, owner, and compatibility decision for each surface
 | Packages      | `@forkara/*` workspace names                    | package scope, published CLI name, import migration   |
 | Product       | Forkara display copy                            | product name, short name, website and support copy    |
 | Desktop       | `packages/shared/src/desktopIdentity.ts`        | display names, bundle IDs, schemes and update channel |
-| Compatibility | `synara`, `.synara` and `SYNARA_*` names        | preserve, alias, or migrate with a rollback plan      |
+| Compatibility | `forkara`, `.forkara` and `FORKARA_*` names     | preserve, alias, or migrate with a rollback plan      |
 | Visuals       | `assets/` and application `public/` directories | logo variants, icons, favicons and screenshots        |
 
 ## Non-negotiable guardrails
@@ -24,8 +24,8 @@ Record the old and new value, owner, and compatibility decision for each surface
   the code came from; they are not current product copy.
 - Do not rename third-party provider products, protocols, package dependencies, or quoted historical
   names merely because a search found them.
-- Treat `synara`, `.synara`, URL schemes, bundle IDs, update channels, executable names, database
-  locations, and every `SYNARA_*` environment variable as compatibility identifiers. Keep them unless
+- Treat `forkara`, `.forkara`, URL schemes, bundle IDs, update channels, executable names, database
+  locations, and every `FORKARA_*` environment variable as compatibility identifiers. Keep them unless
   the fork ships aliases, data migration, update migration, tests, and a rollback path.
 - Change source assets and packaging configuration, then regenerate outputs. Do not hand-edit
   `dist/`, `dist-electron/`, packaged applications, installers, or update manifests.
@@ -49,7 +49,7 @@ Record the old and new value, owner, and compatibility decision for each surface
   build filters, scripts, and the lockfile together. A partial scope rename leaves the workspace
   unbuildable.
 - Review the repository metadata and `bin` map in [`apps/server/package.json`](../apps/server/package.json).
-  The `synara` and `synara-restore-migration-backup` binaries are compatibility names, so rename them
+  The `forkara` and `forkara-restore-migration-backup` binaries are compatibility names, so rename them
   only with aliases and release/migration coverage.
 - Review the desktop `productName` in
   [`apps/desktop/package.json`](../apps/desktop/package.json) and metadata in web/marketing HTML and
@@ -72,7 +72,7 @@ Record the old and new value, owner, and compatibility decision for each surface
 - Keep [the release workflow](../.github/workflows/release.yml), [release documentation](./release.md),
   artifact names, signing/notarization subjects, update repository, release notes, and smoke tests in
   agreement.
-- Search [`packages/shared/src/synaraHome.ts`](../packages/shared/src/synaraHome.ts),
+- Search [`packages/shared/src/forkaraHome.ts`](../packages/shared/src/forkaraHome.ts),
   [`scripts/dev-runner.ts`](../scripts/dev-runner.ts), [`scripts/canary.ts`](../scripts/canary.ts),
   desktop startup, and server startup before changing storage or environment compatibility.
 
@@ -123,8 +123,8 @@ adapt this guard to its policy, not delete or bypass it:
 Useful inventory commands from the repository root:
 
 ```bash
-rg -n -i 'forkara|synara|redxzeta/forkara' README.md CONTRIBUTING.md docs apps packages scripts .github
-rg -n 'SYNARA_|@forkara/' apps packages scripts .github package.json
+rg -n -i 'forkara|forkara|redxzeta/forkara' README.md CONTRIBUTING.md docs apps packages scripts .github
+rg -n 'FORKARA_|@forkara/' apps packages scripts .github package.json
 rg --files assets apps/web/public apps/marketing/public
 ```
 

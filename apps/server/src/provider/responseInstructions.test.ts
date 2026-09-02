@@ -40,7 +40,7 @@ describe("provider response instructions", () => {
     const once = withProviderResponseInstructions(input);
     const twice = withProviderResponseInstructions({ ...input, text: once });
 
-    expect(once).toContain("<synara_goal>");
+    expect(once).toContain("<forkara_goal>");
     expect(once).toContain("Ship the feature safely");
     expect(once).toContain("Take the next step");
     expect(once.split(PROVIDER_BULLY_MODE_PROMPT_PREFIX)).toHaveLength(2);

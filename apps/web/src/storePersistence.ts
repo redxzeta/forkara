@@ -7,7 +7,7 @@ import { normalizeWorkspaceRootForComparison } from "@forkara/shared/threadWorks
 import type { AppState } from "./storeState";
 import type { Project } from "./types";
 
-const PERSISTED_STATE_KEY = "synara:renderer-state:v8";
+const PERSISTED_STATE_KEY = "forkara:renderer-state:v8";
 const persistedExpandedProjectCwds = new Set<string>();
 const persistedProjectOrderCwds: string[] = [];
 const persistedProjectOrderByCwd = new Map<string, number>();

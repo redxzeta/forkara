@@ -4,15 +4,17 @@ import * as Path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  migrateLegacyDesktopProfile,
   repairBrowserProfileFromBridgeManifest,
   resolveDesktopAppDataBase,
   resolveDesktopUserDataPath,
 } from "./desktopUserDataProfile";
+import { legacyProfileDirectory } from "@forkara/shared/legacyProfileMigration";
 
 const tempDirs = new Set<string>();
 
 function makeTempDir(): string {
-  const directory = FS.mkdtempSync(Path.join(OS.tmpdir(), "synara-profile-test-"));
+  const directory = FS.mkdtempSync(Path.join(OS.tmpdir(), "forkara-profile-test-"));
   tempDirs.add(directory);
   return directory;
 }
@@ -25,17 +27,34 @@ afterEach(() => {
 });
 
 describe("desktopUserDataProfile", () => {
-  it("resolves the canonical Synara profile names", () => {
-    const appDataBase = "/Users/tester/Library/Application Support";
-    expect(resolveDesktopUserDataPath({ appDataBase, userDataDirectoryName: "synara-dev" })).toBe(
-      "/Users/tester/Library/Application Support/synara-dev",
+  it("imports a stopped legacy desktop profile into the Forkara profile once", () => {
+    const appDataBase = makeTempDir();
+    const legacyPath = legacyProfileDirectory(appDataBase);
+    FS.mkdirSync(Path.join(legacyPath, "Partitions", "legacy-browser"), { recursive: true });
+    FS.writeFileSync(Path.join(legacyPath, "Preferences"), "legacy-preferences");
+
+    const result = migrateLegacyDesktopProfile({ appDataBase, userDataDirectoryName: "forkara" });
+
+    expect(result).toMatchObject({ status: "migrated", source: legacyPath });
+    expect(FS.readFileSync(Path.join(appDataBase, "forkara", "Preferences"), "utf8")).toBe(
+      "legacy-preferences",
     );
-    expect(resolveDesktopUserDataPath({ appDataBase, userDataDirectoryName: "synara" })).toBe(
-      "/Users/tester/Library/Application Support/synara",
+    expect(migrateLegacyDesktopProfile({ appDataBase, userDataDirectoryName: "forkara" })).toEqual({
+      status: "already-migrated",
+    });
+  });
+
+  it("resolves the canonical Forkara profile names", () => {
+    const appDataBase = "/Users/tester/Library/Application Support";
+    expect(resolveDesktopUserDataPath({ appDataBase, userDataDirectoryName: "forkara-dev" })).toBe(
+      "/Users/tester/Library/Application Support/forkara-dev",
+    );
+    expect(resolveDesktopUserDataPath({ appDataBase, userDataDirectoryName: "forkara" })).toBe(
+      "/Users/tester/Library/Application Support/forkara",
     );
     expect(
-      resolveDesktopUserDataPath({ appDataBase, userDataDirectoryName: "synara-canary" }),
-    ).toBe("/Users/tester/Library/Application Support/synara-canary");
+      resolveDesktopUserDataPath({ appDataBase, userDataDirectoryName: "forkara-canary" }),
+    ).toBe("/Users/tester/Library/Application Support/forkara-canary");
   });
 
   it("uses XDG_CONFIG_HOME on Linux when available", () => {
@@ -50,10 +69,10 @@ describe("desktopUserDataProfile", () => {
 
   it("repairs missing browser data from the profile recorded by the bridge", () => {
     const appDataBase = makeTempDir();
-    const targetPath = Path.join(appDataBase, "synara");
+    const targetPath = Path.join(appDataBase, "forkara");
     const sourcePath = Path.join(appDataBase, "previous-profile");
     const sourcePartitionPath = Path.join(sourcePath, "Partitions", "previous-browser");
-    const targetPartitionPath = Path.join(targetPath, "Partitions", "synara-browser");
+    const targetPartitionPath = Path.join(targetPath, "Partitions", "forkara-browser");
     FS.mkdirSync(Path.join(sourcePartitionPath, "Local Storage"), { recursive: true });
     FS.writeFileSync(Path.join(sourcePartitionPath, "Cookies"), "bridge-cookie");
     FS.writeFileSync(Path.join(sourcePartitionPath, "Cookies-journal"), "bridge-journal");
@@ -61,7 +80,7 @@ describe("desktopUserDataProfile", () => {
     FS.mkdirSync(Path.join(targetPartitionPath, "Local Storage"), { recursive: true });
     FS.writeFileSync(Path.join(targetPartitionPath, "Local Storage", "state"), "current-state");
     FS.writeFileSync(
-      Path.join(targetPath, "synara-profile-seed.json"),
+      Path.join(targetPath, "forkara-profile-seed.json"),
       JSON.stringify({ sourcePath }),
     );
 
@@ -84,13 +103,13 @@ describe("desktopUserDataProfile", () => {
     );
   });
 
-  it("rejects bridge manifests that point outside the Synara profile parent", () => {
+  it("rejects bridge manifests that point outside the Forkara profile parent", () => {
     const appDataBase = makeTempDir();
     const unrelatedBase = makeTempDir();
-    const targetPath = Path.join(appDataBase, "synara");
+    const targetPath = Path.join(appDataBase, "forkara");
     FS.mkdirSync(targetPath, { recursive: true });
     FS.writeFileSync(
-      Path.join(targetPath, "synara-profile-seed.json"),
+      Path.join(targetPath, "forkara-profile-seed.json"),
       JSON.stringify({ sourcePath: Path.join(unrelatedBase, "previous-profile") }),
     );
 
@@ -101,19 +120,19 @@ describe("desktopUserDataProfile", () => {
     });
   });
 
-  it("never adds a foreign SQLite sidecar beside an existing Synara database", () => {
+  it("never adds a foreign SQLite sidecar beside an existing Forkara database", () => {
     const appDataBase = makeTempDir();
-    const targetPath = Path.join(appDataBase, "synara");
+    const targetPath = Path.join(appDataBase, "forkara");
     const sourcePath = Path.join(appDataBase, "previous-profile");
     const sourcePartitionPath = Path.join(sourcePath, "Partitions", "previous-browser");
-    const targetPartitionPath = Path.join(targetPath, "Partitions", "synara-browser");
+    const targetPartitionPath = Path.join(targetPath, "Partitions", "forkara-browser");
     FS.mkdirSync(sourcePartitionPath, { recursive: true });
     FS.mkdirSync(targetPartitionPath, { recursive: true });
     FS.writeFileSync(Path.join(sourcePartitionPath, "Cookies"), "bridge-cookie");
     FS.writeFileSync(Path.join(sourcePartitionPath, "Cookies-journal"), "bridge-journal");
     FS.writeFileSync(Path.join(targetPartitionPath, "Cookies"), "current-cookie");
     FS.writeFileSync(
-      Path.join(targetPath, "synara-profile-seed.json"),
+      Path.join(targetPath, "forkara-profile-seed.json"),
       JSON.stringify({ sourcePath }),
     );
 
@@ -129,10 +148,10 @@ describe("desktopUserDataProfile", () => {
 
   it("replaces an orphaned target sidecar with one from the repaired database generation", () => {
     const appDataBase = makeTempDir();
-    const targetPath = Path.join(appDataBase, "synara");
+    const targetPath = Path.join(appDataBase, "forkara");
     const sourcePath = Path.join(appDataBase, "previous-profile");
     const sourcePartitionPath = Path.join(sourcePath, "Partitions", "previous-browser");
-    const targetPartitionPath = Path.join(targetPath, "Partitions", "synara-browser");
+    const targetPartitionPath = Path.join(targetPath, "Partitions", "forkara-browser");
     FS.mkdirSync(sourcePartitionPath, { recursive: true });
     FS.mkdirSync(targetPartitionPath, { recursive: true });
     FS.writeFileSync(Path.join(sourcePartitionPath, "Cookies"), "bridge-cookie");
@@ -143,7 +162,7 @@ describe("desktopUserDataProfile", () => {
     FS.writeFileSync(Path.join(targetPartitionPath, "Cookies-wal"), "orphaned-wal");
     FS.writeFileSync(Path.join(targetPartitionPath, "Cookies-shm"), "orphaned-shm");
     FS.writeFileSync(
-      Path.join(targetPath, "synara-profile-seed.json"),
+      Path.join(targetPath, "forkara-profile-seed.json"),
       JSON.stringify({ sourcePath }),
     );
 
@@ -165,14 +184,14 @@ describe("desktopUserDataProfile", () => {
     );
     expect(
       FS.readdirSync(targetPartitionPath).some((entryName) =>
-        entryName.startsWith(".synara-bridge-"),
+        entryName.startsWith(".forkara-bridge-"),
       ),
     ).toBe(false);
   });
 
   it("copies from only the newest browser partition recorded under the bridge profile", () => {
     const appDataBase = makeTempDir();
-    const targetPath = Path.join(appDataBase, "synara");
+    const targetPath = Path.join(appDataBase, "forkara");
     const sourcePath = Path.join(appDataBase, "previous-profile");
     const olderPartitionPath = Path.join(sourcePath, "Partitions", "older-browser");
     const newerPartitionPath = Path.join(sourcePath, "Partitions", "newer-browser");
@@ -185,12 +204,12 @@ describe("desktopUserDataProfile", () => {
     FS.utimesSync(newerPartitionPath, new Date(2_000), new Date(2_000));
     FS.mkdirSync(targetPath, { recursive: true });
     FS.writeFileSync(
-      Path.join(targetPath, "synara-profile-seed.json"),
+      Path.join(targetPath, "forkara-profile-seed.json"),
       JSON.stringify({ sourcePath }),
     );
 
     const result = repairBrowserProfileFromBridgeManifest(targetPath);
-    const targetPartitionPath = Path.join(targetPath, "Partitions", "synara-browser");
+    const targetPartitionPath = Path.join(targetPath, "Partitions", "forkara-browser");
 
     expect(result).toMatchObject({ status: "repaired", copiedEntries: ["Cookies"] });
     expect(FS.readFileSync(Path.join(targetPartitionPath, "Cookies"), "utf8")).toBe("newer-cookie");
@@ -199,9 +218,9 @@ describe("desktopUserDataProfile", () => {
 
   it("ignores a malformed bridge manifest without attempting a repair", () => {
     const appDataBase = makeTempDir();
-    const targetPath = Path.join(appDataBase, "synara");
+    const targetPath = Path.join(appDataBase, "forkara");
     FS.mkdirSync(targetPath, { recursive: true });
-    FS.writeFileSync(Path.join(targetPath, "synara-profile-seed.json"), "{");
+    FS.writeFileSync(Path.join(targetPath, "forkara-profile-seed.json"), "{");
 
     expect(repairBrowserProfileFromBridgeManifest(targetPath)).toMatchObject({
       status: "bridge-unavailable",

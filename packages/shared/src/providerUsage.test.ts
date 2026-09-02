@@ -23,7 +23,7 @@ function snapshot(
 }
 
 describe("provider usage metadata", () => {
-  it("exposes a live usage source for every Synara provider", () => {
+  it("exposes a live usage source for every Forkara provider", () => {
     expect([...PROVIDER_USAGE_PROVIDERS]).toEqual([
       "codex",
       "claudeAgent",

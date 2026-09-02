@@ -46,4 +46,4 @@ export interface RuntimeReceiptBusShape {
 export class RuntimeReceiptBus extends ServiceMap.Service<
   RuntimeReceiptBus,
   RuntimeReceiptBusShape
->()("synara/orchestration/Services/RuntimeReceiptBus") {}
+>()("forkara/orchestration/Services/RuntimeReceiptBus") {}

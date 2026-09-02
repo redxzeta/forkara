@@ -48,7 +48,7 @@ import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
 export type SpaceActivityTone = "attention" | "running" | "completed";
 
 /** HTML5 drag payload for filing a project by dropping it onto a space tab. */
-export const PROJECT_SPACE_DRAG_MIME = "application/x-synara-project";
+export const PROJECT_SPACE_DRAG_MIME = "application/x-forkara-project";
 
 function readDraggedProjectId(event: DragEvent): ProjectId | null {
   try {

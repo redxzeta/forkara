@@ -171,7 +171,7 @@ describe("SidebarActivityView", () => {
       lastKnownPr: {
         number: 42,
         title: "Persisted open PR",
-        url: "https://github.com/acme/synara/pull/42",
+        url: "https://github.com/acme/forkara/pull/42",
         baseBranch: "main",
         headBranch: "feature/activity",
         state: "open",
@@ -180,7 +180,7 @@ describe("SidebarActivityView", () => {
     const livePr: OrchestrationThreadPullRequest = {
       number: 42,
       title: "Live merged PR",
-      url: "https://github.com/acme/synara/pull/42",
+      url: "https://github.com/acme/forkara/pull/42",
       baseBranch: "main",
       headBranch: "feature/activity",
       state: "merged",

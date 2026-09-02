@@ -131,5 +131,5 @@ export interface GitManagerShape {
  * GitManager - Service tag for stacked Git workflow orchestration.
  */
 export class GitManager extends ServiceMap.Service<GitManager, GitManagerShape>()(
-  "synara/git/Services/GitManager",
+  "forkara/git/Services/GitManager",
 ) {}

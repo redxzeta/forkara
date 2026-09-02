@@ -323,7 +323,7 @@ const make = Effect.gen(function* () {
   });
 
   const processProviderEvent = (event: ProviderRuntimeEvent) => {
-    // Native subagent lifecycle events carry the parent Synara thread id and the child identity
+    // Native subagent lifecycle events carry the parent Forkara thread id and the child identity
     // in providerRefs. Treating them as parent turns would make shared-root ownership ambiguous
     // and suppress reconciliation when the actual parent turn completes.
     if (event.providerRefs?.providerParentThreadId !== undefined) return Effect.void;

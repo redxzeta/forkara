@@ -22,10 +22,10 @@ describe("X connection Settings states", () => {
     const markup = renderStatus({
       state: "unconfigured",
       redirectUri: null,
-      message: "Set SYNARA_X_CLIENT_ID.",
+      message: "Set FORKARA_X_CLIENT_ID.",
     });
 
-    expect(markup).toContain("Set SYNARA_X_CLIENT_ID.");
+    expect(markup).toContain("Set FORKARA_X_CLIENT_ID.");
     expect(markup).not.toContain("Register this callback URI");
     expect(markup).toContain("Connect X account");
     expect(markup).toContain("disabled");

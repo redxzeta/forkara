@@ -103,4 +103,4 @@ export interface AutomationServiceShape {
 export class AutomationService extends ServiceMap.Service<
   AutomationService,
   AutomationServiceShape
->()("synara/automation/Services/AutomationService") {}
+>()("forkara/automation/Services/AutomationService") {}

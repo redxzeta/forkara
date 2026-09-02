@@ -73,7 +73,7 @@ describe("external MCP overview", () => {
     expect(
       buildExternalMcpOverviewNextSteps(new Set<ExternalMcpCapability>(["projects:read"])),
     ).toEqual([
-      "Call synara_capabilities with a projectId to list the exact provider/model targets available to this integration.",
+      "Call forkara_capabilities with a projectId to list the exact provider/model targets available to this integration.",
     ]);
     expect(
       buildExternalMcpOverviewNextSteps(
@@ -85,10 +85,10 @@ describe("external MCP overview", () => {
         ]),
       ),
     ).toEqual([
-      "Call synara_capabilities with a projectId to list the exact provider/model targets available to this integration.",
-      "Create work with synara_create_task.",
-      "Follow permitted work with synara_wait_for_task.",
-      "Read permitted task results with synara_read_task.",
+      "Call forkara_capabilities with a projectId to list the exact provider/model targets available to this integration.",
+      "Create work with forkara_create_task.",
+      "Follow permitted work with forkara_wait_for_task.",
+      "Read permitted task results with forkara_read_task.",
     ]);
   });
 });

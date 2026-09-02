@@ -114,7 +114,7 @@ const CLAUDE_CATALOG_RANK_BY_SLUG: ReadonlyMap<string, number> = new Map(
 );
 
 // Models the CLI exposes but the catalog does not know yet (a release landing
-// before Synara updates) sort first so they stay visible at the top.
+// before Forkara updates) sort first so they stay visible at the top.
 function orderClaudeModelOptions<T extends ProviderModelOption>(
   options: ReadonlyArray<T>,
 ): ReadonlyArray<T> {

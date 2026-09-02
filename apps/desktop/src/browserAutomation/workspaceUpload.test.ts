@@ -21,7 +21,7 @@ vi.mock("electron", () => ({
 const temporaryDirectories: string[] = [];
 
 const workspaceFixture = async () => {
-  const base = await mkdtemp(join(tmpdir(), "synara-browser-upload-"));
+  const base = await mkdtemp(join(tmpdir(), "forkara-browser-upload-"));
   temporaryDirectories.push(base);
   const workspaceRoot = join(base, "workspace");
   await mkdir(join(workspaceRoot, "fixtures"), { recursive: true });
@@ -53,7 +53,7 @@ const createRuntime = (
       if (expression.includes("const matches = []")) {
         return { result: { value: { count: 1, generation: 1 } } };
       }
-      if (expression.includes("globalThis.__synaraBrowserAutomationV1.currentTarget")) {
+      if (expression.includes("globalThis.__forkaraBrowserAutomationV1.currentTarget")) {
         return { result: { objectId: "file-input", subtype: "node" } };
       }
     }

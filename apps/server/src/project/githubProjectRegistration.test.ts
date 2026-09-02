@@ -14,7 +14,7 @@ function checkout(kind: "created" | "reused"): GitHubProjectCheckoutResult {
     workspaceRoot: "/repos/codex",
     checkout: kind,
     forkCreated: false,
-    recoveryPath: kind === "created" ? "/repos/.synara-clone-1" : null,
+    recoveryPath: kind === "created" ? "/repos/.forkara-clone-1" : null,
   };
 }
 
@@ -31,7 +31,7 @@ describe("recoverUnregisteredGitHubCheckout", () => {
       }),
     );
 
-    expect(moves).toEqual([["/repos/codex", "/repos/.synara-clone-1"]]);
+    expect(moves).toEqual([["/repos/codex", "/repos/.forkara-clone-1"]]);
   });
 
   it.each([

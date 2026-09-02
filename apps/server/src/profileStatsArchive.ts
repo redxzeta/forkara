@@ -386,7 +386,7 @@ export interface ProfileStatsArchiveShape {
 export class ProfileStatsArchive extends ServiceMap.Service<
   ProfileStatsArchive,
   ProfileStatsArchiveShape
->()("synara/profileStats/ProfileStatsArchive") {}
+>()("forkara/profileStats/ProfileStatsArchive") {}
 
 const makeProfileStatsArchive = Effect.gen(function* () {
   const sql = yield* SqlClient.SqlClient;

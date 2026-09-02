@@ -28,7 +28,7 @@ function renderWithQueryClient(ui: ReactElement) {
 
 async function renderMarkdown(
   text: string,
-  cwd = "C:\\Users\\LENOVO\\synara",
+  cwd = "C:\\Users\\LENOVO\\forkara",
   markers?: readonly ThreadMarker[],
 ) {
   const { default: ChatMarkdown } = await import("./ChatMarkdown");
@@ -346,14 +346,14 @@ describe("ChatMarkdown", () => {
         "",
         "- `scripts/delete_uploadthing.py`",
       ].join("\n"),
-      "/Users/tester/Documents/Synara/thread",
+      "/Users/tester/Documents/Forkara/thread",
     );
 
     expect(markup).toContain(
       'title="/Users/tester/.agents/skills/annotate-pr/scripts/delete_uploadthing.py"',
     );
     expect(markup).not.toContain(
-      'href="/Users/tester/Documents/Synara/thread/scripts/delete_uploadthing.py"',
+      'href="/Users/tester/Documents/Forkara/thread/scripts/delete_uploadthing.py"',
     );
   });
 
@@ -396,11 +396,11 @@ describe("ChatMarkdown", () => {
   it("chips a line-suffixed relative file against a directory declared in the same message", async () => {
     const markup = await renderMarkdown(
       ["**Dir:** `/Users/tester/.agents/skills/annotate-pr`", "", "- `SKILL.md:1`"].join("\n"),
-      "/Users/tester/Documents/Synara/thread",
+      "/Users/tester/Documents/Forkara/thread",
     );
 
     expect(markup).toContain('title="/Users/tester/.agents/skills/annotate-pr/SKILL.md"');
-    expect(markup).not.toContain('href="/Users/tester/Documents/Synara/thread/SKILL.md"');
+    expect(markup).not.toContain('href="/Users/tester/Documents/Forkara/thread/SKILL.md"');
   });
 
   it("keeps plan, diff, and transcript surfaces routed through the shared renderer", () => {

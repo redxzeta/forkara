@@ -141,7 +141,7 @@ export function resolveAcpFullAccessPermissionOutcome(
 }
 
 /**
- * Applies Synara's turn-scoped permission precedence to ACP reverse requests.
+ * Applies Forkara's turn-scoped permission precedence to ACP reverse requests.
  *
  * `interactionMode: undefined` means that no turn owns the request. Those
  * requests are cancelled so replay or late provider activity cannot inherit a

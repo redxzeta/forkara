@@ -263,4 +263,4 @@ export interface ProjectionSnapshotQueryShape {
 export class ProjectionSnapshotQuery extends ServiceMap.Service<
   ProjectionSnapshotQuery,
   ProjectionSnapshotQueryShape
->()("synara/orchestration/Services/ProjectionSnapshotQuery") {}
+>()("forkara/orchestration/Services/ProjectionSnapshotQuery") {}

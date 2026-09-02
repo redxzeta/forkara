@@ -41,7 +41,7 @@ afterEach(async () => {
 });
 
 async function makeDbPath(): Promise<string> {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "synara-migration-backup-"));
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "forkara-migration-backup-"));
   tempDirectories.push(directory);
   return path.join(directory, "state.sqlite");
 }

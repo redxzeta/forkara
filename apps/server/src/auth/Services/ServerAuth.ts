@@ -89,5 +89,5 @@ export interface ServerAuthShape {
 }
 
 export class ServerAuth extends ServiceMap.Service<ServerAuth, ServerAuthShape>()(
-  "synara/auth/Services/ServerAuth",
+  "forkara/auth/Services/ServerAuth",
 ) {}

@@ -6,7 +6,7 @@ import { create } from "zustand";
 
 import { spaceKey } from "~/lib/spaceGrouping";
 
-const STORAGE_KEY = "synara:spaces-ui:v1";
+const STORAGE_KEY = "forkara:spaces-ui:v1";
 
 interface PersistedSpacesUiState {
   activeSpaceId: SpaceId | null;

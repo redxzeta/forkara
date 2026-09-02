@@ -452,10 +452,10 @@ describe("deriveWorkLogEntries", () => {
   it("exposes a provider-independent Forkara thread creation recap", () => {
     const activities: OrchestrationThreadActivity[] = [
       makeActivity({
-        id: "synara-created-threads",
+        id: "forkara-created-threads",
         createdAt: "2026-02-23T00:00:05.000Z",
         turnId: "turn-1",
-        kind: "synara.threads.created",
+        kind: "forkara.threads.created",
         summary: "Created 2 Forkara threads",
         tone: "info",
         payload: {
@@ -485,7 +485,7 @@ describe("deriveWorkLogEntries", () => {
     ];
 
     const [entry] = deriveWorkLogEntries(activities, TurnId.makeUnsafe("turn-1"));
-    expect(entry?.synaraThreadCreation).toEqual({
+    expect(entry?.forkaraThreadCreation).toEqual({
       operationId: "gateway:create:two-workers",
       requestedCount: 2,
       createdCount: 2,
@@ -1422,7 +1422,7 @@ describe("deriveWorkLogEntries", () => {
                   type: "read",
                   command: "sed -n '1,220p' README.md",
                   name: "README.md",
-                  path: "/Users/emanueledipietro/Developer/Testing/synara/README.md",
+                  path: "/Users/emanueledipietro/Developer/Testing/forkara/README.md",
                 },
               ],
             },
@@ -1531,7 +1531,7 @@ describe("deriveWorkLogEntries", () => {
               type: "commandExecution",
               id: "call_6OII41pekq8cFCpOCF9pbeMu",
               command: "/bin/zsh -lc 'git status --short'",
-              cwd: "/Users/emanueledipietro/Developer/Testing/synara",
+              cwd: "/Users/emanueledipietro/Developer/Testing/forkara",
               status: "completed",
               commandActions: [{ type: "unknown", command: "git status --short" }],
               aggregatedOutput: " M apps/desktop/src/main.ts\n...",
@@ -2436,11 +2436,11 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("preserves cancellation when an owning turn aborts", () => {
-    const turnId = TurnId.makeUnsafe("turn-with-cancelled-synara-tool");
+    const turnId = TurnId.makeUnsafe("turn-with-cancelled-forkara-tool");
     const entries = deriveWorkLogEntries(
       [
         makeActivity({
-          id: "cancelled-synara-start",
+          id: "cancelled-forkara-start",
           createdAt: "2026-02-23T00:00:01.000Z",
           kind: "tool.started",
           summary: "Forkara create thread",
@@ -2449,8 +2449,8 @@ describe("deriveWorkLogEntries", () => {
             itemType: "mcp_tool_call",
             title: "Forkara create thread",
             data: {
-              toolCallId: "cancelled-synara-call",
-              toolName: "mcp__synara__synara_create_thread",
+              toolCallId: "cancelled-forkara-call",
+              toolName: "mcp__forkara__forkara_create_thread",
             },
           },
         }),
@@ -2484,8 +2484,8 @@ describe("deriveWorkLogEntries", () => {
             title: "Forkara create thread",
             status: "interrupted",
             data: {
-              toolCallId: "interrupted-synara-call",
-              toolName: "mcp__synara__synara_create_thread",
+              toolCallId: "interrupted-forkara-call",
+              toolName: "mcp__forkara__forkara_create_thread",
             },
           },
         }),
@@ -2748,39 +2748,39 @@ describe("deriveWorkLogEntries", () => {
   it("presents Forkara MCP activity consistently across provider item shapes", () => {
     const activities: OrchestrationThreadActivity[] = [
       makeActivity({
-        id: "synara-mcp-create-thread-progress",
+        id: "forkara-mcp-create-thread-progress",
         kind: "tool.updated",
         summary: "MCP tool call",
         payload: {
           itemType: "mcp_tool_call",
           title: "MCP tool call",
           data: {
-            toolCallId: "synara-mcp-create",
-            toolName: "mcp__synara__synara_create_thread",
+            toolCallId: "forkara-mcp-create",
+            toolName: "mcp__forkara__forkara_create_thread",
           },
         },
       }),
       makeActivity({
-        id: "synara-dynamic-send-message-progress",
+        id: "forkara-dynamic-send-message-progress",
         kind: "tool.updated",
         summary: "Tool call",
         payload: {
           itemType: "dynamic_tool_call",
-          title: "Synara__synara_send_message",
+          title: "Forkara__forkara_send_message",
           data: {
-            toolCallId: "synara-dynamic-send",
+            toolCallId: "forkara-dynamic-send",
           },
         },
       }),
       makeActivity({
-        id: "synara-file-change-list-threads-progress",
+        id: "forkara-file-change-list-threads-progress",
         kind: "tool.updated",
         summary: "File change",
         payload: {
           itemType: "file_change",
-          title: "mcp__Synara__synara_list_threads",
+          title: "mcp__Forkara__forkara_list_threads",
           data: {
-            toolCallId: "synara-file-change-list",
+            toolCallId: "forkara-file-change-list",
           },
         },
       }),
@@ -2801,15 +2801,15 @@ describe("deriveWorkLogEntries", () => {
     const [entry] = deriveWorkLogEntries(
       [
         makeActivity({
-          id: "synara-create-threads-failed",
+          id: "forkara-create-threads-failed",
           kind: "tool.completed",
-          summary: "synara__synara_create_threads",
+          summary: "forkara__forkara_create_threads",
           payload: {
             itemType: "mcp_tool_call",
             status: "failed",
             data: {
-              toolCallId: "synara-create-failed",
-              toolName: "mcp__synara__synara_create_threads",
+              toolCallId: "forkara-create-failed",
+              toolName: "mcp__forkara__forkara_create_threads",
               rawOutput: {
                 is_error: 1,
                 output: { Error: "Invalid target options\n  at target.options" },
@@ -3840,7 +3840,7 @@ describe("deriveWorkLogEntries Codex find regression", () => {
               id: "call_UmQKQmLCCrj9PF82rupLIFDO",
               command:
                 "/bin/zsh -lc \"find apps packages -maxdepth 2 -name package.json -print -exec sed -n '1,120p' {} \\\\;\"",
-              cwd: "/Users/emanueledipietro/Developer/Testing/synara",
+              cwd: "/Users/emanueledipietro/Developer/Testing/forkara",
               processId: "38005",
               source: "unifiedExecStartup",
               status: "inProgress",
@@ -3878,7 +3878,7 @@ describe("deriveWorkLogEntries Codex find regression", () => {
               id: "call_UmQKQmLCCrj9PF82rupLIFDO",
               command:
                 "/bin/zsh -lc \"find apps packages -maxdepth 2 -name package.json -print -exec sed -n '1,120p' {} \\\\;\"",
-              cwd: "/Users/emanueledipietro/Developer/Testing/synara",
+              cwd: "/Users/emanueledipietro/Developer/Testing/forkara",
               processId: "38005",
               source: "unifiedExecStartup",
               status: "completed",

@@ -116,7 +116,7 @@ const encodePersistableEvent = (event: ProviderRuntimeEvent) =>
                 ? { messageType: event.raw.messageType }
                 : {}),
               payload: {
-                synaraTruncated: true,
+                forkaraTruncated: true,
                 reason: "provider runtime event exceeded the durable journal size limit",
                 originalBytes,
               },

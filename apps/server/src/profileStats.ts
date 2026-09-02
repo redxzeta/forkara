@@ -1,5 +1,5 @@
 // FILE: profileStats.ts
-// Purpose: Compute Profile-page stats from Synara's local projection DB only.
+// Purpose: Compute Profile-page stats from Forkara's local projection DB only.
 // The share card never reads provider archives or cloud services for metrics.
 // Stats are lifetime numbers: deleting a thread purges its rows but snapshots
 // the aggregates into profile_stats_deleted_* first (profileStatsArchive.ts),
@@ -243,7 +243,7 @@ function extractTextSkillNames(text: string | null): string[] {
   return names;
 }
 
-// Builds profile skill rows from every stored Synara user message, plus the
+// Builds profile skill rows from every stored Forkara user message, plus the
 // pre-aggregated counts snapshotted from purged threads. Structured references
 // stay authoritative, while text tokens backfill older or partial rows.
 export function aggregateProfileSkillUsageRows(
@@ -415,7 +415,7 @@ function deriveInitials(name: string): string {
 
 function sanitizeHandle(basename: string): string {
   const slug = basename.toLowerCase().replace(/[^a-z0-9_]/gu, "");
-  return `@${slug || "synara"}`;
+  return `@${slug || "forkara"}`;
 }
 
 function formatHour(hour: number): string {
@@ -629,7 +629,7 @@ export interface ProfileStatsQueryShape {
 export class ProfileStatsQuery extends ServiceMap.Service<
   ProfileStatsQuery,
   ProfileStatsQueryShape
->()("synara/profileStats/ProfileStatsQuery") {}
+>()("forkara/profileStats/ProfileStatsQuery") {}
 
 const makeProfileStatsQuery = Effect.gen(function* () {
   const sql = yield* SqlClient.SqlClient;
@@ -666,7 +666,7 @@ const makeProfileStatsQuery = Effect.gen(function* () {
   // projections with those deleted-thread aggregates.
   // ── SQL helpers ──────────────────────────────────────────────────────
 
-  // Activity = days/hours the user actually sent a Synara prompt. One day-hour
+  // Activity = days/hours the user actually sent a Forkara prompt. One day-hour
   // grouping gives day totals, hour totals, and lifetime prompt count in TS.
   const queryPromptActivity = (tz: string) =>
     legacyCompatibleQuery(
@@ -696,7 +696,7 @@ const makeProfileStatsQuery = Effect.gen(function* () {
       `,
     );
 
-  // Token usage for EVERY provider, straight from Synara's own DB (no external
+  // Token usage for EVERY provider, straight from Forkara's own DB (no external
   // ~/.codex/~/.claude archives, so it is provider-agnostic AND per-instance). Each
   // `context-window.updated` activity carries a running per-thread token counter;
   // the positive delta is the tokens processed in that step, bucketed by the
@@ -1227,7 +1227,7 @@ const makeProfileStatsQuery = Effect.gen(function* () {
       const totalSkillsUsed = allSkillUsages.reduce((sum, row) => sum + row.runCount, 0);
 
       // ── Identity ──
-      const homeDirBasename = nodePath.basename(config.homeDir) || "synara";
+      const homeDirBasename = nodePath.basename(config.homeDir) || "forkara";
 
       return {
         generatedAt: new Date().toISOString(),

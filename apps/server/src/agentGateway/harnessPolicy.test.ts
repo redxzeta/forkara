@@ -1,23 +1,23 @@
 import { assert, describe, it } from "@effect/vitest";
 
 import {
-  renderSynaraHarnessPolicy,
-  SYNARA_HARNESS_POLICY_MARKER,
-  takeSynaraHarnessPolicyForProviderSession,
-  takeSynaraHarnessPolicyTextPartForProviderSession,
-  takeSynaraHarnessPolicyForSession,
+  renderForkaraHarnessPolicy,
+  FORKARA_HARNESS_POLICY_MARKER,
+  takeForkaraHarnessPolicyForProviderSession,
+  takeForkaraHarnessPolicyTextPartForProviderSession,
+  takeForkaraHarnessPolicyForSession,
 } from "./harnessPolicy.ts";
 
-describe("Synara harness policy", () => {
-  it("identifies Synara and explains exact batch coordination when MCP is available", () => {
-    const policy = renderSynaraHarnessPolicy({ gatewayControlAvailable: true });
-    assert.include(policy, SYNARA_HARNESS_POLICY_MARKER);
-    assert.include(policy, "Synara is the host and harness");
-    assert.include(policy, "one exact synara_create_threads plan");
+describe("Forkara harness policy", () => {
+  it("identifies Forkara and explains exact batch coordination when MCP is available", () => {
+    const policy = renderForkaraHarnessPolicy({ gatewayControlAvailable: true });
+    assert.include(policy, FORKARA_HARNESS_POLICY_MARKER);
+    assert.include(policy, "Forkara is the host and harness");
+    assert.include(policy, "one exact forkara_create_threads plan");
     assert.include(policy, "before returning an operationId");
-    assert.include(policy, "synara_wait_for_threads");
+    assert.include(policy, "forkara_wait_for_threads");
     assert.include(policy, "Use the browser_* tools");
-    assert.include(policy, "exact thread-scoped Electron page Synara surfaces to the user");
+    assert.include(policy, "exact thread-scoped Electron page Forkara surfaces to the user");
     assert.include(policy, "continue in the background");
     assert.include(policy, "must never change the user's active chat");
     assert.include(policy, "in any language");
@@ -29,7 +29,7 @@ describe("Synara harness policy", () => {
     assert.include(policy, "BrowserDownloadApprovalRequired");
     assert.include(policy, "OAuth popup requiring human action");
     assert.include(policy, "stop using tools and answer");
-    assert.include(policy, "do not create Synara threads");
+    assert.include(policy, "do not create Forkara threads");
     assert.include(policy, "3–8 word outcome-oriented task label");
     assert.include(policy, "no assumed chat context");
     assert.include(policy, "notifying the user versus staying silent");
@@ -38,8 +38,8 @@ describe("Synara harness policy", () => {
   });
 
   it("asks agents to emit known absolute file URLs instead of invented relative links", () => {
-    const gateway = renderSynaraHarnessPolicy({ gatewayControlAvailable: true });
-    const identityOnly = renderSynaraHarnessPolicy({ gatewayControlAvailable: false });
+    const gateway = renderForkaraHarnessPolicy({ gatewayControlAvailable: true });
+    const identityOnly = renderForkaraHarnessPolicy({ gatewayControlAvailable: false });
 
     for (const policy of [gateway, identityOnly]) {
       assert.include(policy, "[config.ts](file:///absolute/path/config.ts)");
@@ -53,18 +53,18 @@ describe("Synara harness policy", () => {
   });
 
   it("never advertises gateway mutation to providers without scoped MCP", () => {
-    const policy = renderSynaraHarnessPolicy({ gatewayControlAvailable: false });
-    assert.include(policy, "Synara MCP control is unavailable");
-    assert.notInclude(policy, "one exact synara_create_threads plan");
+    const policy = renderForkaraHarnessPolicy({ gatewayControlAvailable: false });
+    assert.include(policy, "Forkara MCP control is unavailable");
+    assert.notInclude(policy, "one exact forkara_create_threads plan");
   });
 
   it("delivers a private host-context block once per provider session", () => {
     const state: { harnessPolicyDelivered?: boolean } = {};
     assert.include(
-      takeSynaraHarnessPolicyForSession(state, { gatewayControlAvailable: true }) ?? "",
-      "<synara_host_context>",
+      takeForkaraHarnessPolicyForSession(state, { gatewayControlAvailable: true }) ?? "",
+      "<forkara_host_context>",
     );
-    assert.isNull(takeSynaraHarnessPolicyForSession(state, { gatewayControlAvailable: true }));
+    assert.isNull(takeForkaraHarnessPolicyForSession(state, { gatewayControlAvailable: true }));
   });
 
   it("delivers once on fresh/load/fork sessions for every scoped MCP provider", () => {
@@ -80,14 +80,14 @@ describe("Synara harness policy", () => {
       for (const lifecycle of ["fresh", "load", "fork"] as const) {
         const state: { harnessPolicyDelivered?: boolean } = {};
         const first =
-          takeSynaraHarnessPolicyTextPartForProviderSession(state, {
+          takeForkaraHarnessPolicyTextPartForProviderSession(state, {
             provider,
             scopedGatewayConnectionAvailable: true,
           })?.text ?? "";
-        assert.include(first, SYNARA_HARNESS_POLICY_MARKER, `${provider}/${lifecycle}`);
-        assert.include(first, "Use the synara_* tools", `${provider}/${lifecycle}`);
+        assert.include(first, FORKARA_HARNESS_POLICY_MARKER, `${provider}/${lifecycle}`);
+        assert.include(first, "Use the forkara_* tools", `${provider}/${lifecycle}`);
         assert.isNull(
-          takeSynaraHarnessPolicyForProviderSession(state, {
+          takeForkaraHarnessPolicyForProviderSession(state, {
             provider,
             scopedGatewayConnectionAvailable: true,
           }),
@@ -100,18 +100,18 @@ describe("Synara harness policy", () => {
   it("keeps OpenCode, Kilo, and Pi identity-only until scoped setup succeeds", () => {
     for (const provider of ["opencode", "kilo", "pi"] as const) {
       const text =
-        takeSynaraHarnessPolicyForProviderSession(
+        takeForkaraHarnessPolicyForProviderSession(
           {},
           { provider, scopedGatewayConnectionAvailable: false },
         ) ?? "";
-      assert.include(text, SYNARA_HARNESS_POLICY_MARKER, provider);
-      assert.include(text, "Synara MCP control is unavailable", provider);
-      assert.notInclude(text, "one exact synara_create_threads plan", provider);
+      assert.include(text, FORKARA_HARNESS_POLICY_MARKER, provider);
+      assert.include(text, "Forkara MCP control is unavailable", provider);
+      assert.notInclude(text, "one exact forkara_create_threads plan", provider);
     }
   });
 
   it("teaches the device tools well enough for a plain prompt to work", () => {
-    const policy = renderSynaraHarnessPolicy({ gatewayControlAvailable: true });
+    const policy = renderForkaraHarnessPolicy({ gatewayControlAvailable: true });
 
     // When to reach for them at all: the demo needed "using your device_* tools"
     // spelled out because the policy only triggered on the user naming a tool.
@@ -132,7 +132,7 @@ describe("Synara harness policy", () => {
     assert.include(policy, "com.apple.Preferences");
 
     // Expo/RN CLI paths boot the sim through Simulator.app, which foregrounds
-    // a window the user is not watching and leaves the Synara pane empty. A
+    // a window the user is not watching and leaves the Forkara pane empty. A
     // real demo also stalled for minutes on a dev server holding the shell.
     assert.include(policy, "For Expo or React Native work");
     assert.include(policy, "expo start --ios");
@@ -178,7 +178,7 @@ describe("Synara harness policy", () => {
   });
 
   it("withholds device guidance from sessions with no gateway control", () => {
-    const policy = renderSynaraHarnessPolicy({ gatewayControlAvailable: false });
+    const policy = renderForkaraHarnessPolicy({ gatewayControlAvailable: false });
 
     // Promising tools this session cannot reach would be a lie.
     assert.notInclude(policy, "device_list");

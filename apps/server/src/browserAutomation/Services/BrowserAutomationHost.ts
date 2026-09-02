@@ -24,4 +24,4 @@ export interface BrowserAutomationHostShape {
 export class BrowserAutomationHost extends ServiceMap.Service<
   BrowserAutomationHost,
   BrowserAutomationHostShape
->()("synara/browserAutomation/Services/BrowserAutomationHost") {}
+>()("forkara/browserAutomation/Services/BrowserAutomationHost") {}

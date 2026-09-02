@@ -15,7 +15,7 @@ import { expect, it } from "vitest";
 it.runIf(process.platform === "win32")(
   "forwards encoded Codex arguments verbatim through the Effect Node spawner",
   async () => {
-    const root = mkdtempSync(Path.join(tmpdir(), "synara-effect-windows-process-"));
+    const root = mkdtempSync(Path.join(tmpdir(), "forkara-effect-windows-process-"));
     const commandDir = Path.join(root, "tools(x86)");
     const scriptPath = Path.join(commandDir, "capture.mjs");
     const commandPath = Path.join(commandDir, "codex.cmd");
@@ -34,13 +34,13 @@ it.runIf(process.platform === "win32")(
         scriptPath,
         [
           'import { writeFileSync } from "node:fs";',
-          "writeFileSync(process.env.SYNARA_CAPTURE_PATH, JSON.stringify(process.argv.slice(2)));",
+          "writeFileSync(process.env.FORKARA_CAPTURE_PATH, JSON.stringify(process.argv.slice(2)));",
           "",
         ].join("\n"),
       );
       writeFileSync(commandPath, `@echo off\r\n"${process.execPath}" "%~dp0capture.mjs" %*\r\n`);
 
-      const env = { ...process.env, SYNARA_CAPTURE_PATH: outputPath };
+      const env = { ...process.env, FORKARA_CAPTURE_PATH: outputPath };
       const prepared = prepareWindowsSafeProcess(commandPath, expectedArgs, {
         platform: "win32",
         env,

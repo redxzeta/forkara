@@ -43,7 +43,7 @@ const createRuntime = (state: TargetState): BrowserAutomationVisibleRuntime => {
       ) {
         return { result: { value: { count: state.count ?? 1, generation: 0 } } };
       }
-      if (expression.includes("globalThis.__synaraBrowserAutomationV1.currentTarget")) {
+      if (expression.includes("globalThis.__forkaraBrowserAutomationV1.currentTarget")) {
         return { result: { objectId: "target-1", type: "object", subtype: "node" } };
       }
       return {

@@ -73,4 +73,4 @@ export interface ProviderRuntimeEventRepositoryShape {
 export class ProviderRuntimeEventRepository extends ServiceMap.Service<
   ProviderRuntimeEventRepository,
   ProviderRuntimeEventRepositoryShape
->()("synara/persistence/Services/ProviderRuntimeEvents/ProviderRuntimeEventRepository") {}
+>()("forkara/persistence/Services/ProviderRuntimeEvents/ProviderRuntimeEventRepository") {}

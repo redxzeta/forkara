@@ -36,19 +36,19 @@ describe("createDesktopPlatformBuildConfig", () => {
     assert.equal(dmg.writeUpdateInfo, false);
     assert.equal(mac.entitlements, MAC_ENTITLEMENTS_PATH);
     assert.equal(mac.entitlementsInherit, MAC_INHERITED_ENTITLEMENTS_PATH);
-    assert.equal(MAC_APPSNAP_HELPER_BUNDLE_PATH, "Contents/Helpers/synara-appsnap-helper");
-    assert.deepStrictEqual(mac.binaries, ["Contents/Helpers/synara-appsnap-helper"]);
-    assert.equal(mac.x64ArchFiles, "Contents/Helpers/synara-appsnap-helper");
+    assert.equal(MAC_APPSNAP_HELPER_BUNDLE_PATH, "Contents/Helpers/forkara-appsnap-helper");
+    assert.deepStrictEqual(mac.binaries, ["Contents/Helpers/forkara-appsnap-helper"]);
+    assert.equal(mac.x64ArchFiles, "Contents/Helpers/forkara-appsnap-helper");
     assert.equal(
       MAC_APPSNAP_HELPER_STAGE_PATH,
-      "apps/desktop/native/appsnap/build/synara-appsnap-helper",
+      "apps/desktop/native/appsnap/build/forkara-appsnap-helper",
     );
     assert.equal(MAC_APPSNAP_HELPER_ASAR_EXCLUSION, "!apps/desktop/native/appsnap/build/**");
     assert.deepStrictEqual(config.files, ["**/*", MAC_APPSNAP_HELPER_ASAR_EXCLUSION]);
     assert.deepStrictEqual(config.extraFiles, [
       {
-        from: "apps/desktop/native/appsnap/build/synara-appsnap-helper",
-        to: "Helpers/synara-appsnap-helper",
+        from: "apps/desktop/native/appsnap/build/forkara-appsnap-helper",
+        to: "Helpers/forkara-appsnap-helper",
       },
       {
         from: MAC_DEVICE_HELPER_STAGE_PATH,
@@ -77,7 +77,7 @@ describe("createDesktopPlatformBuildConfig", () => {
     const win = createDesktopPlatformBuildConfig({
       platform: "win",
       target: "nsis",
-      windowsAzureSignOptions: { publisherName: "Synara" },
+      windowsAzureSignOptions: { publisherName: "Forkara" },
     });
 
     assert.equal(linux.mac, undefined);
@@ -85,12 +85,12 @@ describe("createDesktopPlatformBuildConfig", () => {
     assert.deepStrictEqual(linux.asarUnpack, ["node_modules/node-pty/**"]);
     assert.deepStrictEqual(linux.linux, {
       target: ["AppImage"],
-      executableName: "synara",
+      executableName: "forkara",
       icon: "icon.png",
       category: "Development",
       desktop: {
         entry: {
-          StartupWMClass: "synara",
+          StartupWMClass: "forkara",
         },
       },
     });
@@ -105,8 +105,8 @@ describe("createDesktopPlatformBuildConfig", () => {
     assert.deepStrictEqual(win.win, {
       target: ["nsis"],
       icon: "icon.ico",
-      publisherName: "Synara",
-      azureSignOptions: { publisherName: "Synara" },
+      publisherName: "Forkara",
+      azureSignOptions: { publisherName: "Forkara" },
     });
   });
 

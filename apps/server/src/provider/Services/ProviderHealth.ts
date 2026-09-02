@@ -41,5 +41,5 @@ export interface ProviderHealthShape {
 }
 
 export class ProviderHealth extends ServiceMap.Service<ProviderHealth, ProviderHealthShape>()(
-  "synara/provider/Services/ProviderHealth",
+  "forkara/provider/Services/ProviderHealth",
 ) {}

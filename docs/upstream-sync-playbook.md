@@ -34,7 +34,7 @@ bun scripts/sync-upstream.ts \
 ## Default workflow
 
 1. Keep your local work tree clean.
-2. Ensure `upstream` points at `https://github.com/Emanuele-web04/synara.git`.
+2. Ensure `upstream` points at `https://github.com/Emanuele-web04/forkara.git`.
 3. Run `bun scripts/sync-upstream.ts`.
 4. If merge conflicts occur, resolve manually:
    1. Fix conflicts and continue with normal `git merge --continue`.

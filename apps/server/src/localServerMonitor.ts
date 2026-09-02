@@ -76,7 +76,7 @@ const EXCLUDED_PROCESS_COMMANDS = new Set([
   "electron",
   "electron helper",
   "electron helper (renderer)",
-  "synara",
+  "forkara",
 ]);
 
 // Chromium/Electron spawns child processes (renderers, GPU, utility, plugin hosts) that can hold
@@ -615,7 +615,7 @@ async function fetchLocalPageTitleResponse(
     signal: AbortSignal.timeout(PAGE_TITLE_FETCH_TIMEOUT_MS),
     headers: {
       Accept: "text/html,application/xhtml+xml;q=0.9,*/*;q=0.1",
-      "User-Agent": "SynaraLocalServerMonitor/1.0",
+      "User-Agent": "ForkaraLocalServerMonitor/1.0",
     },
   });
   if (response.status >= 300 && response.status < 400) {
@@ -837,7 +837,7 @@ function toServerProcess(
     ports,
     addresses,
     isStoppable,
-    ...(isStoppable ? {} : { stopDisabledReason: "Synara cannot signal this process." }),
+    ...(isStoppable ? {} : { stopDisabledReason: "Forkara cannot signal this process." }),
   };
   pageTitleProbeArgs.set(server, detectionArgs);
   return server;
@@ -1015,7 +1015,7 @@ export async function stopLocalServer(
     return {
       pid: input.pid,
       stopped: false,
-      message: target.stopDisabledReason ?? "Synara cannot stop this process.",
+      message: target.stopDisabledReason ?? "Forkara cannot stop this process.",
     };
   }
 

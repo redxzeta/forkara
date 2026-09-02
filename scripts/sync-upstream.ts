@@ -355,7 +355,7 @@ function tryMergeWithUpstream(remote: string, upstream: string): void {
 
 function main(): void {
   const options = parseArgs(process.argv.slice(2));
-  const upstreamUrl = "https://github.com/Emanuele-web04/synara.git";
+  const upstreamUrl = "https://github.com/Emanuele-web04/forkara.git";
   const syncBranch = options.branch ?? defaultBranchName();
   const upstreamRef = `${options.remote}/${options.upstream}`;
 

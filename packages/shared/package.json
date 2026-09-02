@@ -40,9 +40,13 @@
       "types": "./src/loginShellEnvironment.ts",
       "import": "./src/loginShellEnvironment.ts"
     },
-    "./synaraHome": {
-      "types": "./src/synaraHome.ts",
-      "import": "./src/synaraHome.ts"
+    "./forkaraHome": {
+      "types": "./src/forkaraHome.ts",
+      "import": "./src/forkaraHome.ts"
+    },
+    "./legacyProfileMigration": {
+      "types": "./src/legacyProfileMigration.ts",
+      "import": "./src/legacyProfileMigration.ts"
     },
     "./staticSnapshot": {
       "types": "./src/staticSnapshot.ts",

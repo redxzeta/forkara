@@ -9,4 +9,4 @@ export interface ServerEnvironmentShape {
 export class ServerEnvironment extends ServiceMap.Service<
   ServerEnvironment,
   ServerEnvironmentShape
->()("synara/environment/Services/ServerEnvironment") {}
+>()("forkara/environment/Services/ServerEnvironment") {}

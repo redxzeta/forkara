@@ -1,21 +1,21 @@
 // FILE: desktopIdentity.ts
 // Purpose: Defines the canonical desktop application identity across packaging and runtime.
 
-export const SYNARA_DESKTOP_SCHEME = "synara";
-export const SYNARA_DESKTOP_ORIGIN = `${SYNARA_DESKTOP_SCHEME}://app`;
-export const SYNARA_DESKTOP_ENTRY_URL = `${SYNARA_DESKTOP_ORIGIN}/index.html`;
-export const SYNARA_DESKTOP_UPDATE_CHANNEL = "synara";
-export const SYNARA_PRODUCTION_BUNDLE_ID = "com.emanueledipietro.synara";
-export const SYNARA_DEVELOPMENT_BUNDLE_ID = `${SYNARA_PRODUCTION_BUNDLE_ID}.dev`;
-export const SYNARA_CANARY_BUNDLE_ID = `${SYNARA_PRODUCTION_BUNDLE_ID}.canary`;
-export const SYNARA_CANARY_DESKTOP_SCHEME = "synara-canary";
-export const SYNARA_CANARY_DESKTOP_ORIGIN = `${SYNARA_CANARY_DESKTOP_SCHEME}://app`;
-export const SYNARA_CANARY_DESKTOP_ENTRY_URL = `${SYNARA_CANARY_DESKTOP_ORIGIN}/index.html`;
+export const FORKARA_DESKTOP_SCHEME = "forkara";
+export const FORKARA_DESKTOP_ORIGIN = `${FORKARA_DESKTOP_SCHEME}://app`;
+export const FORKARA_DESKTOP_ENTRY_URL = `${FORKARA_DESKTOP_ORIGIN}/index.html`;
+export const FORKARA_DESKTOP_UPDATE_CHANNEL = "forkara";
+export const FORKARA_PRODUCTION_BUNDLE_ID = "com.emanueledipietro.forkara";
+export const FORKARA_DEVELOPMENT_BUNDLE_ID = `${FORKARA_PRODUCTION_BUNDLE_ID}.dev`;
+export const FORKARA_CANARY_BUNDLE_ID = `${FORKARA_PRODUCTION_BUNDLE_ID}.canary`;
+export const FORKARA_CANARY_DESKTOP_SCHEME = "forkara-canary";
+export const FORKARA_CANARY_DESKTOP_ORIGIN = `${FORKARA_CANARY_DESKTOP_SCHEME}://app`;
+export const FORKARA_CANARY_DESKTOP_ENTRY_URL = `${FORKARA_CANARY_DESKTOP_ORIGIN}/index.html`;
 
-export type SynaraDesktopFlavor = "production" | "development" | "canary";
+export type ForkaraDesktopFlavor = "production" | "development" | "canary";
 
-export interface SynaraDesktopIdentity {
-  readonly flavor: SynaraDesktopFlavor;
+export interface ForkaraDesktopIdentity {
+  readonly flavor: ForkaraDesktopFlavor;
   readonly displayName: string;
   readonly bundleId: string;
   readonly scheme: string;
@@ -26,56 +26,56 @@ export interface SynaraDesktopIdentity {
   readonly usesScriptedUpdates: boolean;
 }
 
-export function resolveSynaraDesktopFlavor(input: {
+export function resolveForkaraDesktopFlavor(input: {
   readonly isDevelopment: boolean;
   readonly requestedFlavor?: string | undefined;
-}): SynaraDesktopFlavor {
+}): ForkaraDesktopFlavor {
   if (input.requestedFlavor?.trim().toLowerCase() === "canary") {
     return "canary";
   }
   return input.isDevelopment ? "development" : "production";
 }
 
-export function synaraDesktopIdentity(flavor: SynaraDesktopFlavor): SynaraDesktopIdentity {
+export function forkaraDesktopIdentity(flavor: ForkaraDesktopFlavor): ForkaraDesktopIdentity {
   if (flavor === "canary") {
     return {
       flavor,
-      displayName: "Synara Canary",
-      bundleId: SYNARA_CANARY_BUNDLE_ID,
-      scheme: SYNARA_CANARY_DESKTOP_SCHEME,
-      origin: SYNARA_CANARY_DESKTOP_ORIGIN,
-      entryUrl: SYNARA_CANARY_DESKTOP_ENTRY_URL,
-      userDataDirectoryName: "synara-canary",
-      defaultHomeDirectoryName: ".synara-canary",
+      displayName: "Forkara Canary",
+      bundleId: FORKARA_CANARY_BUNDLE_ID,
+      scheme: FORKARA_CANARY_DESKTOP_SCHEME,
+      origin: FORKARA_CANARY_DESKTOP_ORIGIN,
+      entryUrl: FORKARA_CANARY_DESKTOP_ENTRY_URL,
+      userDataDirectoryName: "forkara-canary",
+      defaultHomeDirectoryName: ".forkara-canary",
       usesScriptedUpdates: true,
     };
   }
   if (flavor === "development") {
     return {
       flavor,
-      displayName: "Synara (Dev)",
-      bundleId: SYNARA_DEVELOPMENT_BUNDLE_ID,
-      scheme: SYNARA_DESKTOP_SCHEME,
-      origin: SYNARA_DESKTOP_ORIGIN,
-      entryUrl: SYNARA_DESKTOP_ENTRY_URL,
-      userDataDirectoryName: "synara-dev",
-      defaultHomeDirectoryName: ".synara",
+      displayName: "Forkara (Dev)",
+      bundleId: FORKARA_DEVELOPMENT_BUNDLE_ID,
+      scheme: FORKARA_DESKTOP_SCHEME,
+      origin: FORKARA_DESKTOP_ORIGIN,
+      entryUrl: FORKARA_DESKTOP_ENTRY_URL,
+      userDataDirectoryName: "forkara-dev",
+      defaultHomeDirectoryName: ".forkara",
       usesScriptedUpdates: false,
     };
   }
   return {
     flavor,
-    displayName: "Synara",
-    bundleId: SYNARA_PRODUCTION_BUNDLE_ID,
-    scheme: SYNARA_DESKTOP_SCHEME,
-    origin: SYNARA_DESKTOP_ORIGIN,
-    entryUrl: SYNARA_DESKTOP_ENTRY_URL,
-    userDataDirectoryName: "synara",
-    defaultHomeDirectoryName: ".synara",
+    displayName: "Forkara",
+    bundleId: FORKARA_PRODUCTION_BUNDLE_ID,
+    scheme: FORKARA_DESKTOP_SCHEME,
+    origin: FORKARA_DESKTOP_ORIGIN,
+    entryUrl: FORKARA_DESKTOP_ENTRY_URL,
+    userDataDirectoryName: "forkara",
+    defaultHomeDirectoryName: ".forkara",
     usesScriptedUpdates: false,
   };
 }
 
-export function synaraBundleId(isDevelopment: boolean): string {
-  return synaraDesktopIdentity(isDevelopment ? "development" : "production").bundleId;
+export function forkaraBundleId(isDevelopment: boolean): string {
+  return forkaraDesktopIdentity(isDevelopment ? "development" : "production").bundleId;
 }

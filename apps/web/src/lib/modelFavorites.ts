@@ -6,10 +6,10 @@ import type { ProviderKind } from "@forkara/contracts";
 import { Schema } from "effect";
 
 export const FAVORITE_MODEL_STORAGE_KEYS = {
-  cursor: "synara:cursor-favourite-models:v1",
-  kilo: "synara:kilo-favourite-models:v1",
-  opencode: "synara:opencode-favourite-models:v1",
-  pi: "synara:pi-favourite-models:v1",
+  cursor: "forkara:cursor-favourite-models:v1",
+  kilo: "forkara:kilo-favourite-models:v1",
+  opencode: "forkara:opencode-favourite-models:v1",
+  pi: "forkara:pi-favourite-models:v1",
 } as const;
 
 export type FavoriteModelProvider = keyof typeof FAVORITE_MODEL_STORAGE_KEYS;

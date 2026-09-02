@@ -77,9 +77,9 @@ describe("device helper cache key", () => {
     expect([...DEVICE_HELPER_CACHE_SEGMENTS]).toEqual([
       "Library",
       "Caches",
-      "synara",
+      "forkara",
       "device-helper",
     ]);
-    expect(DEVICE_HELPER_BINARY_NAME).toBe("synara-device-helper");
+    expect(DEVICE_HELPER_BINARY_NAME).toBe("forkara-device-helper");
   });
 });

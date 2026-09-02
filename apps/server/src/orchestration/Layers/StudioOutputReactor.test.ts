@@ -60,7 +60,7 @@ describe("StudioOutputReactor", () => {
   });
 
   it("uses the pre-dispatch baseline and captures files when the provider session exits", async () => {
-    const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "synara-studio-reactor-"));
+    const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "forkara-studio-reactor-"));
     temporaryRoots.push(workspaceRoot);
     const threadId = ThreadId.makeUnsafe("studio-thread");
     const projectId = ProjectId.makeUnsafe("studio-project");

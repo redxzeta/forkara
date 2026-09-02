@@ -26,10 +26,10 @@ and worktree pipeline.
 3. Choose **Create integration**.
 4. For Codex, Claude Code, or another agentic MCP client, copy the generated setup prompt into the
    client. The prompt guides that agent through the one-time pairing, installs the correct local
-   stdio configuration, and verifies the connection with `synara_overview`. For Claude Desktop or a
+   stdio configuration, and verifies the connection with `forkara_overview`. For Claude Desktop or a
    client that cannot run the setup prompt, complete pairing in Forkara and use the copy-ready JSON
    configuration instead. Forkara uses the exact executable and data directory of the running
-   installation; no global `synara` command, project ID, model slug, request ID, or credential
+   installation; no global `forkara` command, project ID, model slug, request ID, or credential
    path is required from the user.
 5. Forkara moves from **Waiting for pairing** to **Paired** after the local credential exchange, then
    to **Connected** after the client makes its first request.
@@ -46,27 +46,27 @@ The guided flow avoids asking the user for project IDs, provider/model slugs, re
 or credentials. The generated launcher is structurally equivalent to:
 
 ```sh
-/absolute/path/to/runtime /absolute/path/to/synara-server mcp serve --integration mcp_int_REDACTED --home-dir "$HOME/.synara"
+/absolute/path/to/runtime /absolute/path/to/forkara-server mcp serve --integration mcp_int_REDACTED --home-dir "$HOME/.forkara"
 ```
 
 The Codex copy action generates:
 
 ```sh
-codex mcp add synara [--env ELECTRON_RUN_AS_NODE=1] -- /absolute/runtime /absolute/server mcp serve --integration mcp_int_REDACTED --home-dir "$HOME/.synara"
+codex mcp add forkara [--env ELECTRON_RUN_AS_NODE=1] -- /absolute/runtime /absolute/server mcp serve --integration mcp_int_REDACTED --home-dir "$HOME/.forkara"
 ```
 
 The Claude Code copy action generates a user-scoped configuration:
 
 ```sh
-claude mcp add --scope user synara [-e ELECTRON_RUN_AS_NODE=1] -- /absolute/runtime /absolute/server mcp serve --integration mcp_int_REDACTED --home-dir "$HOME/.synara"
+claude mcp add --scope user forkara [-e ELECTRON_RUN_AS_NODE=1] -- /absolute/runtime /absolute/server mcp serve --integration mcp_int_REDACTED --home-dir "$HOME/.forkara"
 ```
 
 The equivalent manual Codex `config.toml` is:
 
 ```toml
-[mcp_servers.synara]
+[mcp_servers.forkara]
 command = "/absolute/path/to/runtime"
-args = ["/absolute/path/to/synara-server", "mcp", "serve", "--integration", "mcp_int_REDACTED", "--home-dir", "/absolute/path/to/synara-data"]
+args = ["/absolute/path/to/forkara-server", "mcp", "serve", "--integration", "mcp_int_REDACTED", "--home-dir", "/absolute/path/to/forkara-data"]
 # Desktop builds also include: env = { ELECTRON_RUN_AS_NODE = "1" }
 ```
 
@@ -75,16 +75,16 @@ For clients that use JSON MCP configuration:
 ```json
 {
   "mcpServers": {
-    "synara": {
+    "forkara": {
       "command": "/absolute/path/to/runtime",
       "args": [
-        "/absolute/path/to/synara-server",
+        "/absolute/path/to/forkara-server",
         "mcp",
         "serve",
         "--integration",
         "mcp_int_REDACTED",
         "--home-dir",
-        "/absolute/path/to/synara-data"
+        "/absolute/path/to/forkara-data"
       ],
       "env": { "ELECTRON_RUN_AS_NODE": "1" }
     }
@@ -99,13 +99,13 @@ silently connect to the wrong runtime. A manually written bridge configuration s
 {
   "command": "/absolute/path/to/runtime",
   "args": [
-    "/absolute/path/to/synara-server",
+    "/absolute/path/to/forkara-server",
     "mcp",
     "serve",
     "--integration",
     "mcp_int_REDACTED",
     "--home-dir",
-    "/absolute/path/to/synara-data"
+    "/absolute/path/to/forkara-data"
   ],
   "env": { "ELECTRON_RUN_AS_NODE": "1" }
 }
@@ -128,13 +128,13 @@ principal to use.
 
 The advertised catalog is filtered by the integration's granted scopes. It exposes:
 
-- `synara_overview` — orient in one call with allowed projects, paths and activity, provider
+- `forkara_overview` — orient in one call with allowed projects, paths and activity, provider
   availability, granted scopes, safe defaults, limits, and suggested next steps.
-- `synara_capabilities` — provider/model construction and safety limits for an allowed project.
-- `synara_list_allowed_projects` — only projects selected by the user.
-- `synara_create_task` — one task per stable `requestId`.
-- `synara_wait_for_task` — wait for an authorized task without changing it.
-- `synara_read_task` — read tasks created by the integration. Reading other tasks requires the
+- `forkara_capabilities` — provider/model construction and safety limits for an allowed project.
+- `forkara_list_allowed_projects` — only projects selected by the user.
+- `forkara_create_task` — one task per stable `requestId`.
+- `forkara_wait_for_task` — wait for an authorized task without changing it.
+- `forkara_read_task` — read tasks created by the integration. Reading other tasks requires the
   separate `tasks:read-project` scope.
 
 Creation requires an explicit `projectId`, `provider`, `model`, `prompt`, and stable `requestId`.
@@ -145,7 +145,7 @@ checkout execution and full-access execution are independent, explicit scopes.
 
 - `/mcp/external` is available only while Forkara itself is loopback-only. Configuring remote or
   published access disables the external endpoint instead of exposing it remotely.
-- External credentials have the fixed `synara.external-mcp` audience. They are opaque, expiring,
+- External credentials have the fixed `forkara.external-mcp` audience. They are opaque, expiring,
   revocable, stored as SHA-256 hashes in the server database, and cannot authenticate browser,
   WebSocket, server-token, or internal provider-session paths.
 - Expiry and revocation are checked at request ingress and again while long-running create/wait

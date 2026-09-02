@@ -65,5 +65,5 @@ export interface AuthControlPlaneShape {
 }
 
 export class AuthControlPlane extends ServiceMap.Service<AuthControlPlane, AuthControlPlaneShape>()(
-  "synara/auth/Services/AuthControlPlane",
+  "forkara/auth/Services/AuthControlPlane",
 ) {}

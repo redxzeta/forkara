@@ -82,7 +82,7 @@ function shouldShowExplorerEntry(entry: ProjectFileSystemEntry): boolean {
   if (entry.kind !== "directory") {
     return true;
   }
-  if (entry.name.startsWith(".synara")) {
+  if (entry.name.startsWith(".forkara")) {
     return false;
   }
   return !EXPLORER_HIDDEN_DIRECTORY_NAMES.has(entry.name);

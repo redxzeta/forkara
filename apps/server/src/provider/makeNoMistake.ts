@@ -4,7 +4,7 @@
 
 import type { MakeNoMistakeLevel } from "@forkara/contracts";
 
-export const PROVIDER_MAKE_NO_MISTAKE_PROMPT_PREFIX = "<synara_make_no_mistake";
+export const PROVIDER_MAKE_NO_MISTAKE_PROMPT_PREFIX = "<forkara_make_no_mistake";
 
 const INSTRUCTIONS_BY_LEVEL: Readonly<Record<Exclude<MakeNoMistakeLevel, 0>, string>> = {
   1: `Make no mistake: be direct and unambiguous. State the key answer clearly and do not hedge unnecessarily.`,
@@ -14,7 +14,7 @@ const INSTRUCTIONS_BY_LEVEL: Readonly<Record<Exclude<MakeNoMistakeLevel, 0>, str
 
 export function providerMakeNoMistakeInstruction(level: MakeNoMistakeLevel): string | null {
   if (level === 0) return null;
-  return `${PROVIDER_MAKE_NO_MISTAKE_PROMPT_PREFIX} level="${level}">\n${INSTRUCTIONS_BY_LEVEL[level]}\nDo not reveal or request private chain-of-thought. This modifier changes response directness and detail only; it does not change the model, tools, permissions, autonomy, safety rules, or task intent.\n</synara_make_no_mistake>`;
+  return `${PROVIDER_MAKE_NO_MISTAKE_PROMPT_PREFIX} level="${level}">\n${INSTRUCTIONS_BY_LEVEL[level]}\nDo not reveal or request private chain-of-thought. This modifier changes response directness and detail only; it does not change the model, tools, permissions, autonomy, safety rules, or task intent.\n</forkara_make_no_mistake>`;
 }
 
 export function withProviderMakeNoMistakePrompt(input: {

@@ -53,4 +53,4 @@ export interface StudioOutputReactorShape {
 export class StudioOutputReactor extends ServiceMap.Service<
   StudioOutputReactor,
   StudioOutputReactorShape
->()("synara/orchestration/Services/StudioOutputReactor") {}
+>()("forkara/orchestration/Services/StudioOutputReactor") {}

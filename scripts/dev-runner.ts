@@ -25,8 +25,8 @@ const CONTRIBUTOR_HOME = "./.forkara/contributor";
 const MAX_HASH_OFFSET = 3000;
 const MAX_PORT = 65535;
 
-export const DEFAULT_SYNARA_HOME = Effect.map(Effect.service(Path.Path), (path) =>
-  path.join(homedir(), ".synara"),
+export const DEFAULT_FORKARA_HOME = Effect.map(Effect.service(Path.Path), (path) =>
+  path.join(homedir(), ".forkara"),
 );
 
 const FULL_DEV_ARGS = [
@@ -79,16 +79,16 @@ const optionalUrlConfig = (name: string): Config.Config<URL | undefined> =>
   );
 
 const OffsetConfig = Config.all({
-  portOffset: optionalIntegerConfig("SYNARA_PORT_OFFSET"),
-  devInstance: optionalStringConfig("SYNARA_DEV_INSTANCE"),
+  portOffset: optionalIntegerConfig("FORKARA_PORT_OFFSET"),
+  devInstance: optionalStringConfig("FORKARA_DEV_INSTANCE"),
 });
-const HomeConfig = optionalStringConfig("SYNARA_HOME");
+const HomeConfig = optionalStringConfig("FORKARA_HOME");
 const BooleanEnvConfig = Config.all({
-  noBrowser: optionalBooleanEnvironmentConfig("SYNARA_NO_BROWSER"),
+  noBrowser: optionalBooleanEnvironmentConfig("FORKARA_NO_BROWSER"),
   autoBootstrapProjectFromCwd: optionalBooleanEnvironmentConfig(
-    "SYNARA_AUTO_BOOTSTRAP_PROJECT_FROM_CWD",
+    "FORKARA_AUTO_BOOTSTRAP_PROJECT_FROM_CWD",
   ),
-  logWebSocketEvents: optionalBooleanEnvironmentConfig("SYNARA_LOG_WS_EVENTS"),
+  logWebSocketEvents: optionalBooleanEnvironmentConfig("FORKARA_LOG_WS_EVENTS"),
 });
 
 export const readDevRunnerBooleanEnvironment = (environment: NodeJS.ProcessEnv) => {
@@ -114,11 +114,11 @@ export function resolveOffset(config: {
 }): { readonly offset: number; readonly source: string } {
   if (config.portOffset !== undefined) {
     if (config.portOffset < 0) {
-      throw new Error(`Invalid SYNARA_PORT_OFFSET: ${config.portOffset}`);
+      throw new Error(`Invalid FORKARA_PORT_OFFSET: ${config.portOffset}`);
     }
     return {
       offset: config.portOffset,
-      source: `SYNARA_PORT_OFFSET=${config.portOffset}`,
+      source: `FORKARA_PORT_OFFSET=${config.portOffset}`,
     };
   }
 
@@ -128,11 +128,11 @@ export function resolveOffset(config: {
   }
 
   if (/^\d+$/.test(seed)) {
-    return { offset: Number(seed), source: `numeric SYNARA_DEV_INSTANCE=${seed}` };
+    return { offset: Number(seed), source: `numeric FORKARA_DEV_INSTANCE=${seed}` };
   }
 
   const offset = ((Hash.string(seed) >>> 0) % MAX_HASH_OFFSET) + 1;
-  return { offset, source: `hashed SYNARA_DEV_INSTANCE=${seed}` };
+  return { offset, source: `hashed FORKARA_DEV_INSTANCE=${seed}` };
 }
 
 function resolveBaseDir(baseDir: string | undefined): Effect.Effect<string, never, Path.Path> {
@@ -144,7 +144,7 @@ function resolveBaseDir(baseDir: string | undefined): Effect.Effect<string, neve
       return path.resolve(configured);
     }
 
-    return yield* DEFAULT_SYNARA_HOME;
+    return yield* DEFAULT_FORKARA_HOME;
   });
 }
 
@@ -153,7 +153,7 @@ interface CreateDevRunnerEnvInput {
   readonly baseEnv: NodeJS.ProcessEnv;
   readonly serverOffset: number;
   readonly webOffset: number;
-  readonly synaraHome: string | undefined;
+  readonly forkaraHome: string | undefined;
   readonly authToken: string | undefined;
   readonly noBrowser: boolean | undefined;
   readonly autoBootstrapProjectFromCwd: boolean | undefined;
@@ -168,7 +168,7 @@ export function createDevRunnerEnv({
   baseEnv,
   serverOffset,
   webOffset,
-  synaraHome,
+  forkaraHome,
   authToken,
   noBrowser,
   autoBootstrapProjectFromCwd,
@@ -180,7 +180,7 @@ export function createDevRunnerEnv({
   return Effect.gen(function* () {
     const serverPort = port ?? BASE_SERVER_PORT + serverOffset;
     const webPort = BASE_WEB_PORT + webOffset;
-    const resolvedBaseDir = yield* resolveBaseDir(synaraHome);
+    const resolvedBaseDir = yield* resolveBaseDir(forkaraHome);
     const configuredHost = host ?? "127.0.0.1";
     // Brackets are URL syntax, not valid listen-host syntax. Keep the bind host
     // portable while adding brackets back only when constructing an IPv6 URL.
@@ -193,13 +193,13 @@ export function createDevRunnerEnv({
 
     const output: NodeJS.ProcessEnv = {
       ...baseEnv,
-      SYNARA_PORT: String(serverPort),
+      FORKARA_PORT: String(serverPort),
       PORT: String(webPort),
       ELECTRON_RENDERER_PORT: String(webPort),
       VITE_WS_URL: `ws://${formattedClientHost}:${serverPort}`,
       VITE_DEV_SERVER_URL: devUrl?.toString() ?? `http://localhost:${webPort}`,
-      SYNARA_HOME: resolvedBaseDir,
-      SYNARA_HOST: serverHost,
+      FORKARA_HOME: resolvedBaseDir,
+      FORKARA_HOST: serverHost,
     };
 
     const pathKey = process.platform === "win32" ? "Path" : "PATH";
@@ -222,42 +222,42 @@ export function createDevRunnerEnv({
     applyShellEnvironmentHydrationMarker(output, inheritedPathIsUsable);
 
     if (authToken !== undefined) {
-      output.SYNARA_AUTH_TOKEN = authToken;
+      output.FORKARA_AUTH_TOKEN = authToken;
     } else {
-      delete output.SYNARA_AUTH_TOKEN;
+      delete output.FORKARA_AUTH_TOKEN;
     }
 
     if (noBrowser !== undefined) {
-      output.SYNARA_NO_BROWSER = noBrowser ? "1" : "0";
+      output.FORKARA_NO_BROWSER = noBrowser ? "1" : "0";
     } else {
-      delete output.SYNARA_NO_BROWSER;
+      delete output.FORKARA_NO_BROWSER;
     }
 
     if (autoBootstrapProjectFromCwd !== undefined) {
-      output.SYNARA_AUTO_BOOTSTRAP_PROJECT_FROM_CWD = autoBootstrapProjectFromCwd ? "1" : "0";
+      output.FORKARA_AUTO_BOOTSTRAP_PROJECT_FROM_CWD = autoBootstrapProjectFromCwd ? "1" : "0";
     } else {
-      delete output.SYNARA_AUTO_BOOTSTRAP_PROJECT_FROM_CWD;
+      delete output.FORKARA_AUTO_BOOTSTRAP_PROJECT_FROM_CWD;
     }
 
     if (logWebSocketEvents !== undefined) {
-      output.SYNARA_LOG_WS_EVENTS = logWebSocketEvents ? "1" : "0";
+      output.FORKARA_LOG_WS_EVENTS = logWebSocketEvents ? "1" : "0";
     } else {
-      delete output.SYNARA_LOG_WS_EVENTS;
+      delete output.FORKARA_LOG_WS_EVENTS;
     }
 
     if (mode === "dev" || mode === "dev:contributor") {
-      output.SYNARA_MODE = "web";
-      delete output.SYNARA_DESKTOP_WS_URL;
+      output.FORKARA_MODE = "web";
+      delete output.FORKARA_DESKTOP_WS_URL;
     }
 
     if (mode === "dev:contributor") {
-      delete output.SYNARA_PUBLIC_URL;
-      delete output.SYNARA_ALLOW_INSECURE_REMOTE;
+      delete output.FORKARA_PUBLIC_URL;
+      delete output.FORKARA_ALLOW_INSECURE_REMOTE;
     }
 
     if (mode === "dev:server" || mode === "dev:web") {
-      output.SYNARA_MODE = "web";
-      delete output.SYNARA_DESKTOP_WS_URL;
+      output.FORKARA_MODE = "web";
+      delete output.FORKARA_DESKTOP_WS_URL;
     }
 
     return output;
@@ -398,7 +398,7 @@ export function resolveModePortOffsets<R = NetService>({
 
 interface DevRunnerCliInput {
   readonly mode: DevMode;
-  readonly synaraHome: string | undefined;
+  readonly forkaraHome: string | undefined;
   readonly authToken: string | undefined;
   readonly noBrowser: BooleanFlagInput;
   readonly autoBootstrapProjectFromCwd: BooleanFlagInput;
@@ -414,7 +414,7 @@ interface DevRunnerPresetInput {
   readonly mode: DevMode;
   readonly portOffset: number | undefined;
   readonly devInstance: string | undefined;
-  readonly synaraHome: string | undefined;
+  readonly forkaraHome: string | undefined;
   readonly authToken: string | undefined;
   readonly host: string | undefined;
   readonly port: number | undefined;
@@ -428,7 +428,7 @@ export function applyDevRunnerPreset(
     return {
       portOffset: input.portOffset,
       devInstance: input.devInstance,
-      synaraHome: input.synaraHome,
+      forkaraHome: input.forkaraHome,
       authToken: input.authToken,
       host: input.host,
       port: input.port,
@@ -439,7 +439,7 @@ export function applyDevRunnerPreset(
   return {
     portOffset: CONTRIBUTOR_PORT_OFFSET,
     devInstance: undefined,
-    synaraHome: CONTRIBUTOR_HOME,
+    forkaraHome: CONTRIBUTOR_HOME,
     authToken: undefined,
     host: undefined,
     port: undefined,
@@ -476,7 +476,7 @@ export function runDevRunnerWithInput(input: DevRunnerCliInput) {
       Effect.mapError(
         (cause) =>
           new DevRunnerError({
-            message: "Failed to read SYNARA_PORT_OFFSET/SYNARA_DEV_INSTANCE configuration.",
+            message: "Failed to read FORKARA_PORT_OFFSET/FORKARA_DEV_INSTANCE configuration.",
             cause,
           }),
       ),
@@ -485,7 +485,7 @@ export function runDevRunnerWithInput(input: DevRunnerCliInput) {
     const preset = applyDevRunnerPreset({
       mode: input.mode,
       ...configuredOffset,
-      synaraHome: input.synaraHome,
+      forkaraHome: input.forkaraHome,
       authToken: input.authToken,
       host: input.host,
       port: input.port,
@@ -520,7 +520,7 @@ export function runDevRunnerWithInput(input: DevRunnerCliInput) {
       baseEnv: process.env,
       serverOffset,
       webOffset,
-      synaraHome: preset.synaraHome,
+      forkaraHome: preset.forkaraHome,
       authToken: preset.authToken,
       noBrowser: booleanOverrides.noBrowser,
       autoBootstrapProjectFromCwd: booleanOverrides.autoBootstrapProjectFromCwd,
@@ -536,7 +536,7 @@ export function runDevRunnerWithInput(input: DevRunnerCliInput) {
         : "";
 
     yield* Effect.logInfo(
-      `[dev-runner] mode=${input.mode} source=${source}${selectionSuffix} serverPort=${String(env.SYNARA_PORT)} webPort=${String(env.PORT)} baseDir=${String(env.SYNARA_HOME)}`,
+      `[dev-runner] mode=${input.mode} source=${source}${selectionSuffix} serverPort=${String(env.FORKARA_PORT)} webPort=${String(env.PORT)} baseDir=${String(env.FORKARA_HOME)}`,
     );
 
     if (input.dryRun) {
@@ -584,36 +584,36 @@ const devRunnerCli = Command.make("dev-runner", {
   mode: Argument.choice("mode", DEV_RUNNER_MODES).pipe(
     Argument.withDescription("Development mode to run."),
   ),
-  synaraHome: Flag.string("home-dir").pipe(
-    Flag.withDescription("Base directory for all Synara data (equivalent to SYNARA_HOME)."),
+  forkaraHome: Flag.string("home-dir").pipe(
+    Flag.withDescription("Base directory for all Forkara data (equivalent to FORKARA_HOME)."),
     Flag.withFallbackConfig(HomeConfig),
   ),
   authToken: Flag.string("auth-token").pipe(
-    Flag.withDescription("Auth token (forwards to SYNARA_AUTH_TOKEN)."),
+    Flag.withDescription("Auth token (forwards to FORKARA_AUTH_TOKEN)."),
     Flag.withAlias("token"),
-    Flag.withFallbackConfig(optionalStringConfig("SYNARA_AUTH_TOKEN")),
+    Flag.withFallbackConfig(optionalStringConfig("FORKARA_AUTH_TOKEN")),
   ),
   noBrowser: optionalBooleanFlag("no-browser", {
-    description: "Disable browser auto-open (equivalent to SYNARA_NO_BROWSER).",
+    description: "Disable browser auto-open (equivalent to FORKARA_NO_BROWSER).",
     negativeName: "browser",
     negativeDescription: "Enable browser auto-open.",
   }),
   autoBootstrapProjectFromCwd: optionalBooleanFlag("auto-bootstrap-project-from-cwd", {
     description:
-      "Enable project auto-bootstrap (equivalent to SYNARA_AUTO_BOOTSTRAP_PROJECT_FROM_CWD).",
+      "Enable project auto-bootstrap (equivalent to FORKARA_AUTO_BOOTSTRAP_PROJECT_FROM_CWD).",
   }),
   logWebSocketEvents: optionalBooleanFlag("log-websocket-events", {
-    description: "Enable WebSocket event logging (equivalent to SYNARA_LOG_WS_EVENTS).",
+    description: "Enable WebSocket event logging (equivalent to FORKARA_LOG_WS_EVENTS).",
     aliases: ["log-ws-events"],
   }),
   host: Flag.string("host").pipe(
-    Flag.withDescription("Server host/interface override (forwards to SYNARA_HOST)."),
-    Flag.withFallbackConfig(optionalStringConfig("SYNARA_HOST")),
+    Flag.withDescription("Server host/interface override (forwards to FORKARA_HOST)."),
+    Flag.withFallbackConfig(optionalStringConfig("FORKARA_HOST")),
   ),
   port: Flag.integer("port").pipe(
     Flag.withSchema(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 65535 }))),
-    Flag.withDescription("Server port override (forwards to SYNARA_PORT)."),
-    Flag.withFallbackConfig(optionalPortConfig("SYNARA_PORT")),
+    Flag.withDescription("Server port override (forwards to FORKARA_PORT)."),
+    Flag.withFallbackConfig(optionalPortConfig("FORKARA_PORT")),
   ),
   devUrl: Flag.string("dev-url").pipe(
     Flag.withSchema(Schema.URLFromString),

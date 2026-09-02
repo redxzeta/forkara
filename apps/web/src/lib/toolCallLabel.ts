@@ -21,7 +21,7 @@ export function normalizeCompactToolLabel(value: string): string {
 
 // Legacy upstream naming still appears in some tool/title payloads and UI copy.
 // Keep this normalization centralized so rebrand rules can be adjusted in one place.
-const LEGACY_BRAND_PREFIX_RE = /(^|[^A-Za-z0-9_])(forkara|synara)(?=[^A-Za-z0-9_]|$)/gi;
+const LEGACY_BRAND_PREFIX_RE = /(^|[^A-Za-z0-9_])(forkara|forkara)(?=[^A-Za-z0-9_]|$)/gi;
 export function normalizeLegacyBranding(value: string): string {
   return value.replace(LEGACY_BRAND_PREFIX_RE, (_, prefix) => `${prefix}Forkara`);
 }
@@ -120,167 +120,167 @@ export interface ReadableToolTitleInput {
   readonly isRunning?: boolean;
 }
 
-interface SynaraMcpToolPresentation {
+interface ForkaraMcpToolPresentation {
   readonly running: string;
   readonly completed: string;
   readonly failed: string;
 }
 
-type SynaraBrowserToolName = `synara_${BrowserToolName}`;
+type ForkaraBrowserToolName = `forkara_${BrowserToolName}`;
 const BROWSER_TOOL_NAME_SET = new Set<string>(BROWSER_TOOL_NAMES);
 
-const SYNARA_BROWSER_TOOL_PRESENTATIONS = Object.fromEntries(
+const FORKARA_BROWSER_TOOL_PRESENTATIONS = Object.fromEntries(
   BROWSER_TOOL_NAMES.map((toolName) => {
     const title = BROWSER_TOOL_TITLES[toolName];
-    return [`synara_${toolName}`, { running: title, completed: title, failed: title }];
+    return [`forkara_${toolName}`, { running: title, completed: title, failed: title }];
   }),
-) as Record<SynaraBrowserToolName, SynaraMcpToolPresentation>;
+) as Record<ForkaraBrowserToolName, ForkaraMcpToolPresentation>;
 
-const SYNARA_MCP_TOOL_PRESENTATIONS = {
-  synara_context: {
+const FORKARA_MCP_TOOL_PRESENTATIONS = {
+  forkara_context: {
     running: "Forkara is checking its context",
     completed: "Forkara checked its context",
     failed: "Forkara couldn't check its context",
   },
-  synara_capabilities: {
+  forkara_capabilities: {
     running: "Forkara is checking available agents",
     completed: "Forkara checked available agents",
     failed: "Forkara couldn't check available agents",
   },
-  synara_overview: {
+  forkara_overview: {
     running: "Forkara is gathering an overview",
     completed: "Forkara gathered an overview",
     failed: "Forkara couldn't gather an overview",
   },
-  synara_list_allowed_projects: {
+  forkara_list_allowed_projects: {
     running: "Forkara is listing allowed projects",
     completed: "Forkara listed allowed projects",
     failed: "Forkara couldn't list allowed projects",
   },
-  synara_create_task: {
+  forkara_create_task: {
     running: "Forkara is creating a task",
     completed: "Forkara created a task",
     failed: "Forkara couldn't create a task",
   },
-  synara_wait_for_task: {
+  forkara_wait_for_task: {
     running: "Forkara is waiting for a task",
     completed: "Forkara finished waiting for a task",
     failed: "Forkara couldn't wait for a task",
   },
-  synara_read_task: {
+  forkara_read_task: {
     running: "Forkara is reading a task",
     completed: "Forkara read a task",
     failed: "Forkara couldn't read a task",
   },
-  synara_list_projects: {
+  forkara_list_projects: {
     running: "Forkara is listing projects",
     completed: "Forkara listed projects",
     failed: "Forkara couldn't list projects",
   },
-  synara_list_threads: {
+  forkara_list_threads: {
     running: "Forkara is listing threads",
     completed: "Forkara listed threads",
     failed: "Forkara couldn't list threads",
   },
-  synara_read_thread: {
+  forkara_read_thread: {
     running: "Forkara is reading a thread",
     completed: "Forkara read a thread",
     failed: "Forkara couldn't read a thread",
   },
-  synara_read_thread_activity: {
+  forkara_read_thread_activity: {
     running: "Forkara is reading thread activity",
     completed: "Forkara read thread activity",
     failed: "Forkara couldn't read thread activity",
   },
-  synara_read_thread_events: {
+  forkara_read_thread_events: {
     running: "Forkara is reading thread events",
     completed: "Forkara read thread events",
     failed: "Forkara couldn't read thread events",
   },
-  synara_read_thread_runtime_events: {
+  forkara_read_thread_runtime_events: {
     running: "Forkara is reading thread runtime events",
     completed: "Forkara read thread runtime events",
     failed: "Forkara couldn't read thread runtime events",
   },
-  synara_diagnose_thread: {
+  forkara_diagnose_thread: {
     running: "Forkara is diagnosing a thread",
     completed: "Forkara diagnosed a thread",
     failed: "Forkara couldn't diagnose a thread",
   },
-  synara_create_thread: {
+  forkara_create_thread: {
     running: "Forkara is creating a thread",
     completed: "Forkara created a thread",
     failed: "Forkara couldn't create a thread",
   },
-  synara_create_threads: {
+  forkara_create_threads: {
     running: "Forkara is creating threads",
     completed: "Forkara created threads",
     failed: "Forkara couldn't create threads",
   },
-  synara_wait_for_threads: {
+  forkara_wait_for_threads: {
     running: "Forkara is waiting for threads",
     completed: "Forkara finished waiting for threads",
     failed: "Forkara couldn't wait for threads",
   },
-  synara_send_message: {
+  forkara_send_message: {
     running: "Forkara is sending a message",
     completed: "Forkara sent a message",
     failed: "Forkara couldn't send a message",
   },
-  synara_interrupt_thread: {
+  forkara_interrupt_thread: {
     running: "Forkara is interrupting a thread",
     completed: "Forkara interrupted a thread",
     failed: "Forkara couldn't interrupt a thread",
   },
-  synara_set_thread_title: {
+  forkara_set_thread_title: {
     running: "Forkara is renaming a thread",
     completed: "Forkara renamed a thread",
     failed: "Forkara couldn't rename a thread",
   },
-  synara_set_thread_archived: {
+  forkara_set_thread_archived: {
     running: "Forkara is updating a thread",
     completed: "Forkara updated a thread",
     failed: "Forkara couldn't update a thread",
   },
-  synara_create_automation: {
+  forkara_create_automation: {
     running: "Forkara is creating an automation",
     completed: "Forkara created an automation",
     failed: "Forkara couldn't create an automation",
   },
-  synara_list_automations: {
+  forkara_list_automations: {
     running: "Forkara is listing automations",
     completed: "Forkara listed automations",
     failed: "Forkara couldn't list automations",
   },
-  synara_view_automation: {
+  forkara_view_automation: {
     running: "Forkara is viewing an automation",
     completed: "Forkara viewed an automation",
     failed: "Forkara couldn't view an automation",
   },
-  synara_update_automation: {
+  forkara_update_automation: {
     running: "Forkara is updating an automation",
     completed: "Forkara updated an automation",
     failed: "Forkara couldn't update an automation",
   },
-  synara_update_automation_memory: {
+  forkara_update_automation_memory: {
     running: "Forkara is updating automation memory",
     completed: "Forkara updated automation memory",
     failed: "Forkara couldn't update automation memory",
   },
-  synara_report_automation_result: {
+  forkara_report_automation_result: {
     running: "Forkara is reporting an automation result",
     completed: "Forkara reported an automation result",
     failed: "Forkara couldn't report an automation result",
   },
-  synara_cancel_automation: {
+  forkara_cancel_automation: {
     running: "Forkara is stopping an automation",
     completed: "Forkara stopped an automation",
     failed: "Forkara couldn't stop an automation",
   },
-  ...SYNARA_BROWSER_TOOL_PRESENTATIONS,
-} as const satisfies Record<string, SynaraMcpToolPresentation>;
+  ...FORKARA_BROWSER_TOOL_PRESENTATIONS,
+} as const satisfies Record<string, ForkaraMcpToolPresentation>;
 
-function normalizeSynaraMcpIdentifier(value: string): string {
+function normalizeForkaraMcpIdentifier(value: string): string {
   return value
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")
@@ -288,68 +288,68 @@ function normalizeSynaraMcpIdentifier(value: string): string {
     .replace(/^_+|_+$/g, "");
 }
 
-const SYNARA_BROWSER_TOOL_NAME_BY_PRESENTATION = new Map<string, SynaraBrowserToolName>(
+const FORKARA_BROWSER_TOOL_NAME_BY_PRESENTATION = new Map<string, ForkaraBrowserToolName>(
   BROWSER_TOOL_NAMES.map((toolName) => [
-    normalizeSynaraMcpIdentifier(BROWSER_TOOL_TITLES[toolName]),
-    `synara_${toolName}`,
+    normalizeForkaraMcpIdentifier(BROWSER_TOOL_TITLES[toolName]),
+    `forkara_${toolName}`,
   ]),
 );
 
-const SYNARA_MCP_TOOL_PRESENTATION_ENTRIES = Object.entries(SYNARA_MCP_TOOL_PRESENTATIONS).map(
+const FORKARA_MCP_TOOL_PRESENTATION_ENTRIES = Object.entries(FORKARA_MCP_TOOL_PRESENTATIONS).map(
   ([toolName, presentation]) => ({
     toolName,
     presentation,
-    normalizedRunning: normalizeSynaraMcpIdentifier(presentation.running),
-    normalizedCompleted: normalizeSynaraMcpIdentifier(presentation.completed),
-    normalizedFailed: normalizeSynaraMcpIdentifier(presentation.failed),
+    normalizedRunning: normalizeForkaraMcpIdentifier(presentation.running),
+    normalizedCompleted: normalizeForkaraMcpIdentifier(presentation.completed),
+    normalizedFailed: normalizeForkaraMcpIdentifier(presentation.failed),
   }),
 );
 
-function normalizeLegacySynaraMcpCandidate(value: string): string {
-  return normalizeSynaraMcpIdentifier(value.replace(/\b(forkara|synara)\b/gi, "synara"));
+function normalizeLegacyForkaraMcpCandidate(value: string): string {
+  return normalizeForkaraMcpIdentifier(value.replace(/\b(forkara|forkara)\b/gi, "forkara"));
 }
 
-function extractSynaraMcpToolName(normalizedCandidate: string): string | null {
+function extractForkaraMcpToolName(normalizedCandidate: string): string | null {
   if (BROWSER_TOOL_NAME_SET.has(normalizedCandidate)) {
-    return `synara_${normalizedCandidate}`;
+    return `forkara_${normalizedCandidate}`;
   }
-  if (normalizedCandidate.startsWith("mcp_synara_synara_")) {
-    return normalizedCandidate.slice("mcp_synara_".length);
+  if (normalizedCandidate.startsWith("mcp_forkara_forkara_")) {
+    return normalizedCandidate.slice("mcp_forkara_".length);
   }
-  if (normalizedCandidate.startsWith("mcp_synara_")) {
-    return `synara_${normalizedCandidate.slice("mcp_synara_".length)}`;
+  if (normalizedCandidate.startsWith("mcp_forkara_")) {
+    return `forkara_${normalizedCandidate.slice("mcp_forkara_".length)}`;
   }
-  if (normalizedCandidate.startsWith("synara_synara_")) {
-    return normalizedCandidate.slice("synara_".length);
+  if (normalizedCandidate.startsWith("forkara_forkara_")) {
+    return normalizedCandidate.slice("forkara_".length);
   }
-  if (normalizedCandidate.startsWith("synara_")) {
+  if (normalizedCandidate.startsWith("forkara_")) {
     return normalizedCandidate;
   }
   return null;
 }
 
-function resolveSynaraBrowserToolName(
+function resolveForkaraBrowserToolName(
   candidates: ReadonlyArray<string | null | undefined>,
-): SynaraBrowserToolName | null {
+): ForkaraBrowserToolName | null {
   for (const candidate of candidates) {
     if (!candidate) continue;
-    const normalizedCandidate = normalizeLegacySynaraMcpCandidate(candidate);
-    const extractedToolName = extractSynaraMcpToolName(normalizedCandidate);
+    const normalizedCandidate = normalizeLegacyForkaraMcpCandidate(candidate);
+    const extractedToolName = extractForkaraMcpToolName(normalizedCandidate);
     const candidateToolName =
       extractedToolName ??
-      SYNARA_BROWSER_TOOL_NAME_BY_PRESENTATION.get(normalizedCandidate) ??
+      FORKARA_BROWSER_TOOL_NAME_BY_PRESENTATION.get(normalizedCandidate) ??
       normalizedCandidate;
-    if (candidateToolName in SYNARA_BROWSER_TOOL_PRESENTATIONS) {
-      return candidateToolName as SynaraBrowserToolName;
+    if (candidateToolName in FORKARA_BROWSER_TOOL_PRESENTATIONS) {
+      return candidateToolName as ForkaraBrowserToolName;
     }
   }
   return null;
 }
 
-function fallbackSynaraMcpToolPresentation(toolName: string): SynaraMcpToolPresentation {
+function fallbackForkaraMcpToolPresentation(toolName: string): ForkaraMcpToolPresentation {
   const action =
     toolName
-      .replace(/^synara_/, "")
+      .replace(/^forkara_/, "")
       .replace(/_+/g, " ")
       .trim() || "an action";
   return {
@@ -359,15 +359,15 @@ function fallbackSynaraMcpToolPresentation(toolName: string): SynaraMcpToolPrese
   };
 }
 
-function resolveSynaraMcpToolPresentation(
+function resolveForkaraMcpToolPresentation(
   candidates: ReadonlyArray<string | null | undefined>,
-): SynaraMcpToolPresentation | null {
+): ForkaraMcpToolPresentation | null {
   for (const candidate of candidates) {
     if (!candidate) {
       continue;
     }
-    const normalizedCandidate = normalizeLegacySynaraMcpCandidate(candidate);
-    for (const entry of SYNARA_MCP_TOOL_PRESENTATION_ENTRIES) {
+    const normalizedCandidate = normalizeLegacyForkaraMcpCandidate(candidate);
+    for (const entry of FORKARA_MCP_TOOL_PRESENTATION_ENTRIES) {
       if (
         normalizedCandidate === entry.normalizedRunning ||
         normalizedCandidate === entry.normalizedCompleted ||
@@ -376,10 +376,10 @@ function resolveSynaraMcpToolPresentation(
         return entry.presentation;
       }
     }
-    const toolName = extractSynaraMcpToolName(normalizedCandidate);
+    const toolName = extractForkaraMcpToolName(normalizedCandidate);
     const knownPresentation = toolName
-      ? (SYNARA_MCP_TOOL_PRESENTATIONS[toolName as keyof typeof SYNARA_MCP_TOOL_PRESENTATIONS] as
-          | SynaraMcpToolPresentation
+      ? (FORKARA_MCP_TOOL_PRESENTATIONS[toolName as keyof typeof FORKARA_MCP_TOOL_PRESENTATIONS] as
+          | ForkaraMcpToolPresentation
           | undefined)
       : undefined;
     if (knownPresentation) {
@@ -391,47 +391,47 @@ function resolveSynaraMcpToolPresentation(
     if (/\s/.test(candidate.trim())) {
       continue;
     }
-    if (normalizedCandidate.startsWith("synara_is_handling_")) {
-      return fallbackSynaraMcpToolPresentation(
-        `synara_${normalizedCandidate.slice("synara_is_handling_".length)}`,
+    if (normalizedCandidate.startsWith("forkara_is_handling_")) {
+      return fallbackForkaraMcpToolPresentation(
+        `forkara_${normalizedCandidate.slice("forkara_is_handling_".length)}`,
       );
     }
-    if (normalizedCandidate.startsWith("synara_handled_")) {
-      return fallbackSynaraMcpToolPresentation(
-        `synara_${normalizedCandidate.slice("synara_handled_".length)}`,
+    if (normalizedCandidate.startsWith("forkara_handled_")) {
+      return fallbackForkaraMcpToolPresentation(
+        `forkara_${normalizedCandidate.slice("forkara_handled_".length)}`,
       );
     }
-    if (normalizedCandidate.startsWith("synara_couldn_t_handle_")) {
-      return fallbackSynaraMcpToolPresentation(
-        `synara_${normalizedCandidate.slice("synara_couldn_t_handle_".length)}`,
+    if (normalizedCandidate.startsWith("forkara_couldn_t_handle_")) {
+      return fallbackForkaraMcpToolPresentation(
+        `forkara_${normalizedCandidate.slice("forkara_couldn_t_handle_".length)}`,
       );
     }
     if (!toolName) {
       continue;
     }
-    return fallbackSynaraMcpToolPresentation(toolName);
+    return fallbackForkaraMcpToolPresentation(toolName);
   }
   return null;
 }
 
-export type SynaraMcpToolStatus = "running" | "completed" | "failed" | "cancelled";
+export type ForkaraMcpToolStatus = "running" | "completed" | "failed" | "cancelled";
 
-export interface SynaraMcpToolTitleInput {
+export interface ForkaraMcpToolTitleInput {
   readonly toolName?: string | null | undefined;
   readonly title?: string | null | undefined;
   readonly fallbackLabel?: string | null | undefined;
-  readonly status?: SynaraMcpToolStatus | undefined;
+  readonly status?: ForkaraMcpToolStatus | undefined;
 }
 
-export function isSynaraBrowserToolCall(input: SynaraMcpToolTitleInput): boolean {
-  return resolveSynaraBrowserToolName([input.toolName, input.title, input.fallbackLabel]) !== null;
+export function isForkaraBrowserToolCall(input: ForkaraMcpToolTitleInput): boolean {
+  return resolveForkaraBrowserToolName([input.toolName, input.title, input.fallbackLabel]) !== null;
 }
 
 // Every provider exposes Forkara's MCP tools differently: MCP, dynamic, and even
 // file-change rows can all represent the same gateway action. Normalize by tool
 // identity instead of provider item type so transport details never reach the UI.
-export function deriveSynaraMcpToolTitle(input: SynaraMcpToolTitleInput): string | null {
-  const presentation = resolveSynaraMcpToolPresentation([
+export function deriveForkaraMcpToolTitle(input: ForkaraMcpToolTitleInput): string | null {
+  const presentation = resolveForkaraMcpToolPresentation([
     input.toolName,
     input.title,
     input.fallbackLabel,
@@ -455,17 +455,17 @@ export function deriveSynaraMcpToolTitle(input: SynaraMcpToolTitleInput): string
   }
 }
 
-export function sanitizeSynaraMcpToolPreview(input: {
+export function sanitizeForkaraMcpToolPreview(input: {
   readonly preview?: string | null | undefined;
   readonly heading: string;
-  readonly status?: SynaraMcpToolStatus | undefined;
+  readonly status?: ForkaraMcpToolStatus | undefined;
 }): string | null {
   const preview = input.preview?.trim();
   if (!preview) return null;
-  const previewTitle = deriveSynaraMcpToolTitle({ title: preview, status: input.status });
+  const previewTitle = deriveForkaraMcpToolTitle({ title: preview, status: input.status });
   if (
     previewTitle &&
-    normalizeSynaraMcpIdentifier(previewTitle) === normalizeSynaraMcpIdentifier(input.heading)
+    normalizeForkaraMcpIdentifier(previewTitle) === normalizeForkaraMcpIdentifier(input.heading)
   ) {
     return null;
   }

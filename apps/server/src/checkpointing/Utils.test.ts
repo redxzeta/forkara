@@ -14,13 +14,13 @@ import {
 describe("managed checkpoint refs", () => {
   const threadId = ThreadId.makeUnsafe("thread-1");
 
-  it("creates canonical Synara refs", () => {
-    expect(checkpointRefForThreadTurn(threadId, 4)).toMatch(/^refs\/synara\/checkpoints\//);
+  it("creates canonical Forkara refs", () => {
+    expect(checkpointRefForThreadTurn(threadId, 4)).toMatch(/^refs\/forkara\/checkpoints\//);
   });
 
   it("recognizes a structurally valid persisted ref for the same thread", () => {
     const canonical = checkpointRefForThreadTurn(threadId, 4);
-    const historical = canonical.replace("refs/synara/", "refs/historical/");
+    const historical = canonical.replace("refs/forkara/", "refs/historical/");
     expect(parseManagedCheckpointRef(historical)?.namespace).toBe("historical");
     expect(isManagedCheckpointRefForThread(historical, threadId)).toBe(true);
   });
@@ -37,7 +37,7 @@ describe("managed checkpoint refs", () => {
 
   it("reconstructs turn and turn-start refs in an existing managed family", () => {
     const historical = checkpointRefForThreadTurn(threadId, 4).replace(
-      "refs/synara/",
+      "refs/forkara/",
       "refs/historical/",
     );
 

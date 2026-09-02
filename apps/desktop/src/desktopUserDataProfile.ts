@@ -1,12 +1,18 @@
 // FILE: desktopUserDataProfile.ts
-// Purpose: Resolves Synara's Electron userData paths and completes bridge profile repair.
+// Purpose: Resolves Forkara's Electron userData paths and completes bridge profile repair.
 
 import * as FS from "node:fs";
 import * as OS from "node:os";
 import * as Path from "node:path";
 
-const BRIDGE_PROFILE_MANIFEST_FILE_NAME = "synara-profile-seed.json";
-const CANONICAL_BROWSER_PARTITION_NAME = "synara-browser";
+import {
+  legacyProfileDirectory,
+  migrateLegacyProfile,
+  type LegacyImportResult,
+} from "@forkara/shared/legacyProfileMigration";
+
+const BRIDGE_PROFILE_MANIFEST_FILE_NAME = "forkara-profile-seed.json";
+const CANONICAL_BROWSER_PARTITION_NAME = "forkara-browser";
 const BROWSER_PARTITION_SEED_ENTRY_GROUPS = [
   ["Cookies", "Cookies-journal", "Cookies-wal", "Cookies-shm"],
   ["Local Storage"],
@@ -54,6 +60,28 @@ export function resolveDesktopUserDataPath(input: {
   readonly userDataDirectoryName: string;
 }): string {
   return Path.join(input.appDataBase, input.userDataDirectoryName);
+}
+
+/** Imports a stopped predecessor Electron profile once, then seeds the canonical partition. */
+export function migrateLegacyDesktopProfile(input: {
+  readonly appDataBase: string;
+  readonly userDataDirectoryName: string;
+}): LegacyImportResult {
+  const targetPath = resolveDesktopUserDataPath(input);
+  const result = migrateLegacyProfile({
+    homeDirectory: input.appDataBase,
+    targetDirectory: targetPath,
+    legacyDirectory: legacyProfileDirectory(input.appDataBase),
+    hasExplicitForkaraHome: false,
+  });
+  if (result.status === "migrated") {
+    FS.writeFileSync(
+      Path.join(targetPath, BRIDGE_PROFILE_MANIFEST_FILE_NAME),
+      `${JSON.stringify({ sourcePath: result.source })}\n`,
+      { encoding: "utf8", mode: 0o600, flag: "wx" },
+    );
+  }
+  return result;
 }
 
 function readBridgeProfileSourcePath(targetPath: string): string | null {
@@ -106,7 +134,7 @@ function findBridgeBrowserPartitionPaths(sourceProfilePath: string): string[] {
 /**
  * Finishes any browser-partition copy described by the compatibility bridge.
  *
- * The bridge manifest identifies the exact sibling profile that supplied the Synara profile.
+ * The bridge manifest identifies the exact sibling profile that supplied the Forkara profile.
  * Discovering its `*-browser` partition from that trusted path avoids shipping predecessor names
  * while still repairing cookies or storage entries that were absent during the first bridge run.
  */
@@ -150,7 +178,7 @@ export function repairBrowserProfileFromBridgeManifest(
         FS.existsSync(Path.join(sourcePartitionPath, entryName)),
       );
       FS.mkdirSync(targetPartitionPath, { recursive: true });
-      const stagedGroupPath = FS.mkdtempSync(Path.join(targetPartitionPath, ".synara-bridge-"));
+      const stagedGroupPath = FS.mkdtempSync(Path.join(targetPartitionPath, ".forkara-bridge-"));
       const stagedSourcePath = Path.join(stagedGroupPath, "source");
       const stagedTargetBackupPath = Path.join(stagedGroupPath, "target-backup");
       try {

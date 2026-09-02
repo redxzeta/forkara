@@ -22,13 +22,13 @@ describe("bundleSignatureFromStats", () => {
 
 describe("isWatchableBundlePath", () => {
   it("accepts a packaged asar app path", () => {
-    expect(isWatchableBundlePath("/Applications/Synara.app/Contents/Resources/app.asar")).toBe(
+    expect(isWatchableBundlePath("/Applications/Forkara.app/Contents/Resources/app.asar")).toBe(
       true,
     );
   });
 
   it("rejects an unpackaged directory app path", () => {
-    expect(isWatchableBundlePath("/Users/me/dev/synara/apps/desktop")).toBe(false);
+    expect(isWatchableBundlePath("/Users/me/dev/forkara/apps/desktop")).toBe(false);
   });
 });
 

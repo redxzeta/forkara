@@ -89,10 +89,10 @@ export function projectScriptRuntimeEnv(
   input: ProjectScriptRuntimeEnvInput,
 ): Record<string, string> {
   const env: Record<string, string> = {
-    SYNARA_PROJECT_ROOT: input.project.cwd,
+    FORKARA_PROJECT_ROOT: input.project.cwd,
   };
   if (input.worktreePath) {
-    env.SYNARA_WORKTREE_PATH = input.worktreePath;
+    env.FORKARA_WORKTREE_PATH = input.worktreePath;
   }
   if (input.extraEnv) {
     return { ...env, ...input.extraEnv };

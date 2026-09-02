@@ -817,7 +817,7 @@ export class DesktopBrowserManager {
     if (this.disposed) return;
     const key = buildRuntimeKey(input.threadId, input.sourceTabId);
     // One native activation can surface duplicate callbacks in embedded guest
-    // runtimes. Only the first decision may create a canonical Synara tab.
+    // runtimes. Only the first decision may create a canonical Forkara tab.
     if (
       this.pendingWindowOpenTasksByRuntimeKey.has(key) ||
       this.pendingAutomationWindowOpenCommitsByRuntimeKey.has(key)
@@ -1682,7 +1682,7 @@ export class DesktopBrowserManager {
       (this.window !== null && hostWebContentsId !== this.window.webContents.id) ||
       webContents.session !== electronSession.fromPartition(BROWSER_SESSION_PARTITION)
     ) {
-      throw new Error("The browser webview does not belong to this Synara window and partition.");
+      throw new Error("The browser webview does not belong to this Forkara window and partition.");
     }
 
     // Promote before adopting. The floating panel's attach effect can run before

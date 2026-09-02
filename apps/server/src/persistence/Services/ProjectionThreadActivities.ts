@@ -80,4 +80,4 @@ export interface ProjectionThreadActivityRepositoryShape {
 export class ProjectionThreadActivityRepository extends ServiceMap.Service<
   ProjectionThreadActivityRepository,
   ProjectionThreadActivityRepositoryShape
->()("synara/persistence/Services/ProjectionThreadActivities/ProjectionThreadActivityRepository") {}
+>()("forkara/persistence/Services/ProjectionThreadActivities/ProjectionThreadActivityRepository") {}

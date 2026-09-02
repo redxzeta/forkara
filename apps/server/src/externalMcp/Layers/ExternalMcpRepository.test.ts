@@ -20,7 +20,7 @@ const createIntegration = (
     integrationId: `integration-${suffix}`,
     name: `Integration ${suffix}`,
     clientKind,
-    audience: "synara.external-mcp",
+    audience: "forkara.external-mcp",
     capabilities: ["projects:read", "tasks:create", "tasks:read", "tasks:wait"],
     projectScope: "selected",
     projectIds: [`project-${suffix}`],
@@ -836,7 +836,7 @@ layer("ExternalMcpRepository", (it) => {
         repository.beginAudit({
           auditId,
           integrationId: "integration-rate",
-          tool: "synara_list_allowed_projects",
+          tool: "forkara_list_allowed_projects",
           requestId: null,
           projectId: null,
           runtimeMode: null,
@@ -871,7 +871,7 @@ layer("ExternalMcpRepository", (it) => {
         yield* repository.beginAudit({
           auditId: `bounded-audit-${index}`,
           integrationId: "integration-bounded-rate",
-          tool: "synara_list_allowed_projects",
+          tool: "forkara_list_allowed_projects",
           requestId: null,
           projectId: null,
           runtimeMode: null,

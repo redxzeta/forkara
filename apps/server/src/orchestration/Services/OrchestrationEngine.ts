@@ -166,4 +166,4 @@ export interface OrchestrationEngineShape {
 export class OrchestrationEngineService extends ServiceMap.Service<
   OrchestrationEngineService,
   OrchestrationEngineShape
->()("synara/orchestration/Services/OrchestrationEngine/OrchestrationEngineService") {}
+>()("forkara/orchestration/Services/OrchestrationEngine/OrchestrationEngineService") {}

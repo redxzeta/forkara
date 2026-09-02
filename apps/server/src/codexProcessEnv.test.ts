@@ -23,7 +23,7 @@ describe("linkOrCopyCodexOverlayEntry", () => {
       {
         entryName: "auth.json",
         sourcePath: "C:\\Users\\test\\.codex\\auth.json",
-        targetPath: "C:\\Users\\test\\.synara\\codex-home-overlay\\auth.json",
+        targetPath: "C:\\Users\\test\\.forkara\\codex-home-overlay\\auth.json",
         type: "file",
       },
       { symlink, copyFile },
@@ -31,12 +31,12 @@ describe("linkOrCopyCodexOverlayEntry", () => {
 
     expect(symlink).toHaveBeenCalledWith(
       "C:\\Users\\test\\.codex\\auth.json",
-      "C:\\Users\\test\\.synara\\codex-home-overlay\\auth.json",
+      "C:\\Users\\test\\.forkara\\codex-home-overlay\\auth.json",
       "file",
     );
     expect(copyFile).toHaveBeenCalledWith(
       "C:\\Users\\test\\.codex\\auth.json",
-      "C:\\Users\\test\\.synara\\codex-home-overlay\\auth.json",
+      "C:\\Users\\test\\.forkara\\codex-home-overlay\\auth.json",
     );
   });
 
@@ -50,7 +50,7 @@ describe("linkOrCopyCodexOverlayEntry", () => {
         {
           entryName: "sessions",
           sourcePath: "C:\\Users\\test\\.codex\\sessions",
-          targetPath: "C:\\Users\\test\\.synara\\codex-home-overlay\\sessions",
+          targetPath: "C:\\Users\\test\\.forkara\\codex-home-overlay\\sessions",
           type: "dir",
         },
         { symlink, copyFile: vi.fn(async () => undefined) },
@@ -92,7 +92,7 @@ describe("disableCodexConfigSections", () => {
 
 describe("buildCodexProcessEnv", () => {
   it("registers the active custom provider env key for diagnostic redaction", async () => {
-    const codexHome = mkdtempSync(path.join(os.tmpdir(), "synara-codex-provider-key-"));
+    const codexHome = mkdtempSync(path.join(os.tmpdir(), "forkara-codex-provider-key-"));
     writeFileSync(
       path.join(codexHome, "config.toml"),
       [
@@ -112,24 +112,24 @@ describe("buildCodexProcessEnv", () => {
     }
   });
 
-  it("replaces a user-defined Synara MCP table only inside the session overlay", async () => {
-    const sourceHome = mkdtempSync(path.join(os.tmpdir(), "synara-codex-source-"));
-    const runtimeHome = mkdtempSync(path.join(os.tmpdir(), "synara-codex-runtime-"));
+  it("replaces a user-defined Forkara MCP table only inside the session overlay", async () => {
+    const sourceHome = mkdtempSync(path.join(os.tmpdir(), "forkara-codex-source-"));
+    const runtimeHome = mkdtempSync(path.join(os.tmpdir(), "forkara-codex-runtime-"));
     const sourceConfig = [
       'model = "gpt-5.5"',
       "",
-      "[mcp_servers.synara]",
+      "[mcp_servers.forkara]",
       'url = "http://127.0.0.1:1111/stale-mcp"',
       'bearer_token_env_var = "STALE_GATEWAY_TOKEN"',
       "",
-      "[mcp_servers.synara.headers]",
+      "[mcp_servers.forkara.headers]",
       'Authorization = "stale-inline-secret"',
       "",
-      "[mcp_servers.synara.env]",
+      "[mcp_servers.forkara.env]",
       'STALE_GATEWAY_TOKEN = "stale-inline-secret"',
       "",
-      "[mcp_servers.synara-other]",
-      'url = "http://127.0.0.1:2111/synara-other"',
+      "[mcp_servers.forkara-other]",
+      'url = "http://127.0.0.1:2111/forkara-other"',
       "",
       "[mcp_servers.user-tool]",
       'url = "http://127.0.0.1:2222/user-tool"',
@@ -139,45 +139,45 @@ describe("buildCodexProcessEnv", () => {
       'exclude = ["USER_SECRET"]',
     ].join("\n");
     const managedConfig = [
-      "[mcp_servers.synara]",
+      "[mcp_servers.forkara]",
       'url = "http://127.0.0.1:3773/mcp"',
-      'bearer_token_env_var = "SYNARA_AGENT_GATEWAY_TOKEN"',
+      'bearer_token_env_var = "FORKARA_AGENT_GATEWAY_TOKEN"',
       "",
       "[shell_environment_policy]",
-      'exclude = ["SYNARA_AGENT_GATEWAY_TOKEN"]',
+      'exclude = ["FORKARA_AGENT_GATEWAY_TOKEN"]',
     ].join("\n");
     const sourceConfigPath = path.join(sourceHome, "config.toml");
     writeFileSync(sourceConfigPath, sourceConfig, "utf8");
 
     try {
       const env = await buildCodexProcessEnv({
-        env: { SYNARA_HOME: runtimeHome },
+        env: { FORKARA_HOME: runtimeHome },
         homePath: sourceHome,
         platform: "darwin",
         appendConfigToml: managedConfig,
       });
       const overlayHome = env.CODEX_HOME;
       if (!overlayHome) {
-        throw new Error("Expected a Synara Codex home overlay.");
+        throw new Error("Expected a Forkara Codex home overlay.");
       }
       const overlayConfig = readFileSync(path.join(overlayHome, "config.toml"), "utf8");
 
-      expect(overlayConfig.match(/^\[mcp_servers\.synara\]$/gm)).toHaveLength(1);
+      expect(overlayConfig.match(/^\[mcp_servers\.forkara\]$/gm)).toHaveLength(1);
       expect(overlayConfig).toContain('url = "http://127.0.0.1:3773/mcp"');
-      expect(overlayConfig).toContain('bearer_token_env_var = "SYNARA_AGENT_GATEWAY_TOKEN"');
+      expect(overlayConfig).toContain('bearer_token_env_var = "FORKARA_AGENT_GATEWAY_TOKEN"');
       expect(overlayConfig).not.toContain("http://127.0.0.1:1111/stale-mcp");
       expect(overlayConfig).not.toContain("STALE_GATEWAY_TOKEN");
       expect(overlayConfig).not.toContain("stale-inline-secret");
-      expect(overlayConfig).not.toContain("[mcp_servers.synara.headers]");
-      expect(overlayConfig).not.toContain("[mcp_servers.synara.env]");
+      expect(overlayConfig).not.toContain("[mcp_servers.forkara.headers]");
+      expect(overlayConfig).not.toContain("[mcp_servers.forkara.env]");
       expect(overlayConfig).toContain(
-        '[mcp_servers.synara-other]\nurl = "http://127.0.0.1:2111/synara-other"',
+        '[mcp_servers.forkara-other]\nurl = "http://127.0.0.1:2111/forkara-other"',
       );
       expect(overlayConfig).toContain(
         '[mcp_servers.user-tool]\nurl = "http://127.0.0.1:2222/user-tool"',
       );
       expect(overlayConfig).toContain('inherit = "core"');
-      expect(overlayConfig).toContain('exclude = ["SYNARA_AGENT_GATEWAY_TOKEN", "USER_SECRET"]');
+      expect(overlayConfig).toContain('exclude = ["FORKARA_AGENT_GATEWAY_TOKEN", "USER_SECRET"]');
       expect(readFileSync(sourceConfigPath, "utf8")).toBe(sourceConfig);
     } finally {
       rmSync(sourceHome, { recursive: true, force: true });

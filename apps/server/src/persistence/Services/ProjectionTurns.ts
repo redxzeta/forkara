@@ -185,4 +185,4 @@ export interface ProjectionTurnRepositoryShape {
 export class ProjectionTurnRepository extends ServiceMap.Service<
   ProjectionTurnRepository,
   ProjectionTurnRepositoryShape
->()("synara/persistence/Services/ProjectionTurns/ProjectionTurnRepository") {}
+>()("forkara/persistence/Services/ProjectionTurns/ProjectionTurnRepository") {}

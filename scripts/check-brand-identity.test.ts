@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   findBrandIdentityViolations,
+  findLegacyIdentityViolations,
   findVisualBrandAssetViolations,
 } from "./check-brand-identity";
 
@@ -18,6 +19,19 @@ const releaseAttribution = `**A review of the Forkara codebase found an analytic
 const inAppReleaseAttribution = `"A review of the Forkara codebase found an analytics configuration that came from the original ${firstSpacedDisplayName} codebase when Forkara was created as a clone in March.",`;
 
 describe("brand identity guard", () => {
+  it("allows predecessor identity only at the migration and historical boundaries", () => {
+    const predecessor = ["Syn", "ara"].join("");
+    expect(
+      findLegacyIdentityViolations([
+        { path: "packages/shared/src/legacyProfileMigration.ts", contents: predecessor },
+        { path: "docs/archive/history.md", contents: predecessor },
+      ]),
+    ).toEqual([]);
+    expect(
+      findLegacyIdentityViolations([{ path: "apps/server/src/main.ts", contents: predecessor }]),
+    ).toHaveLength(1);
+  });
+
   it("detects retired names in paths and text", () => {
     const violations = findBrandIdentityViolations([
       { path: `docs/${firstName}.md`, contents: "Forkara" },

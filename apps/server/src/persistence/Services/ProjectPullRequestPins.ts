@@ -70,4 +70,4 @@ export interface ProjectPullRequestPinsShape {
 export class ProjectPullRequestPins extends ServiceMap.Service<
   ProjectPullRequestPins,
   ProjectPullRequestPinsShape
->()("synara/persistence/Services/ProjectPullRequestPins/ProjectPullRequestPins") {}
+>()("forkara/persistence/Services/ProjectPullRequestPins/ProjectPullRequestPins") {}

@@ -142,7 +142,7 @@ describe("GitHub project provisioning", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const parent = yield* fileSystem.makeTempDirectoryScoped({ prefix: "synara-provision-" });
+        const parent = yield* fileSystem.makeTempDirectoryScoped({ prefix: "forkara-provision-" });
         const ghCalls: ReadonlyArray<string>[] = [];
         const githubBase = makeForkAwareGitHubCliStub(fileSystem);
         const github = {
@@ -210,7 +210,7 @@ describe("GitHub project provisioning", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const parent = yield* fileSystem.makeTempDirectoryScoped({ prefix: "synara-provision-" });
+        const parent = yield* fileSystem.makeTempDirectoryScoped({ prefix: "forkara-provision-" });
         const ghCalls: ReadonlyArray<string>[] = [];
         const githubBase = makeForkAwareGitHubCliStub(fileSystem);
         const github = {
@@ -261,7 +261,7 @@ describe("GitHub project provisioning", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const parent = yield* fileSystem.makeTempDirectoryScoped({ prefix: "synara-provision-" });
+        const parent = yield* fileSystem.makeTempDirectoryScoped({ prefix: "forkara-provision-" });
         const calls: Array<{ readonly operation: string; readonly args: readonly string[] }> = [];
         const gitBase = makeGitCoreStub(fileSystem);
         const git = {
@@ -312,7 +312,7 @@ describe("GitHub project provisioning", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const parent = yield* fileSystem.makeTempDirectoryScoped({ prefix: "synara-provision-" });
+        const parent = yield* fileSystem.makeTempDirectoryScoped({ prefix: "forkara-provision-" });
         const provisioner = yield* makeGitHubProjectProvisioner({
           homeDir: parent,
           fileSystem,
@@ -343,7 +343,7 @@ describe("GitHub project provisioning", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const parent = yield* fileSystem.makeTempDirectoryScoped({ prefix: "synara-provision-" });
+        const parent = yield* fileSystem.makeTempDirectoryScoped({ prefix: "forkara-provision-" });
         const provisioner = yield* makeGitHubProjectProvisioner({
           homeDir: parent,
           fileSystem,
@@ -373,7 +373,7 @@ describe("GitHub project provisioning", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const parent = yield* fileSystem.makeTempDirectoryScoped({ prefix: "synara-provision-" });
+        const parent = yield* fileSystem.makeTempDirectoryScoped({ prefix: "forkara-provision-" });
         const githubBase = makeForkAwareGitHubCliStub(fileSystem);
         const github = {
           ...githubBase,
@@ -414,7 +414,7 @@ describe("GitHub project provisioning", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const parent = yield* fileSystem.makeTempDirectoryScoped({ prefix: "synara-provision-" });
+        const parent = yield* fileSystem.makeTempDirectoryScoped({ prefix: "forkara-provision-" });
         const calls: string[] = [];
         const git = {
           execute: (input: Parameters<GitCoreShape["execute"]>[0]) =>
@@ -460,7 +460,7 @@ describe("GitHub project provisioning", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const parent = yield* fileSystem.makeTempDirectoryScoped({ prefix: "synara-provision-" });
+        const parent = yield* fileSystem.makeTempDirectoryScoped({ prefix: "forkara-provision-" });
         yield* fileSystem.makeDirectory(path.join(parent, "codex"));
         const calls: string[] = [];
         const git = {
@@ -499,7 +499,7 @@ describe("GitHub project provisioning", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const parent = yield* fileSystem.makeTempDirectoryScoped({ prefix: "synara-provision-" });
+        const parent = yield* fileSystem.makeTempDirectoryScoped({ prefix: "forkara-provision-" });
         yield* fileSystem.makeDirectory(path.join(parent, "codex"));
         const git = {
           execute: () =>
@@ -531,7 +531,7 @@ describe("GitHub project provisioning", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const parent = yield* fileSystem.makeTempDirectoryScoped({ prefix: "synara-provision-" });
+        const parent = yield* fileSystem.makeTempDirectoryScoped({ prefix: "forkara-provision-" });
         const missing = path.join(parent, "missing");
         const provisioner = yield* makeGitHubProjectProvisioner({
           homeDir: parent,
@@ -559,7 +559,7 @@ describe("GitHub project provisioning", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const parent = yield* fileSystem.makeTempDirectoryScoped({ prefix: "synara-provision-" });
+        const parent = yield* fileSystem.makeTempDirectoryScoped({ prefix: "forkara-provision-" });
         let cloneStarted = false;
         const unwritableFileSystem = {
           ...fileSystem,
@@ -605,7 +605,7 @@ describe("GitHub project provisioning", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const parent = yield* fileSystem.makeTempDirectoryScoped({ prefix: "synara-provision-" });
+        const parent = yield* fileSystem.makeTempDirectoryScoped({ prefix: "forkara-provision-" });
         yield* fileSystem.makeDirectory(path.join(parent, "codex"));
         const git = {
           execute: () =>
@@ -640,7 +640,7 @@ describe("GitHub project provisioning", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const parent = yield* fileSystem.makeTempDirectoryScoped({ prefix: "synara-provision-" });
+        const parent = yield* fileSystem.makeTempDirectoryScoped({ prefix: "forkara-provision-" });
         const git = {
           execute: (input: Parameters<GitCoreShape["execute"]>[0]) =>
             Effect.gen(function* () {
@@ -682,7 +682,7 @@ describe("GitHub project provisioning", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const parent = yield* fileSystem.makeTempDirectoryScoped({ prefix: "synara-provision-" });
+        const parent = yield* fileSystem.makeTempDirectoryScoped({ prefix: "forkara-provision-" });
         const git = {
           execute: (input: Parameters<GitCoreShape["execute"]>[0]) =>
             Effect.fail(
@@ -716,7 +716,7 @@ describe("GitHub project provisioning", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const parent = yield* fileSystem.makeTempDirectoryScoped({ prefix: "synara-provision-" });
+        const parent = yield* fileSystem.makeTempDirectoryScoped({ prefix: "forkara-provision-" });
         const git = {
           execute: (input: Parameters<GitCoreShape["execute"]>[0]) =>
             Effect.fail(
@@ -751,7 +751,7 @@ describe("GitHub project provisioning", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const parent = yield* fileSystem.makeTempDirectoryScoped({ prefix: "synara-provision-" });
+        const parent = yield* fileSystem.makeTempDirectoryScoped({ prefix: "forkara-provision-" });
         const git = makeGitCoreStub(fileSystem, "openai/codex");
         const fileSystemWithPromotionRace = {
           ...fileSystem,
@@ -786,7 +786,7 @@ describe("GitHub project provisioning", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const parent = yield* fileSystem.makeTempDirectoryScoped({ prefix: "synara-provision-" });
+        const parent = yield* fileSystem.makeTempDirectoryScoped({ prefix: "forkara-provision-" });
         const cloneStarted = yield* Deferred.make<void>();
         const git = {
           execute: (input: Parameters<GitCoreShape["execute"]>[0]) =>

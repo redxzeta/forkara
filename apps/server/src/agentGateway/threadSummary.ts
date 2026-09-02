@@ -3,8 +3,8 @@
  *
  * Converts full orchestration read-model shapes into compact, token-friendly
  * summaries: a derived one-word thread status, shell summaries for
- * `synara_list_threads`, and truncated/paginated message views for
- * `synara_read_thread`. Kept pure so the shaping rules are unit-testable.
+ * `forkara_list_threads`, and truncated/paginated message views for
+ * `forkara_read_thread`. Kept pure so the shaping rules are unit-testable.
  *
  * @module agentGateway/threadSummary
  */

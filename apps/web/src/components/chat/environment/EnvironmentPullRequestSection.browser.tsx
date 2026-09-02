@@ -24,7 +24,7 @@ const threadId = ThreadId.makeUnsafe("thread-pr-fix-actions");
 const pullRequest = {
   number: 321,
   title: "Keep PR context visible",
-  url: "https://github.com/example/synara/pull/321",
+  url: "https://github.com/example/forkara/pull/321",
   baseBranch: "main",
   headBranch: "fix/pr-panel",
   state: "open",
@@ -101,7 +101,7 @@ describe("EnvironmentPullRequestSection", () => {
           enabled
           activeThreadId={threadId}
           projectId={null}
-          configuredRepositories={[{ nameWithOwner: "example/synara" }]}
+          configuredRepositories={[{ nameWithOwner: "example/forkara" }]}
           onOpenUrl={vi.fn()}
           onClose={onClose}
         />
@@ -141,7 +141,7 @@ describe("EnvironmentPullRequestSection", () => {
           enabled
           activeThreadId={threadId}
           projectId={null}
-          configuredRepositories={[{ nameWithOwner: "example/synara" }]}
+          configuredRepositories={[{ nameWithOwner: "example/forkara" }]}
           onOpenUrl={vi.fn()}
           onClose={vi.fn()}
         />

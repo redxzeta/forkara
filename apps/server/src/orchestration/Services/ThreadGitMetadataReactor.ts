@@ -12,4 +12,4 @@ export interface ThreadGitMetadataReactorShape {
 export class ThreadGitMetadataReactor extends ServiceMap.Service<
   ThreadGitMetadataReactor,
   ThreadGitMetadataReactorShape
->()("synara/orchestration/Services/ThreadGitMetadataReactor") {}
+>()("forkara/orchestration/Services/ThreadGitMetadataReactor") {}

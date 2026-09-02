@@ -129,7 +129,7 @@ describe("shouldUseLivePullRequestForSidebarThread", () => {
   it("trusts the checked-out branch for a dedicated worktree when persisted metadata is stale", () => {
     expect(
       shouldUseLivePullRequestForSidebarThread({
-        threadBranch: "synara/original-branch",
+        threadBranch: "forkara/original-branch",
         liveBranch: "feat/agent-created-branch",
         hasDedicatedWorktree: true,
       }),
@@ -156,7 +156,7 @@ describe("shouldUseLivePullRequestForSidebarThread", () => {
   it("does not use live PR data for a detached worktree", () => {
     expect(
       shouldUseLivePullRequestForSidebarThread({
-        threadBranch: "synara/original-branch",
+        threadBranch: "forkara/original-branch",
         liveBranch: null,
         hasDedicatedWorktree: true,
       }),
@@ -199,12 +199,12 @@ describe("resolveSidebarThreadPullRequest", () => {
     const live = openPr(575, "feat/current-branch");
     expect(
       resolveSidebarThreadPullRequest({
-        threadBranch: "synara/stale-branch",
+        threadBranch: "forkara/stale-branch",
         liveBranch: "feat/current-branch",
         hasLiveStatus: true,
         hasDedicatedWorktree: true,
         livePullRequest: live,
-        persistedPullRequest: openPr(574, "synara/stale-branch"),
+        persistedPullRequest: openPr(574, "forkara/stale-branch"),
       }),
     ).toBe(live);
   });
@@ -419,24 +419,24 @@ describe("resolveThreadHoverCardMetadata", () => {
     const metadata = resolveThreadHoverCardMetadata({
       thread: makeSidebarThreadSummary({
         envMode: "worktree",
-        branch: "codex/synara-mobile",
+        branch: "codex/forkara-mobile",
         worktreePath: "/Users/me/.codex/worktrees/1234/Remodex",
         associatedWorktreePath: "/Users/me/.codex/worktrees/1234/Remodex",
-        associatedWorktreeBranch: "codex/synara-mobile",
+        associatedWorktreeBranch: "codex/forkara-mobile",
       }),
       project: {
         kind: "project",
-        name: "synara-mobile",
+        name: "forkara-mobile",
         folderName: "Remodex",
         cwd: "/Users/me/Developer/Remodex",
       },
     });
 
     expect(metadata).toEqual({
-      projectName: "synara-mobile",
+      projectName: "forkara-mobile",
       projectCwd: "/Users/me/Developer/Remodex",
       sourceProjectName: "Remodex",
-      branch: "codex/synara-mobile",
+      branch: "codex/forkara-mobile",
       worktreeName: "Remodex",
     });
   });
@@ -448,15 +448,15 @@ describe("resolveThreadHoverCardMetadata", () => {
       }),
       project: {
         kind: "project",
-        name: "synara",
-        folderName: "synara",
-        cwd: "/Users/me/Developer/synara",
+        name: "forkara",
+        folderName: "forkara",
+        cwd: "/Users/me/Developer/forkara",
       },
     });
 
     expect(metadata).toEqual({
-      projectName: "synara",
-      projectCwd: "/Users/me/Developer/synara",
+      projectName: "forkara",
+      projectCwd: "/Users/me/Developer/forkara",
       sourceProjectName: null,
       branch: "main",
       worktreeName: null,
@@ -468,7 +468,7 @@ describe("resolveThreadHoverCardMetadata", () => {
       envMode: "worktree",
       branch: "feat/current-branch",
       worktreePath: "/repo/.worktrees/thread",
-      associatedWorktreeBranch: "synara/stale-branch",
+      associatedWorktreeBranch: "forkara/stale-branch",
     });
 
     expect(resolveThreadDisplayBranch(thread)).toBe("feat/current-branch");
@@ -477,8 +477,8 @@ describe("resolveThreadHoverCardMetadata", () => {
         thread,
         project: {
           kind: "project",
-          name: "synara",
-          folderName: "synara",
+          name: "forkara",
+          folderName: "forkara",
           cwd: "/repo",
         },
       }).branch,
@@ -498,18 +498,18 @@ describe("resolveThreadHoverCardMetadata", () => {
     ).toBeNull();
   });
 
-  it("labels project-less chat containers as Synara instead of the slug folder", () => {
+  it("labels project-less chat containers as Forkara instead of the slug folder", () => {
     const metadata = resolveThreadHoverCardMetadata({
       thread: makeSidebarThreadSummary({ branch: null }),
       project: {
         kind: "chat",
         name: "open-the-browser-search-house-music",
         folderName: "open-the-browser-search-house-music",
-        cwd: "/Users/me/Documents/Synara/2026-08-01/open-the-browser-search-house-music",
+        cwd: "/Users/me/Documents/Forkara/2026-08-01/open-the-browser-search-house-music",
       },
     });
 
-    expect(metadata.projectName).toBe("Synara");
+    expect(metadata.projectName).toBe("Forkara");
   });
 });
 
@@ -886,7 +886,7 @@ describe("add-project error helpers", () => {
 
   it("explains root-absolute add-project paths that probably missed the home directory", () => {
     expect(
-      describeAddProjectError("Failed to create project directory: /Developer/Testing/synara"),
+      describeAddProjectError("Failed to create project directory: /Developer/Testing/forkara"),
     ).toContain("/Users/<name>/Developer");
   });
 

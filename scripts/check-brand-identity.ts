@@ -72,6 +72,48 @@ const approvedAttributions: readonly ApprovedAttribution[] = [
   },
 ];
 
+// Compatibility is intentionally one-way and local-only. Any new predecessor production
+// reference must be added here deliberately, with tests, rather than bypassing the scan.
+const legacyMigrationAllowlist = new Set([
+  "packages/shared/src/legacyProfileMigration.ts",
+  "packages/shared/src/legacyProfileMigration.test.ts",
+]);
+const historicalLegacyPaths = [
+  "CHANGELOG.md",
+  "docs/archive/",
+  "audit/",
+  "plans/",
+  ".plans/",
+];
+const legacyIdentityPattern = new RegExp(
+  `${characters(83, 121, 110, 97, 114, 97)}|${characters(115, 121, 110, 97, 114, 97)}`,
+  "i",
+);
+
+export function findLegacyIdentityViolations(
+  files: readonly BrandIdentityFile[],
+): BrandIdentityViolation[] {
+  return files.flatMap((file) => {
+    if (
+      legacyMigrationAllowlist.has(file.path) ||
+      historicalLegacyPaths.some((path) => file.path === path || file.path.startsWith(path))
+    ) {
+      return [];
+    }
+    const pathViolation = legacyIdentityPattern.test(file.path)
+      ? [{ path: file.path, line: null, text: file.path }]
+      : [];
+    const contentViolations = file.contents
+      .split(/\r?\n/)
+      .flatMap((line, index) =>
+        legacyIdentityPattern.test(line)
+          ? [{ path: file.path, line: index + 1, text: line.trim() }]
+          : [],
+      );
+    return [...pathViolation, ...contentViolations];
+  });
+}
+
 // Raster images cannot be searched for embedded text. Keep the user-facing
 // screenshots behind reviewed digests so changing either one requires another
 // explicit visual identity audit instead of silently bypassing this guard.
@@ -81,7 +123,7 @@ const approvedVisualAssetDigests = new Map<string, string>([
     "0b4be139f13dd08885a1aac26fc1f7c623697db157777d16360e985c93d47bcf",
   ],
   [
-    "assets/prod/synara-hero.jpeg",
+    "assets/prod/forkara-hero.jpeg",
     "07fbd00bde259b5ed2c69f404c00c1347de2fa46fa4a5e2aa70f016912dc2490",
   ],
 ]);
@@ -128,6 +170,7 @@ export function findBrandIdentityViolations(
 ): BrandIdentityViolation[] {
   const violations: BrandIdentityViolation[] = [];
   for (const file of files) {
+    if (legacyMigrationAllowlist.has(file.path)) continue;
     if (containsForbiddenIdentity(file.path)) {
       violations.push({ path: file.path, line: null, text: file.path });
     }
@@ -195,6 +238,7 @@ function main(): void {
   }));
   const violations = [
     ...findBrandIdentityViolations(searchableFiles),
+    ...findLegacyIdentityViolations(searchableFiles),
     ...findVisualBrandAssetViolations(trackedFiles),
   ];
   if (violations.length === 0) {

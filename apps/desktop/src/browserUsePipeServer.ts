@@ -28,14 +28,14 @@ const MAX_CLIENTS = 64;
 const MAX_IN_FLIGHT_REQUESTS = 16;
 const MAX_QUEUED_OUTPUT_BYTES = 1024 * 1024;
 const MAX_WORKSPACE_ROOT_BYTES = 4_096;
-const PIPE_DIR = "synara-browser-host";
-const PIPE_NAME_PREFIX = "synara-browser-host";
+const PIPE_DIR = "forkara-browser-host";
+const PIPE_NAME_PREFIX = "forkara-browser-host";
 
-export const SYNARA_BROWSER_HOST_PIPE_ENV = "SYNARA_BROWSER_HOST_PIPE_PATH";
-export const SYNARA_BROWSER_HOST_CAPABILITY_ENV = "SYNARA_BROWSER_HOST_CAPABILITY";
-export const SYNARA_BROWSER_HOST_CAPABILITY_FD_ENV = "SYNARA_BROWSER_HOST_CAPABILITY_FD";
+export const FORKARA_BROWSER_HOST_PIPE_ENV = "FORKARA_BROWSER_HOST_PIPE_PATH";
+export const FORKARA_BROWSER_HOST_CAPABILITY_ENV = "FORKARA_BROWSER_HOST_CAPABILITY";
+export const FORKARA_BROWSER_HOST_CAPABILITY_FD_ENV = "FORKARA_BROWSER_HOST_CAPABILITY_FD";
 /** @deprecated Read/written only while old backend builds are still supported. */
-export const SYNARA_BROWSER_USE_PIPE_ENV = "SYNARA_BROWSER_USE_PIPE_PATH";
+export const FORKARA_BROWSER_USE_PIPE_ENV = "FORKARA_BROWSER_USE_PIPE_PATH";
 
 type RpcId = string | number;
 type WriteResult = "written" | "overflow" | "closed";
@@ -120,7 +120,7 @@ export function resolveConfiguredBrowserHostPipePath(
   platform = process.platform,
 ): string {
   const configured =
-    env[SYNARA_BROWSER_HOST_PIPE_ENV]?.trim() || env[SYNARA_BROWSER_USE_PIPE_ENV]?.trim();
+    env[FORKARA_BROWSER_HOST_PIPE_ENV]?.trim() || env[FORKARA_BROWSER_USE_PIPE_ENV]?.trim();
   return configured || resolveDefaultBrowserHostPipePath(platform);
 }
 
@@ -129,9 +129,9 @@ export const resolveDefaultBrowserUsePipePath = resolveDefaultBrowserHostPipePat
 /** @deprecated Compatibility export for callers using the former IAB name. */
 export const resolveConfiguredBrowserUsePipePath = resolveConfiguredBrowserHostPipePath;
 
-export const SYNARA_BROWSER_HOST_PIPE_PATH = resolveConfiguredBrowserHostPipePath();
+export const FORKARA_BROWSER_HOST_PIPE_PATH = resolveConfiguredBrowserHostPipePath();
 /** @deprecated Compatibility alias for old packaged backend builds. */
-export const SYNARA_BROWSER_USE_PIPE_PATH = SYNARA_BROWSER_HOST_PIPE_PATH;
+export const FORKARA_BROWSER_USE_PIPE_PATH = FORKARA_BROWSER_HOST_PIPE_PATH;
 
 export function resolveBrowserHostPipeBackendEnv(
   inheritedEnv: NodeJS.ProcessEnv,
@@ -139,15 +139,15 @@ export function resolveBrowserHostPipeBackendEnv(
   capabilityFd?: number | null,
 ): NodeJS.ProcessEnv {
   const backendEnv = { ...inheritedEnv };
-  delete backendEnv[SYNARA_BROWSER_HOST_PIPE_ENV];
-  delete backendEnv[SYNARA_BROWSER_USE_PIPE_ENV];
-  delete backendEnv[SYNARA_BROWSER_HOST_CAPABILITY_ENV];
-  delete backendEnv[SYNARA_BROWSER_HOST_CAPABILITY_FD_ENV];
+  delete backendEnv[FORKARA_BROWSER_HOST_PIPE_ENV];
+  delete backendEnv[FORKARA_BROWSER_USE_PIPE_ENV];
+  delete backendEnv[FORKARA_BROWSER_HOST_CAPABILITY_ENV];
+  delete backendEnv[FORKARA_BROWSER_HOST_CAPABILITY_FD_ENV];
   const pipePath = activePipePath?.trim();
   if (pipePath && Number.isInteger(capabilityFd) && (capabilityFd ?? 0) >= 3) {
-    backendEnv[SYNARA_BROWSER_HOST_PIPE_ENV] = pipePath;
-    backendEnv[SYNARA_BROWSER_USE_PIPE_ENV] = pipePath;
-    backendEnv[SYNARA_BROWSER_HOST_CAPABILITY_FD_ENV] = String(capabilityFd);
+    backendEnv[FORKARA_BROWSER_HOST_PIPE_ENV] = pipePath;
+    backendEnv[FORKARA_BROWSER_USE_PIPE_ENV] = pipePath;
+    backendEnv[FORKARA_BROWSER_HOST_CAPABILITY_FD_ENV] = String(capabilityFd);
   }
   return backendEnv;
 }
@@ -234,11 +234,11 @@ export class BrowserHostPipeServer {
 
   constructor(
     browserManager: DesktopBrowserManager,
-    options: BrowserHostPipeServerOptions | string = SYNARA_BROWSER_HOST_PIPE_PATH,
+    options: BrowserHostPipeServerOptions | string = FORKARA_BROWSER_HOST_PIPE_PATH,
   ) {
     const normalized = typeof options === "string" ? { pipePath: options } : options;
     this.platform = normalized.platform ?? process.platform;
-    this.pipePath = normalized.pipePath ?? SYNARA_BROWSER_HOST_PIPE_PATH;
+    this.pipePath = normalized.pipePath ?? FORKARA_BROWSER_HOST_PIPE_PATH;
     const capability = normalized.capability?.trim();
     if (!capability || Buffer.byteLength(capability, "utf8") < 32) {
       throw new Error("Browser host requires a private backend capability.");
@@ -434,9 +434,9 @@ export class BrowserHostPipeServer {
     }
     client.sessionId = sessionId;
     return {
-      name: "Synara Browser Host",
+      name: "Forkara Browser Host",
       version: "1.0.0",
-      type: "synara-browser-host",
+      type: "forkara-browser-host",
       metadata: {
         sessionId,
         protocolVersion: 1,
