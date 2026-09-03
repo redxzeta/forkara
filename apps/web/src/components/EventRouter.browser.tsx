@@ -644,6 +644,7 @@ describe("EventRouter scoped orchestration sync", () => {
       await new Promise((resolve) => window.setTimeout(resolve, 120));
       expect(subscribeThreadRequestCountById.get(THREAD_ID)).toBe(subscribeCountBeforeDelete);
     } finally {
+      fixture = buildFixture();
       await mounted.cleanup();
     }
   });
