@@ -25,7 +25,7 @@ import { Throttler } from "@tanstack/react-pacer";
 
 import { APP_DISPLAY_NAME, APP_VERSION } from "../branding";
 import { DesktopWindowControls } from "../components/DesktopWindowControls";
-import { readSidebarUiState } from "../components/Sidebar.uiState";
+import { clearLastThreadRouteIfMatches, readSidebarUiState } from "../components/Sidebar.uiState";
 import { RunningChatsQuitCoordinator } from "../components/RunningChatsQuitCoordinator";
 import { AppSnapCoordinator } from "../components/AppSnapCoordinator";
 import { AppSnapWelcomeDialog } from "../components/AppSnapWelcomeDialog";
@@ -1130,6 +1130,12 @@ function EventRouter() {
     ? subscribedThreadIdsRef.current
     : nextSubscribedThreadIds;
   const pathnameRef = useRef(pathname);
+  // `pathnameRef` is refreshed in a passive effect, so the first welcome can
+  // otherwise observe the router's provisional root location before a deep
+  // link commits. Capture the committed launch path in layout so welcome
+  // bootstrap remains a root-only fallback.
+  const initialPathnameRef = useRef<string | null>(null);
+  const routeThreadIdRef = useRef(routeThreadId);
   const handledBootstrapThreadIdRef = useRef<string | null>(null);
   const bootstrapNavigationSettledRef = useRef(false);
   const visibleThreadIdsRef = useRef(subscribedThreadIds);
@@ -1141,8 +1147,15 @@ function EventRouter() {
   // callbacks (welcome handler, scoped-subscription reconcile, terminal cleanup).
   // The refs are seeded via useRef init, so mount reads stay correct before this
   // runs; subsequent renders refresh them here instead of during render.
+  useLayoutEffect(() => {
+    if (initialPathnameRef.current === null) {
+      initialPathnameRef.current = pathname;
+    }
+  }, [pathname]);
+
   useEffect(() => {
     pathnameRef.current = pathname;
+    routeThreadIdRef.current = routeThreadId;
     visibleThreadIdsRef.current = subscribedThreadIds;
     subscribedThreadIdsRef.current = subscribedThreadIds;
     // Retention must know what is on screen: an evicted visible thread keeps its
@@ -1888,6 +1901,13 @@ function EventRouter() {
       }
       shellSnapshotSequence = item.sequence;
       applyShellEvent(item);
+      if (item.kind === "thread-removed" && routeThreadIdRef.current === item.threadId) {
+        // The removal event is authoritative. Leave the stale route now instead
+        // of waiting for its empty-snapshot guard, which otherwise leaves a
+        // window for launch bootstrap to reclaim the deleted thread path.
+        clearLastThreadRouteIfMatches(item.threadId);
+        void navigate({ to: "/", replace: true });
+      }
       if (item.kind === "thread-upserted") {
         reconcilePromotedDraftsFromShellThreads([item.thread]);
       }
@@ -2100,7 +2120,7 @@ function EventRouter() {
         // own recovery: if a missing/deleted route falls back to "/" while the
         // welcome handler is still loading, a late bootstrap must not replace
         // that recovery with a different remembered server thread.
-        const welcomeArrivedOnRootRoute = pathnameRef.current === "/";
+        const welcomeArrivedOnRootRoute = initialPathnameRef.current === "/";
         // A stored route (including one waiting for empty-snapshot recovery)
         // is resolved by the index route. Bootstrap navigation is only the
         // no-preference root fallback, otherwise it races that resolver and
