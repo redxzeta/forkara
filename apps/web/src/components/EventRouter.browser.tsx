@@ -448,7 +448,10 @@ function sendShellEventPush(event: OrchestrationShellStreamItem) {
   sendEffectRpcChunk(shellStreamClient, shellStreamRequestId, event);
 }
 
-describe("EventRouter scoped orchestration sync", () => {
+// This file drives one browser app, WebSocket mock, and projection fixture. Keep
+// the cases serialized: several intentionally advance the fixture while their
+// route/stream assertions are pending, which is not safe to overlap.
+describe.sequential("EventRouter scoped orchestration sync", () => {
   beforeAll(async () => {
     fixture = buildFixture();
     await worker.start({
@@ -621,6 +624,11 @@ describe("EventRouter scoped orchestration sync", () => {
 
     try {
       const subscribeCountBeforeDelete = subscribeThreadRequestCountById.get(THREAD_ID) ?? 0;
+      fixture.snapshot = {
+        ...fixture.snapshot,
+        snapshotSequence: 2,
+        threads: [],
+      };
       sendShellEventPush({
         kind: "thread-removed",
         sequence: 2,
@@ -639,6 +647,7 @@ describe("EventRouter scoped orchestration sync", () => {
       await new Promise((resolve) => window.setTimeout(resolve, 120));
       expect(subscribeThreadRequestCountById.get(THREAD_ID)).toBe(subscribeCountBeforeDelete);
     } finally {
+      fixture = buildFixture();
       await mounted.cleanup();
     }
   });
