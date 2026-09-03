@@ -529,6 +529,10 @@ describe.sequential("EventRouter scoped orchestration sync", () => {
     }
   });
 
+  it("keeps a live assistant intro when a lagging thread snapshot arrives right after it", async () => {
+    await assertLiveAssistantIntroSurvivesLaggingSnapshot();
+  });
+
   it("recovers a stale remembered route without opening a missing detail subscription", async () => {
     const staleThreadId = ThreadId.makeUnsafe("thread-stale-route");
     localStorage.setItem(
@@ -2049,7 +2053,7 @@ describe.sequential("EventRouter scoped orchestration sync", () => {
     }
   });
 
-  it("keeps a live assistant intro when a lagging thread snapshot arrives right after it", async () => {
+  async function assertLiveAssistantIntroSurvivesLaggingSnapshot() {
     const mounted = await mountApp();
 
     try {
@@ -2127,5 +2131,5 @@ describe.sequential("EventRouter scoped orchestration sync", () => {
       fixture = buildFixture();
       await mounted.cleanup();
     }
-  });
+  }
 });
