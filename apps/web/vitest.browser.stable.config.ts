@@ -10,9 +10,8 @@ export default mergeConfig(
       // Browser suites share one page and some legacy fixture-backed suites
       // deliberately mutate their transport state between assertions.
       sequence: { concurrent: false },
-      browser: {
-        fileParallelism: false,
-      },
+      maxConcurrency: 1,
+      fileParallelism: false,
     },
   }),
 );
