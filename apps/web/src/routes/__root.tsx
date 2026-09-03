@@ -25,6 +25,7 @@ import { Throttler } from "@tanstack/react-pacer";
 
 import { APP_DISPLAY_NAME, APP_VERSION } from "../branding";
 import { DesktopWindowControls } from "../components/DesktopWindowControls";
+import { readSidebarUiState } from "../components/Sidebar.uiState";
 import { RunningChatsQuitCoordinator } from "../components/RunningChatsQuitCoordinator";
 import { AppSnapCoordinator } from "../components/AppSnapCoordinator";
 import { AppSnapWelcomeDialog } from "../components/AppSnapWelcomeDialog";
@@ -1130,6 +1131,7 @@ function EventRouter() {
     : nextSubscribedThreadIds;
   const pathnameRef = useRef(pathname);
   const handledBootstrapThreadIdRef = useRef<string | null>(null);
+  const bootstrapNavigationSettledRef = useRef(false);
   const visibleThreadIdsRef = useRef(subscribedThreadIds);
   const reconcileThreadSubscriptionsRef = useRef<
     ((threadIds: readonly ThreadId[]) => Promise<void>) | null
@@ -2094,6 +2096,21 @@ function EventRouter() {
       .catch(() => undefined);
     const unsubWelcome = onServerWelcome((payload) => {
       void (async () => {
+        // Capture this before the awaited bootstrap work. A deep link owns its
+        // own recovery: if a missing/deleted route falls back to "/" while the
+        // welcome handler is still loading, a late bootstrap must not replace
+        // that recovery with a different remembered server thread.
+        const welcomeArrivedOnRootRoute = pathnameRef.current === "/";
+        // A stored route (including one waiting for empty-snapshot recovery)
+        // is resolved by the index route. Bootstrap navigation is only the
+        // no-preference root fallback, otherwise it races that resolver and
+        // can re-persist a route the resolver has just invalidated.
+        const hasRememberedRoute = readSidebarUiState().lastThreadRoute !== null;
+        // Bootstrap is a launch-time fallback, not a reconnect navigation policy.
+        // Settling it before the asynchronous snapshot work also prevents two
+        // overlapping welcomes from making contradictory routing decisions.
+        const shouldConsiderBootstrapNavigation = !bootstrapNavigationSettledRef.current;
+        bootstrapNavigationSettledRef.current = true;
         setServerWorkspacePaths({
           homeDir: payload.homeDir,
           chatWorkspaceRoot: payload.chatWorkspaceRoot,
@@ -2110,7 +2127,12 @@ function EventRouter() {
         }
         setProjectExpanded(payload.bootstrapProjectId, true);
 
-        if (pathnameRef.current !== "/") {
+        if (
+          !shouldConsiderBootstrapNavigation ||
+          !welcomeArrivedOnRootRoute ||
+          pathnameRef.current !== "/" ||
+          hasRememberedRoute
+        ) {
           return;
         }
         if (handledBootstrapThreadIdRef.current === payload.bootstrapThreadId) {
