@@ -101,7 +101,7 @@ function shouldKeepBuiltInSlashCommandDespiteNativeCollision(
     command === "automation" ||
     command === "export" ||
     command === "feedback" ||
-    // /fork is app-owned everywhere: it creates a Synara thread with fork
+    // /fork is app-owned everywhere: it creates a Forkara thread with fork
     // lineage (native session forking per provider), which a provider-native
     // "fork" text command cannot do.
     command === "fork" ||

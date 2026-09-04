@@ -47,7 +47,7 @@ describe("resolveFilePreviewWorkspaceRoot", () => {
   it("uses a Studio thread working directory ahead of its container project", () => {
     expect(
       resolveFilePreviewWorkspaceRoot({
-        projectCwd: "/synara/studio",
+        projectCwd: "/forkara/studio",
         threadEnvMode: "local",
         threadWorktreePath: null,
         threadWorkingDirectory: "/repo/external",

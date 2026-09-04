@@ -1258,7 +1258,7 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
   if (tag === WS_METHODS.gitCreateDetachedWorktree) {
     return {
       worktree: {
-        path: "/repo/.codex/worktrees/generated/synara",
+        path: "/repo/.codex/worktrees/generated/forkara",
         ref: "0123456789abcdef0123456789abcdef01234567",
         branch: typeof body.newBranch === "string" ? body.newBranch : null,
       },
@@ -4427,7 +4427,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
             threadId: THREAD_ID,
             cwd: "/repo/project",
             env: {
-              SYNARA_PROJECT_ROOT: "/repo/project",
+              FORKARA_PROJECT_ROOT: "/repo/project",
             },
           });
         },
@@ -4524,8 +4524,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
             threadId: THREAD_ID,
             cwd: "/repo/worktrees/feature-draft",
             env: {
-              SYNARA_PROJECT_ROOT: "/repo/project",
-              SYNARA_WORKTREE_PATH: "/repo/worktrees/feature-draft",
+              FORKARA_PROJECT_ROOT: "/repo/project",
+              FORKARA_WORKTREE_PATH: "/repo/worktrees/feature-draft",
             },
           });
         },
@@ -5098,7 +5098,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
   });
 
   it("steers a running turn when Follow-up behavior is set to Steer", async () => {
-    localStorage.setItem("synara:app-settings:v1", JSON.stringify({ followUpBehavior: "steer" }));
+    localStorage.setItem("forkara:app-settings:v1", JSON.stringify({ followUpBehavior: "steer" }));
     useComposerDraftStore.getState().setPrompt(THREAD_ID, "steer this running turn");
 
     const mounted = await mountChatView({
@@ -6886,7 +6886,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           expect(createWorktreeRequest).toBeTruthy();
           const temporaryBranch = createWorktreeRequest?.newBranch;
           expect(typeof temporaryBranch).toBe("string");
-          expect(temporaryBranch).toMatch(/^synara\/[0-9a-f]{8}$/);
+          expect(temporaryBranch).toMatch(/^forkara\/[0-9a-f]{8}$/);
 
           const createThreadRequest = wsRequests.find(
             (request) =>
@@ -6902,8 +6902,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
           expect(createThreadRequest?.command).toMatchObject({
             envMode: "worktree",
             branch: temporaryBranch,
-            worktreePath: "/repo/.codex/worktrees/generated/synara",
-            associatedWorktreePath: "/repo/.codex/worktrees/generated/synara",
+            worktreePath: "/repo/.codex/worktrees/generated/forkara",
+            associatedWorktreePath: "/repo/.codex/worktrees/generated/forkara",
             associatedWorktreeBranch: temporaryBranch,
             associatedWorktreeRef: "0123456789abcdef0123456789abcdef01234567",
           });
@@ -6995,7 +6995,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
             wsRequests.some(
               (candidate) =>
                 candidate._tag === WS_METHODS.gitRemoveWorktree &&
-                candidate.path === "/repo/.codex/worktrees/generated/synara" &&
+                candidate.path === "/repo/.codex/worktrees/generated/forkara" &&
                 candidate.force === true &&
                 candidate.reclaimTemporaryBranch === true,
             ),
@@ -7124,7 +7124,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         { timeout: 10_000, interval: 16 },
       );
       const createWorktreeIndex = wsRequests.indexOf(createWorktreeRequest);
-      const worktreePath = "/repo/.codex/worktrees/generated/synara";
+      const worktreePath = "/repo/.codex/worktrees/generated/forkara";
 
       const terminalOpenRequest = await vi.waitFor(
         () => {
@@ -7153,8 +7153,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
         _tag: WS_METHODS.terminalOpen,
         cwd: worktreePath,
         env: {
-          SYNARA_PROJECT_ROOT: "/repo/project",
-          SYNARA_WORKTREE_PATH: worktreePath,
+          FORKARA_PROJECT_ROOT: "/repo/project",
+          FORKARA_WORKTREE_PATH: worktreePath,
         },
       });
 
@@ -7522,7 +7522,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
   });
 
   it("applies the selected chat width to the transcript column", async () => {
-    localStorage.setItem("synara:app-settings:v1", JSON.stringify({ chatWidth: "wide" }));
+    localStorage.setItem("forkara:app-settings:v1", JSON.stringify({ chatWidth: "wide" }));
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
       snapshot: createSnapshotForTargetUser({

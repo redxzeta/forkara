@@ -160,13 +160,13 @@ export function makeXPostService(dependencies: XPostDependencies): XPostServiceS
     if (!clientId) {
       return {
         callback,
-        error: "Set SYNARA_X_CLIENT_ID to the public client ID for an X OAuth 2.0 app.",
+        error: "Set FORKARA_X_CLIENT_ID to the public client ID for an X OAuth 2.0 app.",
       } as const;
     }
     if (!callback) {
       return {
         callback,
-        error: "X connection requires loopback access or an HTTPS SYNARA_PUBLIC_URL.",
+        error: "X connection requires loopback access or an HTTPS FORKARA_PUBLIC_URL.",
       } as const;
     }
     return { callback, error: null } as const;

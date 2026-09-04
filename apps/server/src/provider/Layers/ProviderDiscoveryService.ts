@@ -103,7 +103,7 @@ const make = Effect.gen(function* () {
       const capabilities = adapter.getComposerCapabilities
         ? yield* adapter.getComposerCapabilities()
         : disabledCapabilitiesForProvider(parsed.provider);
-      // The unified Synara skills catalog backs skill discovery for every
+      // The unified Forkara skills catalog backs skill discovery for every
       // provider, including ones without native skill support.
       return {
         ...capabilities,
@@ -126,7 +126,7 @@ const make = Effect.gen(function* () {
             .pipe(
               Effect.catch((error) =>
                 Effect.logWarning(
-                  "provider-native skill discovery failed; serving the Synara skills catalog only",
+                  "provider-native skill discovery failed; serving the Forkara skills catalog only",
                   { provider: parsed.provider, error },
                 ).pipe(Effect.as(null)),
               ),
@@ -136,13 +136,13 @@ const make = Effect.gen(function* () {
         discoverSkillsCatalog({
           cwd: parsed.cwd,
           homeDir: serverConfig.homeDir,
-          synaraBaseDir: serverConfig.baseDir,
+          forkaraBaseDir: serverConfig.baseDir,
           provider: parsed.provider,
           ...(parsed.forceReload !== undefined ? { forceReload: parsed.forceReload } : {}),
         }),
       ).pipe(
         Effect.catchCause((cause) =>
-          Effect.logWarning("synara skills catalog discovery failed", {
+          Effect.logWarning("forkara skills catalog discovery failed", {
             provider: parsed.provider,
             cause,
           }).pipe(Effect.as([] as ProviderSkillDescriptor[])),
@@ -157,7 +157,7 @@ const make = Effect.gen(function* () {
       );
       return {
         skills: filterDisabledSkills(merged, settings.skills.disabled),
-        source: nativeResult?.source ? `${nativeResult.source}+synara.catalog` : "synara.catalog",
+        source: nativeResult?.source ? `${nativeResult.source}+forkara.catalog` : "forkara.catalog",
         cached: nativeResult?.cached ?? false,
       } satisfies ProviderListSkillsResult;
     });

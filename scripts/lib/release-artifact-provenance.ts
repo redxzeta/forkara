@@ -212,7 +212,7 @@ function verifyMacSignatures(
 
   const zip = requireSingleArtifact(artifacts, ".zip");
   const diskImage = requireSingleArtifact(artifacts, ".dmg");
-  const extractionRoot = mkdtempSync(join(tmpdir(), "synara-release-provenance-"));
+  const extractionRoot = mkdtempSync(join(tmpdir(), "forkara-release-provenance-"));
   try {
     runCommand("ditto", ["-x", "-k", join(input.assetsDirectory, zip.fileName), extractionRoot]);
     const appBundles = readdirSync(extractionRoot).filter((entry) => {

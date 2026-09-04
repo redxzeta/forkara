@@ -146,5 +146,5 @@ export class OrchestrationEventDeliveryRepository extends ServiceMap.Service<
   OrchestrationEventDeliveryRepository,
   OrchestrationEventDeliveryRepositoryShape
 >()(
-  "synara/persistence/Services/OrchestrationEventDeliveries/OrchestrationEventDeliveryRepository",
+  "forkara/persistence/Services/OrchestrationEventDeliveries/OrchestrationEventDeliveryRepository",
 ) {}

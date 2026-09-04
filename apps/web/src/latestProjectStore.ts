@@ -2,7 +2,7 @@ import type { ProjectId } from "@forkara/contracts";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
-const LATEST_PROJECT_STORAGE_KEY = "synara:latest-project:v1";
+const LATEST_PROJECT_STORAGE_KEY = "forkara:latest-project:v1";
 
 interface LatestProjectStore {
   latestProjectId: ProjectId | null;

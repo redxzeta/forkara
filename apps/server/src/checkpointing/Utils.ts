@@ -9,7 +9,7 @@ import {
 } from "@forkara/contracts";
 import { resolveThreadWorkspaceCwd as resolveSharedThreadWorkspaceCwd } from "@forkara/shared/threadEnvironment";
 
-export const CHECKPOINT_REFS_PREFIX = "refs/synara/checkpoints";
+export const CHECKPOINT_REFS_PREFIX = "refs/forkara/checkpoints";
 
 const MANAGED_CHECKPOINT_REF_PATTERN =
   /^refs\/([A-Za-z0-9._-]+)\/checkpoints\/([A-Za-z0-9_-]+)\/(turn|message-start|turn-start|turn-live|revert-rescue)\/([A-Za-z0-9_-]+)$/;

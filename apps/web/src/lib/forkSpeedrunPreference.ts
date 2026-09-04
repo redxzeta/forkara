@@ -2,7 +2,7 @@
 // Purpose: Local-only per-project opt-in for displaying Fork Speedrun receipts.
 // Layer: Web persistence helper; never sends preference state off device.
 
-const STORAGE_KEY = "synara:fork-speedrun-opt-in:v1";
+const STORAGE_KEY = "forkara:fork-speedrun-opt-in:v1";
 
 function decodeProjectIds(value: string | null): Set<string> {
   const decoded: unknown = JSON.parse(value ?? "[]");

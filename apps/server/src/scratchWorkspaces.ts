@@ -22,11 +22,11 @@ function scratchOwnerSegment(homeDirectory = homedir()): string {
 }
 
 function scratchCacheRoot(homeDirectory: string, platform: NodeJS.Platform): string {
-  if (platform === "darwin") return path.join(homeDirectory, "Library", "Caches", "synara");
+  if (platform === "darwin") return path.join(homeDirectory, "Library", "Caches", "forkara");
   if (platform === "win32") {
-    return path.join(homeDirectory, "AppData", "Local", "Synara", "Cache");
+    return path.join(homeDirectory, "AppData", "Local", "Forkara", "Cache");
   }
-  return path.join(homeDirectory, ".cache", "synara");
+  return path.join(homeDirectory, ".cache", "forkara");
 }
 
 export function resolveScratchWorkspacesRoot(
@@ -38,7 +38,7 @@ export function resolveScratchWorkspacesRoot(
   const homeDirectory = options.homeDirectory ?? homedir();
   const ownerContainer = path.join(
     scratchCacheRoot(homeDirectory, options.platform ?? process.platform),
-    `.synara-${scratchOwnerSegment(homeDirectory)}`,
+    `.forkara-${scratchOwnerSegment(homeDirectory)}`,
   );
   return path.join(ownerContainer, SCRATCH_WORKSPACES_DIRNAME);
 }

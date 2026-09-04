@@ -1392,7 +1392,7 @@ const makeOrchestrationEngine = Effect.gen(function* () {
                     commandId: "repair-local-state",
                     commandType: ORCHESTRATION_WS_METHODS.repairState,
                     detail:
-                      "Projection repair failed and its staged backup could not be restored. Restart Synara before retrying repair.",
+                      "Projection repair failed and its staged backup could not be restored. Restart Forkara before retrying repair.",
                   }),
                 ),
               ),

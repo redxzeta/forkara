@@ -1,13 +1,13 @@
-# Verify: run Synara locally for runtime verification
+# Verify: run Forkara locally for runtime verification
 
-How to launch an isolated Synara instance (server + web) to observe UI changes, without touching `~/.synara` or the default dev ports.
+How to launch an isolated Forkara instance (server + web) to observe UI changes, without touching `~/.forkara` or the default dev ports.
 
 ## Launch
 
 ```bash
 # 1. Server (from the directory you want as the workspace/project cwd):
-SYNARA_HOME=<scratch>/synara-home \
-SYNARA_PORT=3899 SYNARA_MODE=web SYNARA_NO_BROWSER=1 \
+FORKARA_HOME=<scratch>/forkara-home \
+FORKARA_PORT=3899 FORKARA_MODE=web FORKARA_NO_BROWSER=1 \
 VITE_DEV_SERVER_URL=http://localhost:5899 \
 bun <repo>/apps/server/src/index.ts &
 

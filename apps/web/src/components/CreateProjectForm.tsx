@@ -371,7 +371,7 @@ export const CreateProjectForm = forwardRef<CreateProjectFormHandle, CreateProje
         return;
       }
       if (source === "github" && !props.githubProvisioningAvailable) {
-        setLocalFailure("Update the Synara server before adding a project from GitHub.");
+        setLocalFailure("Update the Forkara server before adding a project from GitHub.");
         return;
       }
       if (source === "github" && trimmedDestinationParent.length === 0) {

@@ -336,7 +336,7 @@ export interface OpenShape {
 /**
  * Open - Service tag for browser/editor launch operations.
  */
-export class Open extends ServiceMap.Service<Open, OpenShape>()("synara/open") {}
+export class Open extends ServiceMap.Service<Open, OpenShape>()("forkara/open") {}
 
 // ==============================
 // Implementations

@@ -9,7 +9,7 @@ import type { ProviderKind } from "@forkara/contracts";
 import { PROVIDER_DESCRIPTORS } from "@forkara/shared/providerMetadata";
 import { isPlainObject } from "./persistedRecord";
 
-const STORAGE_KEY = "synara:confirmed-custom-binary-paths:v1";
+const STORAGE_KEY = "forkara:confirmed-custom-binary-paths:v1";
 
 const PROVIDER_KINDS: ReadonlySet<ProviderKind> = new Set(
   PROVIDER_DESCRIPTORS.map((descriptor) => descriptor.kind),

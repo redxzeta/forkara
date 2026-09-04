@@ -90,4 +90,4 @@ export interface AuthSessionRepositoryShape {
 export class AuthSessionRepository extends ServiceMap.Service<
   AuthSessionRepository,
   AuthSessionRepositoryShape
->()("synara/persistence/Services/AuthSessions/AuthSessionRepository") {}
+>()("forkara/persistence/Services/AuthSessions/AuthSessionRepository") {}

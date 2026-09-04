@@ -19,4 +19,4 @@ export interface TurnCheckpointCoordinatorShape {
 export class TurnCheckpointCoordinator extends ServiceMap.Service<
   TurnCheckpointCoordinator,
   TurnCheckpointCoordinatorShape
->()("synara/orchestration/Services/TurnCheckpointCoordinator") {}
+>()("forkara/orchestration/Services/TurnCheckpointCoordinator") {}

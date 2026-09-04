@@ -125,7 +125,7 @@ describe("agent gateway device tool handlers", () => {
     };
 
     expect(result.availability).toEqual({ kind: "available" });
-    expect(result.devices.find((device) => device.udid === DEVICE)?.bootSource).toBe("synara");
+    expect(result.devices.find((device) => device.udid === DEVICE)?.bootSource).toBe("forkara");
   });
 
   it("taps through to the backend with the requested device points", async () => {

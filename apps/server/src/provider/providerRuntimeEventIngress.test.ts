@@ -49,7 +49,7 @@ describe("provider runtime event ingress sizing", () => {
 
     expect(sized.event).not.toBe(event);
     expect(sized.event.raw?.payload).toMatchObject({
-      synaraTruncated: true,
+      forkaraTruncated: true,
       originalBytes: expect.any(Number),
     });
     expect(callsBeforeAssertion).toBe(2);

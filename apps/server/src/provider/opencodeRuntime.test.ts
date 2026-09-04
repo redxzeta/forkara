@@ -168,14 +168,14 @@ describe("toOpenCodeFileParts", () => {
     expect(
       toOpenCodeFileParts({
         attachments: [attachment],
-        resolveAttachmentPath: () => "/tmp/synara-attachments/screenshot.png",
+        resolveAttachmentPath: () => "/tmp/forkara-attachments/screenshot.png",
       }),
     ).toEqual([
       {
         type: "file",
         mime: "image/png",
         filename: "screenshot.png",
-        url: pathToFileURL("/tmp/synara-attachments/screenshot.png").href,
+        url: pathToFileURL("/tmp/forkara-attachments/screenshot.png").href,
       },
     ]);
   });
@@ -192,7 +192,7 @@ describe("toOpenCodeFileParts", () => {
     expect(
       toOpenCodeFileParts({
         attachments: [attachment],
-        resolveAttachmentPath: () => "/tmp/synara-attachments/notes.docx",
+        resolveAttachmentPath: () => "/tmp/forkara-attachments/notes.docx",
       }),
     ).toEqual([]);
   });
@@ -220,18 +220,18 @@ describe("buildOpenCodeServerProcessEnv", () => {
     expect(env.OPENCODE_CONFIG_CONTENT).toBe('{"provider":{"openai":{}}}');
   });
 
-  it("strips inherited Synara authority from managed server processes", () => {
+  it("strips inherited Forkara authority from managed server processes", () => {
     const env = buildOpenCodeServerProcessEnv({
       baseEnv: {
         OPENAI_API_KEY: "provider-key",
-        SYNARA_AUTH_TOKEN: "server-secret",
-        SYNARA_BROWSER_USE_PIPE_PATH: "/tmp/browser.sock",
+        FORKARA_AUTH_TOKEN: "server-secret",
+        FORKARA_BROWSER_USE_PIPE_PATH: "/tmp/browser.sock",
       },
     });
 
     expect(env.OPENAI_API_KEY).toBe("provider-key");
-    expect(env.SYNARA_AUTH_TOKEN).toBeUndefined();
-    expect(env.SYNARA_BROWSER_USE_PIPE_PATH).toBeUndefined();
+    expect(env.FORKARA_AUTH_TOKEN).toBeUndefined();
+    expect(env.FORKARA_BROWSER_USE_PIPE_PATH).toBeUndefined();
   });
 });
 
@@ -434,7 +434,7 @@ describe("OpenCodeRuntime local server pool", () => {
             .connectToOpenCodeServer({
               binaryPath: "kilo",
               cliSpec: KILO_CLI_SPEC,
-              poolIsolationKey: "synara-kilo-thread",
+              poolIsolationKey: "forkara-kilo-thread",
             })
             .pipe(Effect.provideService(Scope.Scope, serverScope), Effect.forkChild);
 
@@ -598,14 +598,14 @@ describe("OpenCodeRuntime local server pool", () => {
             .connectToOpenCodeServer({
               binaryPath: "opencode",
               cwd: "/repo",
-              poolIsolationKey: "synara-thread-a",
+              poolIsolationKey: "forkara-thread-a",
             })
             .pipe(Effect.provideService(Scope.Scope, firstScope));
           const second = yield* runtime
             .connectToOpenCodeServer({
               binaryPath: "opencode",
               cwd: "/repo",
-              poolIsolationKey: "synara-thread-b",
+              poolIsolationKey: "forkara-thread-b",
             })
             .pipe(Effect.provideService(Scope.Scope, secondScope));
 

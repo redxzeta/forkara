@@ -3,7 +3,7 @@ import type {
   GitStackedAction,
   GitStatusResult,
 } from "@forkara/contracts";
-import { isTemporaryWorktreeBranch, resolveUniqueSynaraBranchName } from "@forkara/shared/git";
+import { isTemporaryWorktreeBranch, resolveUniqueForkaraBranchName } from "@forkara/shared/git";
 
 export type GitActionIconName = "commit" | "push" | "pr";
 
@@ -72,7 +72,7 @@ export function resolveDefaultCreateBranchName(
   existingBranchNames: readonly string[],
   preferredBranch?: string,
 ): string {
-  return resolveUniqueSynaraBranchName(existingBranchNames, preferredBranch);
+  return resolveUniqueForkaraBranchName(existingBranchNames, preferredBranch);
 }
 
 export function buildGitActionProgressStages(input: {

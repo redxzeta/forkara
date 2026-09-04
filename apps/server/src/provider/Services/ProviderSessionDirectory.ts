@@ -61,4 +61,4 @@ export interface ProviderSessionDirectoryShape {
 export class ProviderSessionDirectory extends ServiceMap.Service<
   ProviderSessionDirectory,
   ProviderSessionDirectoryShape
->()("synara/provider/Services/ProviderSessionDirectory") {}
+>()("forkara/provider/Services/ProviderSessionDirectory") {}

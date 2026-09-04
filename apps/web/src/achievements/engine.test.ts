@@ -135,7 +135,7 @@ describe("achievement engine", () => {
       oracleUseCount: 2,
       resetToolIds: ["oracle"],
     });
-    expect(storage.key()).toBe("synara:achievements:v1");
+    expect(storage.key()).toBe("forkara:achievements:v1");
 
     const reloaded = createAchievementEngine({
       storage,

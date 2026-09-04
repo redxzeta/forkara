@@ -55,4 +55,4 @@ export interface AgentGatewaySessionRegistryShape {
 export class AgentGatewaySessionRegistry extends ServiceMap.Service<
   AgentGatewaySessionRegistry,
   AgentGatewaySessionRegistryShape
->()("synara/agentGateway/Services/AgentGatewaySessionRegistry") {}
+>()("forkara/agentGateway/Services/AgentGatewaySessionRegistry") {}

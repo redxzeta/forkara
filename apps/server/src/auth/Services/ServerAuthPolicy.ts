@@ -6,5 +6,5 @@ export interface ServerAuthPolicyShape {
 }
 
 export class ServerAuthPolicy extends ServiceMap.Service<ServerAuthPolicy, ServerAuthPolicyShape>()(
-  "synara/auth/Services/ServerAuthPolicy",
+  "forkara/auth/Services/ServerAuthPolicy",
 ) {}

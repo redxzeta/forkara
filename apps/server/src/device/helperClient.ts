@@ -373,7 +373,7 @@ export class HelperClient {
     await this.stopStream();
     await this.attach(udid);
 
-    const directory = await mkdtemp(path.join(tmpdir(), "synara-device-frames-"));
+    const directory = await mkdtemp(path.join(tmpdir(), "forkara-device-frames-"));
     const socketPath = path.join(directory, "frames.sock");
     this.frameSocketDirectory = directory;
 

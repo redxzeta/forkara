@@ -74,4 +74,4 @@ export interface ExternalMcpServiceShape {
 export class ExternalMcpService extends ServiceMap.Service<
   ExternalMcpService,
   ExternalMcpServiceShape
->()("synara/externalMcp/Services/ExternalMcpService") {}
+>()("forkara/externalMcp/Services/ExternalMcpService") {}

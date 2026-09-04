@@ -68,4 +68,4 @@ export interface WorkspaceFileSystemShape {
 export class WorkspaceFileSystem extends ServiceMap.Service<
   WorkspaceFileSystem,
   WorkspaceFileSystemShape
->()("synara/workspace/Services/WorkspaceFileSystem") {}
+>()("forkara/workspace/Services/WorkspaceFileSystem") {}

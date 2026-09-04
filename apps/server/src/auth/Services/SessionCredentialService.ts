@@ -89,4 +89,4 @@ export interface SessionCredentialServiceShape {
 export class SessionCredentialService extends ServiceMap.Service<
   SessionCredentialService,
   SessionCredentialServiceShape
->()("synara/auth/Services/SessionCredentialService") {}
+>()("forkara/auth/Services/SessionCredentialService") {}

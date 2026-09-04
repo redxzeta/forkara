@@ -18,7 +18,7 @@ type AgentGatewaySessionLeaseCredentials = Pick<
   >;
 
 export const AGENT_GATEWAY_CREDENTIAL_ROTATION_REQUIRED = "agentGatewayCredentialRotationRequired";
-export const AGENT_GATEWAY_TURN_AUTHORITY_RETIRED = "synaraGatewayTurnAuthorityRetired";
+export const AGENT_GATEWAY_TURN_AUTHORITY_RETIRED = "forkaraGatewayTurnAuthorityRetired";
 
 /**
  * One provider runtime's ownership of one gateway credential.

@@ -501,4 +501,4 @@ export interface AutomationRepositoryShape {
 export class AutomationRepository extends ServiceMap.Service<
   AutomationRepository,
   AutomationRepositoryShape
->()("synara/persistence/Services/AutomationRepository") {}
+>()("forkara/persistence/Services/AutomationRepository") {}

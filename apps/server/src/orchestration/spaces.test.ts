@@ -82,8 +82,8 @@ describe("Spaces", () => {
       type: "project.create",
       commandId: CommandId.makeUnsafe("cmd-project-create"),
       projectId,
-      title: "Synara",
-      workspaceRoot: "/tmp/synara",
+      title: "Forkara",
+      workspaceRoot: "/tmp/forkara",
       createdAt,
     }));
     expect(readModel.projects[0]?.spaceId).toBeNull();
@@ -320,7 +320,7 @@ describe("Spaces", () => {
     const ordinaryProjectId = ProjectId.makeUnsafe("project-ordinary");
     const workspacePaths = {
       homeDir: "/Users/dev",
-      chatWorkspaceRoot: "/Users/dev/Documents/Synara/Chats",
+      chatWorkspaceRoot: "/Users/dev/Documents/Forkara/Chats",
     };
     let readModel = createEmptyReadModel(createdAt);
 
@@ -346,8 +346,8 @@ describe("Spaces", () => {
       type: "project.create",
       commandId: CommandId.makeUnsafe("cmd-create-ordinary"),
       projectId: ordinaryProjectId,
-      title: "Synara",
-      workspaceRoot: "/Users/dev/code/synara",
+      title: "Forkara",
+      workspaceRoot: "/Users/dev/code/forkara",
       createdAt,
     }));
 
@@ -422,7 +422,7 @@ describe("Spaces", () => {
     const projectId = ProjectId.makeUnsafe("project-transition-to-home");
     const workspacePaths = {
       homeDir: "/Users/dev",
-      chatWorkspaceRoot: "/Users/dev/Documents/Synara/Chats",
+      chatWorkspaceRoot: "/Users/dev/Documents/Forkara/Chats",
     };
     let readModel = createEmptyReadModel(createdAt);
 
@@ -438,8 +438,8 @@ describe("Spaces", () => {
       type: "project.create",
       commandId: CommandId.makeUnsafe("cmd-create-transition-to-home"),
       projectId,
-      title: "Synara",
-      workspaceRoot: "/tmp/synara",
+      title: "Forkara",
+      workspaceRoot: "/tmp/forkara",
       createdAt,
     }));
     ({ readModel } = await dispatch(readModel, {
@@ -472,7 +472,7 @@ describe("Spaces", () => {
     const projectId = ProjectId.makeUnsafe("project-renamed-legacy-home");
     const workspacePaths = {
       homeDir: "/Users/dev",
-      chatWorkspaceRoot: "/Users/dev/Documents/Synara/Chats",
+      chatWorkspaceRoot: "/Users/dev/Documents/Forkara/Chats",
     };
     let readModel = createEmptyReadModel(createdAt);
 

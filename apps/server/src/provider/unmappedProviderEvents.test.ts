@@ -55,7 +55,7 @@ describe("unmapped provider event safety", () => {
       expect(serialized).not.toContain("private-key-material");
       expect(serialized).toContain("[REDACTED]");
       expect(serialized).toContain("Cookie policy is strict");
-      expect(serialized).toContain("__synaraTruncated");
+      expect(serialized).toContain("__forkaraTruncated");
     }
   });
 

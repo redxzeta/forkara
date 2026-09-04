@@ -324,7 +324,7 @@ function withGatewayIdempotencyKey(
   const digest = createHash("sha256").update(requestFingerprint).digest("hex");
   return {
     ...argumentsValue,
-    idempotencyKey: `synara-mcp-${digest.slice(0, 40)}`,
+    idempotencyKey: `forkara-mcp-${digest.slice(0, 40)}`,
   };
 }
 

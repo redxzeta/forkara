@@ -185,5 +185,5 @@ export interface TerminalManagerShape {
  * TerminalManager - Service tag for terminal session orchestration.
  */
 export class TerminalManager extends ServiceMap.Service<TerminalManager, TerminalManagerShape>()(
-  "synara/terminal/Services/Manager/TerminalManager",
+  "forkara/terminal/Services/Manager/TerminalManager",
 ) {}

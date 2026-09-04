@@ -253,7 +253,7 @@ describe("ProviderRuntimeIngestion", () => {
   });
 
   async function createHarness(options?: { readonly startIngestion?: boolean }) {
-    const workspaceRoot = makeTempDir("synara-provider-project-");
+    const workspaceRoot = makeTempDir("forkara-provider-project-");
     fs.mkdirSync(path.join(workspaceRoot, ".git"));
     const provider = createProviderServiceHarness();
     const orchestrationLayer = OrchestrationEngineLive.pipe(
@@ -5431,7 +5431,7 @@ describe("ProviderRuntimeIngestion", () => {
         ? (data.rawOutput as Record<string, unknown>)
         : {};
 
-    expect(data.__synaraTruncated).toBe(true);
+    expect(data.__forkaraTruncated).toBe(true);
     expect(JSON.stringify(data).length).toBeLessThan(17_000);
     expect(rawInput.command).toBe("bun run something");
     expect(String(rawOutput.stdout ?? "").length).toBeLessThan(3_000);
@@ -5605,7 +5605,7 @@ describe("ProviderRuntimeIngestion", () => {
         ? (payload.data as Record<string, unknown>)
         : {};
 
-    expect(data.__synaraTruncated).toBe(true);
+    expect(data.__forkaraTruncated).toBe(true);
     expect(typeof data.preview).toBe("string");
     expect(JSON.stringify(data).length).toBeLessThanOrEqual(16_000);
   });

@@ -22,7 +22,7 @@ const RECORDED_AT = "2026-06-14T10:00:00.000Z";
 const BEFORE_RECORD = "2026-06-14T09:59:00.000Z";
 const AFTER_RECORD = "2026-06-14T10:00:30.000Z";
 const NOW = "2026-06-14T10:05:00.000Z";
-const PROMPT = "Synara was closed while this chat was still running. Continue where you left off.";
+const PROMPT = "Forkara was closed while this chat was still running. Continue where you left off.";
 
 const threadId = (id: string) => ThreadId.makeUnsafe(id);
 const turnId = (id: string) => TurnId.makeUnsafe(id);
@@ -314,7 +314,7 @@ describe("planQuitResumeTurns", () => {
 
 describe("quit resume record file", () => {
   const serverConfigLayer = ServerConfig.layerTest(process.cwd(), {
-    prefix: "synara-quit-resume-",
+    prefix: "forkara-quit-resume-",
   }).pipe(Layer.provide(NodeServices.layer));
   const testLayer = Layer.merge(NodeServices.layer, serverConfigLayer);
   const run = <A, E, R>(effect: Effect.Effect<A, E, R>) =>

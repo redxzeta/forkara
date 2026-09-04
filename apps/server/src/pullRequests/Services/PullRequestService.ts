@@ -41,4 +41,4 @@ export interface PullRequestServiceShape {
 export class PullRequestService extends ServiceMap.Service<
   PullRequestService,
   PullRequestServiceShape
->()("synara/pullRequests/Services/PullRequestService/PullRequestService") {}
+>()("forkara/pullRequests/Services/PullRequestService/PullRequestService") {}

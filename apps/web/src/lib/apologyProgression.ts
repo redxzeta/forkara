@@ -37,7 +37,7 @@ export const APOLOGY_PROGRESSION_STAGES = [
 
 export type ApologyProgressionStage = (typeof APOLOGY_PROGRESSION_STAGES)[number];
 
-const STORAGE_KEY = "synara:apology-progression:v1";
+const STORAGE_KEY = "forkara:apology-progression:v1";
 const FIRST_STAGE_INDEX = 0;
 export const FINAL_APOLOGY_STAGE_INDEX = APOLOGY_PROGRESSION_STAGES.length - 1;
 

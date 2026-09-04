@@ -22,7 +22,7 @@ export async function discoverCursorSkills(
     providerNativeSkillRoots({
       cwd: input.cwd,
       homeDir: input.homeDir,
-      synaraBaseDir: nodePath.join(input.homeDir, ".synara"),
+      forkaraBaseDir: nodePath.join(input.homeDir, ".forkara"),
       provider: "cursor",
     }),
   );

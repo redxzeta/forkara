@@ -102,4 +102,4 @@ export interface OrchestrationEventStoreShape {
 export class OrchestrationEventStore extends ServiceMap.Service<
   OrchestrationEventStore,
   OrchestrationEventStoreShape
->()("synara/persistence/Services/OrchestrationEventStore") {}
+>()("forkara/persistence/Services/OrchestrationEventStore") {}

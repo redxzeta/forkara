@@ -39,7 +39,7 @@ export const makeBrowserAutomationError = (
 export const makeBrowserMcpToolErrorEnvelope = (
   input: BrowserAutomationErrorInput,
 ): BrowserMcpToolErrorEnvelope => ({
-  type: "synara_browser_error",
+  type: "forkara_browser_error",
   version: 1,
   error: makeBrowserAutomationError(input),
 });

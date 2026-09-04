@@ -55,4 +55,4 @@ export interface ProviderDiscoveryServiceShape {
 export class ProviderDiscoveryService extends ServiceMap.Service<
   ProviderDiscoveryService,
   ProviderDiscoveryServiceShape
->()("synara/provider/Services/ProviderDiscoveryService") {}
+>()("forkara/provider/Services/ProviderDiscoveryService") {}

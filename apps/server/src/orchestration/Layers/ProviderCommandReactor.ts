@@ -512,7 +512,7 @@ function buildGeneratedWorktreeBranchName(raw: string): string {
     .replace(/^refs\/heads\//, "")
     .replace(/['"`]/g, "");
 
-  const withoutPrefix = normalized.replace(/^synara\//, "");
+  const withoutPrefix = normalized.replace(/^forkara\//, "");
 
   const branchFragment = withoutPrefix
     .replace(/[^a-z0-9/_-]+/g, "-")
@@ -537,7 +537,7 @@ interface ProviderCommandReactorConfigShape {
 class ProviderCommandReactorConfig extends ServiceMap.Service<
   ProviderCommandReactorConfig,
   ProviderCommandReactorConfigShape
->()("synara/orchestration/Layers/ProviderCommandReactorConfig") {}
+>()("forkara/orchestration/Layers/ProviderCommandReactorConfig") {}
 
 const make = Effect.gen(function* () {
   const { commandEventTimeout } = yield* ProviderCommandReactorConfig;

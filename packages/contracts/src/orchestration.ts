@@ -252,7 +252,7 @@ export type MessageDispatchOrigin = typeof MessageDispatchOrigin.Type;
 // create. Dedicated automations' own threads stay unmarked: they are persistent
 // conversations the user keeps, not run artifacts.
 export const ThreadCreationSource = Schema.Literals([
-  "synara_mcp",
+  "forkara_mcp",
   "external_mcp",
   "provider_native",
   "automation_run",

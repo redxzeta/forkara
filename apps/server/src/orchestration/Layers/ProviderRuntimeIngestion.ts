@@ -136,7 +136,7 @@ const MAX_BUFFERED_TOOL_OUTPUT_CHARS = 24_000;
 const MAX_BUFFERED_REASONING_SUMMARY_CHARS = 8_000;
 const MAX_BUFFERED_REASONING_SUMMARY_PARTS = 24;
 const BUFFERED_TEXT_TRUNCATION_MARKER = "... [truncated]";
-const STRICT_PROVIDER_LIFECYCLE_GUARD = process.env.SYNARA_STRICT_PROVIDER_LIFECYCLE_GUARD !== "0";
+const STRICT_PROVIDER_LIFECYCLE_GUARD = process.env.FORKARA_STRICT_PROVIDER_LIFECYCLE_GUARD !== "0";
 
 /**
  * Back off the durable-journal safety poll while the live persisted-event
@@ -1976,7 +1976,7 @@ const make = Effect.gen(function* () {
                   id: overflowId,
                   tone: "error",
                   kind: "subagent.materialization.capped",
-                  summary: `Synara limited this provider turn to ${MAX_NATIVE_CHILDREN_PER_PARENT_TURN} visible native subagents.`,
+                  summary: `Forkara limited this provider turn to ${MAX_NATIVE_CHILDREN_PER_PARENT_TURN} visible native subagents.`,
                   payload: {
                     source: "provider_native",
                     cap: MAX_NATIVE_CHILDREN_PER_PARENT_TURN,

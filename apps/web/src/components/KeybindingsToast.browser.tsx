@@ -528,7 +528,7 @@ describe("Keybindings update toast", () => {
   it("[personality-smoke] keeps a recoverable No Forks Given failure inline", async () => {
     fixture = buildFixture();
     localStorage.setItem(
-      "synara:app-settings:v1",
+      "forkara:app-settings:v1",
       JSON.stringify({ noForksGivenModeEnabled: true }),
     );
     const boundary = installPersonalitySendBoundary({ rejectTurnStart: true });

@@ -6,7 +6,7 @@
 import { normalizeWorkspaceRootForComparison } from "@forkara/shared/threadWorkspace";
 import type { LastThreadRoute } from "../chatRouteRestore";
 
-const SIDEBAR_UI_STATE_STORAGE_KEY = "synara:sidebar-ui:v1";
+const SIDEBAR_UI_STATE_STORAGE_KEY = "forkara:sidebar-ui:v1";
 
 export type SidebarUiState = {
   chatSectionExpanded: boolean;

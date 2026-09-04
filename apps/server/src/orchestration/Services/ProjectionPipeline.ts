@@ -75,4 +75,4 @@ export interface OrchestrationProjectionPipelineShape {
 export class OrchestrationProjectionPipeline extends ServiceMap.Service<
   OrchestrationProjectionPipeline,
   OrchestrationProjectionPipelineShape
->()("synara/orchestration/Services/ProjectionPipeline/OrchestrationProjectionPipeline") {}
+>()("forkara/orchestration/Services/ProjectionPipeline/OrchestrationProjectionPipeline") {}

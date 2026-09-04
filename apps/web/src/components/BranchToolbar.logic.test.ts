@@ -16,7 +16,7 @@ describe("resolveDraftEnvModeAfterBranchChange", () => {
     expect(
       resolveDraftEnvModeAfterBranchChange({
         nextWorktreePath: null,
-        currentWorktreePath: "/repo/.synara/worktrees/feature-a",
+        currentWorktreePath: "/repo/.forkara/worktrees/feature-a",
         effectiveEnvMode: "worktree",
       }),
     ).toBe("local");
@@ -35,17 +35,17 @@ describe("resolveDraftEnvModeAfterBranchChange", () => {
   it("uses worktree mode when selecting a branch already attached to a worktree", () => {
     expect(
       resolveDraftEnvModeAfterBranchChange({
-        nextWorktreePath: "/repo/.synara/worktrees/feature-a",
+        nextWorktreePath: "/repo/.forkara/worktrees/feature-a",
         currentWorktreePath: null,
         effectiveEnvMode: "local",
       }),
     ).toBe("worktree");
   });
 
-  it("keeps legacy .synara worktree paths working for migrated threads", () => {
+  it("keeps legacy .forkara worktree paths working for migrated threads", () => {
     expect(
       resolveDraftEnvModeAfterBranchChange({
-        nextWorktreePath: "/repo/.synara/worktrees/feature-a",
+        nextWorktreePath: "/repo/.forkara/worktrees/feature-a",
         currentWorktreePath: null,
         effectiveEnvMode: "local",
       }),
@@ -140,7 +140,7 @@ describe("shouldSyncLocalThreadBranch", () => {
       shouldSyncLocalThreadBranch({
         envMode: "local",
         activeWorktreePath: null,
-        activeThreadBranch: "synara/pi",
+        activeThreadBranch: "forkara/pi",
         currentGitBranch: "main",
         hasServerThread: true,
         isThreadSettled: false,
@@ -154,7 +154,7 @@ describe("shouldSyncLocalThreadBranch", () => {
       shouldSyncLocalThreadBranch({
         envMode: "local",
         activeWorktreePath: null,
-        activeThreadBranch: "synara/pi",
+        activeThreadBranch: "forkara/pi",
         currentGitBranch: "main",
         hasServerThread: true,
         isThreadSettled: false,
@@ -226,14 +226,14 @@ describe("resolveAssociatedWorktreeMetadataAfterWorkspacePatch", () => {
       resolveAssociatedWorktreeMetadataAfterWorkspacePatch({
         branch: "main",
         worktreePath: null,
-        existingAssociatedWorktreePath: "/repo/.worktrees/synara-pi",
-        existingAssociatedWorktreeBranch: "synara/pi",
-        existingAssociatedWorktreeRef: "synara/pi",
+        existingAssociatedWorktreePath: "/repo/.worktrees/forkara-pi",
+        existingAssociatedWorktreeBranch: "forkara/pi",
+        existingAssociatedWorktreeRef: "forkara/pi",
       }),
     ).toEqual({
-      associatedWorktreePath: "/repo/.worktrees/synara-pi",
-      associatedWorktreeBranch: "synara/pi",
-      associatedWorktreeRef: "synara/pi",
+      associatedWorktreePath: "/repo/.worktrees/forkara-pi",
+      associatedWorktreeBranch: "forkara/pi",
+      associatedWorktreeRef: "forkara/pi",
     });
   });
 
@@ -258,13 +258,13 @@ describe("resolveAssociatedWorktreeMetadataAfterWorkspacePatch", () => {
       resolveAssociatedWorktreeMetadataAfterWorkspacePatch({
         branch: "main",
         worktreePath: null,
-        existingAssociatedWorktreePath: "/repo/.worktrees/synara-pi",
-        existingAssociatedWorktreeBranch: "synara/pi",
-        existingAssociatedWorktreeRef: "synara/pi",
+        existingAssociatedWorktreePath: "/repo/.worktrees/forkara-pi",
+        existingAssociatedWorktreeBranch: "forkara/pi",
+        existingAssociatedWorktreeRef: "forkara/pi",
         patchAssociatedWorktreeBranch: "feature/new-pair",
       }),
     ).toEqual({
-      associatedWorktreePath: "/repo/.worktrees/synara-pi",
+      associatedWorktreePath: "/repo/.worktrees/forkara-pi",
       associatedWorktreeBranch: "feature/new-pair",
       associatedWorktreeRef: "feature/new-pair",
     });
@@ -399,15 +399,15 @@ describe("resolveBranchSelectionTarget", () => {
     expect(
       resolveBranchSelectionTarget({
         activeProjectCwd: "/repo",
-        activeWorktreePath: "/repo/.synara/worktrees/feature-a",
+        activeWorktreePath: "/repo/.forkara/worktrees/feature-a",
         branch: {
           isDefault: false,
-          worktreePath: "/repo/.synara/worktrees/feature-b",
+          worktreePath: "/repo/.forkara/worktrees/feature-b",
         },
       }),
     ).toEqual({
-      checkoutCwd: "/repo/.synara/worktrees/feature-b",
-      nextWorktreePath: "/repo/.synara/worktrees/feature-b",
+      checkoutCwd: "/repo/.forkara/worktrees/feature-b",
+      nextWorktreePath: "/repo/.forkara/worktrees/feature-b",
       reuseExistingWorktree: true,
     });
   });
@@ -416,7 +416,7 @@ describe("resolveBranchSelectionTarget", () => {
     expect(
       resolveBranchSelectionTarget({
         activeProjectCwd: "/repo",
-        activeWorktreePath: "/repo/.synara/worktrees/feature-a",
+        activeWorktreePath: "/repo/.forkara/worktrees/feature-a",
         branch: {
           isDefault: true,
           worktreePath: "/repo",
@@ -433,7 +433,7 @@ describe("resolveBranchSelectionTarget", () => {
     expect(
       resolveBranchSelectionTarget({
         activeProjectCwd: "/repo",
-        activeWorktreePath: "/repo/.synara/worktrees/feature-a",
+        activeWorktreePath: "/repo/.forkara/worktrees/feature-a",
         branch: {
           isDefault: true,
           worktreePath: null,
@@ -450,15 +450,15 @@ describe("resolveBranchSelectionTarget", () => {
     expect(
       resolveBranchSelectionTarget({
         activeProjectCwd: "/repo",
-        activeWorktreePath: "/repo/.synara/worktrees/feature-a",
+        activeWorktreePath: "/repo/.forkara/worktrees/feature-a",
         branch: {
           isDefault: false,
           worktreePath: null,
         },
       }),
     ).toEqual({
-      checkoutCwd: "/repo/.synara/worktrees/feature-a",
-      nextWorktreePath: "/repo/.synara/worktrees/feature-a",
+      checkoutCwd: "/repo/.forkara/worktrees/feature-a",
+      nextWorktreePath: "/repo/.forkara/worktrees/feature-a",
       reuseExistingWorktree: false,
     });
   });

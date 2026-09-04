@@ -32,7 +32,7 @@ interface AchievementEngine {
   readonly subscribe: (listener: () => void) => () => void;
 }
 
-const STORAGE_KEY = "synara:achievements:v1";
+const STORAGE_KEY = "forkara:achievements:v1";
 export const EMPTY_ACHIEVEMENT_SNAPSHOT: AchievementSnapshot = Object.freeze([]);
 const EMPTY_RESET_TOOL_IDS: readonly ResetToolId[] = Object.freeze([]);
 const EMPTY_ACHIEVEMENT_PROGRESS: AchievementProgress = Object.freeze({

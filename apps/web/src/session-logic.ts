@@ -40,8 +40,8 @@ export {
   type WorkLogLiveActivityState,
   type WorkLogSubagent,
   type WorkLogSubagentAction,
-  type WorkLogSynaraCreatedThread,
-  type WorkLogSynaraThreadCreation,
+  type WorkLogForkaraCreatedThread,
+  type WorkLogForkaraThreadCreation,
 } from "./workLog";
 
 export type ProviderPickerKind = ProviderKind;

@@ -62,7 +62,7 @@ export interface ServerLifecycleEventsShape {
 export class ServerLifecycleEvents extends ServiceMap.Service<
   ServerLifecycleEvents,
   ServerLifecycleEventsShape
->()("synara/serverLifecycleEvents") {}
+>()("forkara/serverLifecycleEvents") {}
 
 export const ServerLifecycleEventsLive = Layer.effect(
   ServerLifecycleEvents,

@@ -237,15 +237,15 @@ describe("browser annotation protocol", () => {
     };
     expect(
       hardenBrowserAnnotationWebviewPreferences({
-        partition: "persist:synara-browser",
-        expectedPartition: "persist:synara-browser",
+        partition: "persist:forkara-browser",
+        expectedPartition: "persist:forkara-browser",
         preloadPath: "/app/browserAnnotations/guestPreload.js",
         webPreferences,
       }),
     ).toBe(true);
     expect(webPreferences).toMatchObject({
       preload: "/app/browserAnnotations/guestPreload.js",
-      partition: "persist:synara-browser",
+      partition: "persist:forkara-browser",
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false,
@@ -256,7 +256,7 @@ describe("browser annotation protocol", () => {
     expect(
       hardenBrowserAnnotationWebviewPreferences({
         partition: "persist:other",
-        expectedPartition: "persist:synara-browser",
+        expectedPartition: "persist:forkara-browser",
         preloadPath: "/app/browserAnnotations/guestPreload.js",
         webPreferences: {},
       }),

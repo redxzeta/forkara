@@ -508,7 +508,7 @@ lifecycleLayer("CodexAdapterLive lifecycle", (it) => {
         payload: {
           summary: "  Invalid MCP configuration  ",
           details: "url is not supported for stdio\n",
-          path: "  mcp_servers.synara  ",
+          path: "  mcp_servers.forkara  ",
         },
       } satisfies ProviderEvent);
 
@@ -523,7 +523,7 @@ lifecycleLayer("CodexAdapterLive lifecycle", (it) => {
       }
       assert.equal(firstEvent.value.payload.summary, "Invalid MCP configuration");
       assert.equal(firstEvent.value.payload.details, "url is not supported for stdio");
-      assert.equal(firstEvent.value.payload.path, "mcp_servers.synara");
+      assert.equal(firstEvent.value.payload.path, "mcp_servers.forkara");
     }),
   );
 
@@ -1640,7 +1640,7 @@ lifecycleLayer("CodexAdapterLive lifecycle", (it) => {
         assert.equal(serialized.includes("private-token"), false);
         assert.ok(serialized.length < 17_000);
         assert.deepEqual(firstEvent.value.raw?.payload, {
-          synaraSanitized: true,
+          forkaraSanitized: true,
         });
         // Provider refs still resolved from the raw event.
         assert.equal(firstEvent.value.itemId, "agent_message_9");

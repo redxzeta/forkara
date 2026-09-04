@@ -24,4 +24,4 @@ export interface GitStatusBroadcasterShape {
 export class GitStatusBroadcaster extends ServiceMap.Service<
   GitStatusBroadcaster,
   GitStatusBroadcasterShape
->()("synara/git/Services/GitStatusBroadcaster") {}
+>()("forkara/git/Services/GitStatusBroadcaster") {}

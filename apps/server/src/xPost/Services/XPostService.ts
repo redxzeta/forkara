@@ -26,5 +26,5 @@ export interface XPostServiceShape {
 }
 
 export class XPostService extends ServiceMap.Service<XPostService, XPostServiceShape>()(
-  "synara/xPost/Services/XPostService",
+  "forkara/xPost/Services/XPostService",
 ) {}

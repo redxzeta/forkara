@@ -29,7 +29,7 @@ const tokenHeatmapCell = {
 const baseStats = {
   generatedAt: "2026-07-02T10:00:00.000Z",
   timezone: { utcOffsetMinutes: 0, today: "2026-07-02" },
-  identity: { homeDirBasename: "synara", initials: "S", defaultHandle: "@synara" },
+  identity: { homeDirBasename: "forkara", initials: "S", defaultHandle: "@forkara" },
   activity: {
     currentStreakDays: 0,
     longestStreakDays: 0,

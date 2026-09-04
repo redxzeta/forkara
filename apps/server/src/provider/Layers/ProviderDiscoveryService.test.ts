@@ -1,6 +1,6 @@
 // FILE: ProviderDiscoveryService.test.ts
 // Purpose: Verifies the discovery service merges provider-native skills with the
-//          unified Synara catalog, filters user-disabled skills, and reports
+//          unified Forkara catalog, filters user-disabled skills, and reports
 //          skill discovery as supported for every provider.
 // Layer: Server provider tests
 
@@ -131,7 +131,7 @@ beforeEach(async () => {
   clearSkillsCatalogCacheForTests();
   root = mkdtempSync(path.join(os.tmpdir(), "discovery-service-"));
   homeDir = path.join(root, "home");
-  baseDir = path.join(homeDir, ".synara");
+  baseDir = path.join(homeDir, ".forkara");
   cwd = path.join(root, "repo");
   await mkdir(cwd, { recursive: true });
 });

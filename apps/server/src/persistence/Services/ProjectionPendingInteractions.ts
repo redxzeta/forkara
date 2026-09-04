@@ -89,5 +89,5 @@ export class ProjectionPendingInteractionRepository extends ServiceMap.Service<
   ProjectionPendingInteractionRepository,
   ProjectionPendingInteractionRepositoryShape
 >()(
-  "synara/persistence/Services/ProjectionPendingInteractions/ProjectionPendingInteractionRepository",
+  "forkara/persistence/Services/ProjectionPendingInteractions/ProjectionPendingInteractionRepository",
 ) {}

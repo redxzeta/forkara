@@ -1555,7 +1555,7 @@ const makeOpenCodeRuntime = (options?: OpenCodeRuntimeLiveOptions) =>
   });
 
 export class OpenCodeRuntime extends ServiceMap.Service<OpenCodeRuntime, OpenCodeRuntimeShape>()(
-  "synara/provider/opencodeRuntime",
+  "forkara/provider/opencodeRuntime",
 ) {}
 
 export const makeOpenCodeRuntimeLive = (options?: OpenCodeRuntimeLiveOptions) =>

@@ -46,7 +46,7 @@ export interface ToolCallGroupSummary {
 export function isSummarizableToolCallEntry(entry: WorkLogEntry): boolean {
   return (
     entry.tone === "tool" &&
-    !entry.synaraThreadCreation &&
+    !entry.forkaraThreadCreation &&
     !entry.automation &&
     !entry.subagentAction &&
     (entry.subagents?.length ?? 0) === 0

@@ -90,4 +90,4 @@ export interface ProjectionCheckpointRepositoryShape {
 export class ProjectionCheckpointRepository extends ServiceMap.Service<
   ProjectionCheckpointRepository,
   ProjectionCheckpointRepositoryShape
->()("synara/persistence/Services/ProjectionCheckpoints/ProjectionCheckpointRepository") {}
+>()("forkara/persistence/Services/ProjectionCheckpoints/ProjectionCheckpointRepository") {}

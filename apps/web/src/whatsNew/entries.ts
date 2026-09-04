@@ -147,9 +147,9 @@ export const WHATS_NEW_ENTRIES: readonly WhatsNewEntry[] = [
         id: "ios-simulator-pane",
         title: "Build and test iOS apps beside the conversation",
         description:
-          "The new iOS Simulator pane gives you and supported agents one live, interactive device surface inside Synara.",
+          "The new iOS Simulator pane gives you and supported agents one live, interactive device surface inside Forkara.",
         details:
-          "On macOS, Synara can boot and attach simulators, stream their display, install and launch apps, tap, swipe, type, press hardware controls, save screenshots, record the view, and inspect accessibility elements. The source-shipped helper compiles with your selected Xcode, runs in a constrained sandbox, drops slow frames instead of blocking RPC traffic, and reclaims Synara-owned devices after crashes.",
+          "On macOS, Forkara can boot and attach simulators, stream their display, install and launch apps, tap, swipe, type, press hardware controls, save screenshots, record the view, and inspect accessibility elements. The source-shipped helper compiles with your selected Xcode, runs in a constrained sandbox, drops slow frames instead of blocking RPC traffic, and reclaims Forkara-owned devices after crashes.",
       },
       {
         id: "persistent-autonomous-goals",
@@ -157,7 +157,7 @@ export const WHATS_NEW_ENTRIES: readonly WhatsNewEntry[] = [
         description:
           "Persistent goals stay visible, timed, and active across turns, with pause, resume, achievement, and recovery controls.",
         details:
-          "Use /goal or the stacked composer panel to set an objective. Synara carries it through provider turns, restarts, retries, and subagent steering, records completed goals, and can automatically start the next continuation after clean completion. Queued user work, approvals, Plan mode, interrupts, failures, timeouts, and repeated blockers all have explicit priority and pause rules so autonomy does not become an uncontrolled loop.",
+          "Use /goal or the stacked composer panel to set an objective. Forkara carries it through provider turns, restarts, retries, and subagent steering, records completed goals, and can automatically start the next continuation after clean completion. Queued user work, approvals, Plan mode, interrupts, failures, timeouts, and repeated blockers all have explicit priority and pause rules so autonomy does not become an uncontrolled loop.",
       },
       {
         id: "stacked-pull-requests",
@@ -165,7 +165,7 @@ export const WHATS_NEW_ENTRIES: readonly WhatsNewEntry[] = [
         description:
           "Pull-request rows and details now understand stack position, order, readiness, navigation, and merge outcomes.",
         details:
-          "Stack badges show where each PR sits, the detail view opens an ordered navigator, and merge copy accounts for drafts, conflicts, and incomplete stack data. Synara uses GitHub's asynchronous merge path when available, falls back safely where needed, and refreshes repository-wide PR state after a stack mutation.",
+          "Stack badges show where each PR sits, the detail view opens an ordered navigator, and merge copy accounts for drafts, conflicts, and incomplete stack data. Forkara uses GitHub's asynchronous merge path when available, falls back safely where needed, and refreshes repository-wide PR state after a stack mutation.",
       },
       {
         id: "evidence-first-debug-mode",
@@ -237,7 +237,7 @@ export const WHATS_NEW_ENTRIES: readonly WhatsNewEntry[] = [
         description:
           "One malformed model or very large local Codex archive no longer destabilizes an entire catalogue or usage refresh.",
         details:
-          "Synara isolates invalid descriptors, warms every available provider catalogue for new threads, shows installed providers, exposes Pi's maximum thinking level, and turns unknown rate-limit windows into readable labels. Codex usage scans now read archives backward in bounded 64 KiB chunks and skip oversized records without loading entire session files into memory.",
+          "Forkara isolates invalid descriptors, warms every available provider catalogue for new threads, shows installed providers, exposes Pi's maximum thinking level, and turns unknown rate-limit windows into readable labels. Codex usage scans now read archives backward in bounded 64 KiB chunks and skip oversized records without loading entire session files into memory.",
       },
       {
         id: "adjustable-chat-and-file-actions",
@@ -245,7 +245,7 @@ export const WHATS_NEW_ENTRIES: readonly WhatsNewEntry[] = [
         description:
           "Choose a focused, standard, or wide chat column and use context actions directly from file references.",
         details:
-          "Chat width is persisted as a visual preference, while Markdown file links can copy their path, open in Synara, or reveal supported workspace references. File and snippet search use the same direct-to-file workflow for a more consistent navigation path.",
+          "Chat width is persisted as a visual preference, while Markdown file links can copy their path, open in Forkara, or reveal supported workspace references. File and snippet search use the same direct-to-file workflow for a more consistent navigation path.",
       },
       {
         id: "desktop-platform-polish",
@@ -797,7 +797,7 @@ export const WHATS_NEW_ENTRIES: readonly WhatsNewEntry[] = [
     date: "Jul 24",
     features: [
       {
-        id: "external-synara-mcp",
+        id: "external-forkara-mcp",
         title: "Bring Forkara to any MCP-capable agent",
         description:
           "Connect Codex, Claude Code, Claude Desktop, or another local MCP app, then let it discover your Forkara workspace, launch isolated tasks, wait for results, and bring the answer back.",
@@ -805,7 +805,7 @@ export const WHATS_NEW_ENTRIES: readonly WhatsNewEntry[] = [
           "Settings → Integrations now provides a copy-ready guided prompt for agentic clients, manual JSON configuration for Claude Desktop and other non-agentic clients, resumable pairing, all-or-selected project access, provider and model discovery, connection status, and immediate revocation. Connections expire, are rate-limited and capability-scoped, and default new work to managed worktrees with approval-required execution; local-checkout, full-access, and project-wide task reading stay behind explicit advanced permissions.",
       },
       {
-        id: "built-in-synara-mcp",
+        id: "built-in-forkara-mcp",
         title: "Forkara's agents can now operate Forkara",
         description:
           "Every supported agent running inside Forkara receives built-in tools to understand the app, delegate work, coordinate parallel tasks, inspect failures, and manage automations.",
@@ -1081,12 +1081,12 @@ export const WHATS_NEW_ENTRIES: readonly WhatsNewEntry[] = [
     date: "Jul 11",
     features: [
       {
-        id: "synara-identity",
+        id: "forkara-identity",
         title: "Forkara, all the way through",
         description:
           "The app now uses one identity everywhere, from its desktop installation and command line to packages, settings, diagnostics, and release artifacts.",
         details:
-          "The desktop bundle is now com.emanueledipietro.synara, the CLI is @forkara/cli with the synara command, and every first-party runtime identifier uses the Forkara namespace. The 0.4.2 bridge preserves renderer state during the origin change.",
+          "The desktop bundle is now com.emanueledipietro.forkara, the CLI is @forkara/cli with the forkara command, and every first-party runtime identifier uses the Forkara namespace. The 0.4.2 bridge preserves renderer state during the origin change.",
       },
       {
         id: "claude-context-and-resume",
@@ -1135,7 +1135,7 @@ export const WHATS_NEW_ENTRIES: readonly WhatsNewEntry[] = [
     date: "Jul 9",
     features: [
       {
-        id: "synara-identity-bridge",
+        id: "forkara-identity-bridge",
         title: "Forkara is preparing a seamless identity upgrade",
         description:
           "Launch this version at least once before installing the next Forkara release so your drafts, pins, theme, browser state, and other local interface preferences move with you.",
@@ -2575,10 +2575,10 @@ export const WHATS_NEW_ENTRIES: readonly WhatsNewEntry[] = [
     date: "Jun 3",
     features: [
       {
-        id: "synara-home-migration",
+        id: "forkara-home-migration",
         title: "Forkara is now the default home",
         description:
-          "The app now starts from `~/.synara`, carries the Forkara environment variables through the desktop and server runtime, and safely imports data from previous installations on first launch.",
+          "The app now starts from `~/.forkara`, carries the Forkara environment variables through the desktop and server runtime, and safely imports data from previous installations on first launch.",
       },
       {
         id: "desktop-platform-polish",

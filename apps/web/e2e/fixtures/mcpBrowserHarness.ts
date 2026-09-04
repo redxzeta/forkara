@@ -83,8 +83,8 @@ export function createBrowserMcpHarness(input: {
   } as never;
   const tools = makeAgentGatewayBrowserTools(
     makeBrowserAutomationHost({
-      SYNARA_BROWSER_HOST_PIPE_PATH: input.pipePath,
-      SYNARA_BROWSER_HOST_CAPABILITY: input.capability,
+      FORKARA_BROWSER_HOST_PIPE_PATH: input.pipePath,
+      FORKARA_BROWSER_HOST_CAPABILITY: input.capability,
     }),
     { resolveWorkspaceRoot: () => Effect.succeed(input.workspaceRoot) },
   );

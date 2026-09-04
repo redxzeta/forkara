@@ -89,7 +89,7 @@ describe("Sidebar.uiState", () => {
 
   it("ignores malformed persisted thread list paging entries", () => {
     window.localStorage.setItem(
-      "synara:sidebar-ui:v1",
+      "forkara:sidebar-ui:v1",
       JSON.stringify({
         chatSectionExpanded: true,
         chatThreadListExtraPages: -4,
@@ -130,7 +130,7 @@ describe("Sidebar.uiState", () => {
 
   it("migrates legacy all-or-nothing show-more state to one extra page", () => {
     window.localStorage.setItem(
-      "synara:sidebar-ui:v1",
+      "forkara:sidebar-ui:v1",
       JSON.stringify({
         chatSectionExpanded: false,
         chatThreadListExpanded: true,
@@ -149,7 +149,7 @@ describe("Sidebar.uiState", () => {
 
   it("drops malformed persisted last thread routes", () => {
     window.localStorage.setItem(
-      "synara:sidebar-ui:v1",
+      "forkara:sidebar-ui:v1",
       JSON.stringify({
         lastThreadRoute: {
           threadId: 42,

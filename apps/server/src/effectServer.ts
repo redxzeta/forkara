@@ -86,7 +86,7 @@ export interface ServerShape {
 }
 
 export class Server extends ServiceMap.Service<Server, ServerShape>()(
-  "synara/effectServer/Server",
+  "forkara/effectServer/Server",
 ) {}
 
 export class ServerLifecycleError extends Schema.TaggedErrorClass<ServerLifecycleError>()(

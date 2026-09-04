@@ -22,7 +22,7 @@ afterEach(() => {
 
 describe("resolveAllowedLocalPreviewFile", () => {
   it("allows images inside the current workspace", async () => {
-    const workspace = makeTempDir("synara-image-workspace-");
+    const workspace = makeTempDir("forkara-image-workspace-");
     writeFileSync(path.join(workspace, ".git"), "gitdir: .git");
     const imagePath = path.join(workspace, "preview.png");
     writeFileSync(imagePath, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
@@ -37,7 +37,7 @@ describe("resolveAllowedLocalPreviewFile", () => {
   });
 
   it("allows images inside Codex generated_images without a cwd", async () => {
-    const codexHome = makeTempDir("synara-codex-home-");
+    const codexHome = makeTempDir("forkara-codex-home-");
     const previousCodexHome = process.env.CODEX_HOME;
     process.env.CODEX_HOME = codexHome;
     try {
@@ -61,10 +61,10 @@ describe("resolveAllowedLocalPreviewFile", () => {
     }
   });
 
-  it("allows images written to the SYNARA_HOME codex-home-overlay generated_images root", async () => {
-    // Codex app-server is launched with CODEX_HOME pointing at a Synara overlay
-    // directory (see resolveSynaraCodexHomeOverlayPath). Generated images therefore
-    // live under <SYNARA_HOME>/codex-home-overlay/generated_images/<thread>/<call>.png,
+  it("allows images written to the FORKARA_HOME codex-home-overlay generated_images root", async () => {
+    // Codex app-server is launched with CODEX_HOME pointing at a Forkara overlay
+    // directory (see resolveForkaraCodexHomeOverlayPath). Generated images therefore
+    // live under <FORKARA_HOME>/codex-home-overlay/generated_images/<thread>/<call>.png,
     // which sits outside both the user's `~/.codex` source home and any workspace
     // root. The allowlist must still serve them.
     //
@@ -73,9 +73,9 @@ describe("resolveAllowedLocalPreviewFile", () => {
     // way only the overlay candidate can satisfy the allowlist.
     const fakeRoot = path.join(process.cwd(), `.test-codex-overlay-${process.pid}-${Date.now()}`);
     const sourceHome = path.join(fakeRoot, "source", ".codex");
-    const synaraHome = path.join(fakeRoot, "synara", "runtime");
+    const forkaraHome = path.join(fakeRoot, "forkara", "runtime");
     const overlayImageDir = path.join(
-      synaraHome,
+      forkaraHome,
       "codex-home-overlay",
       "generated_images",
       "thread-overlay",
@@ -84,8 +84,8 @@ describe("resolveAllowedLocalPreviewFile", () => {
     mkdirSync(overlayImageDir, { recursive: true });
     writeFileSync(imagePath, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
 
-    const previousSynaraHome = process.env.SYNARA_HOME;
-    process.env.SYNARA_HOME = synaraHome;
+    const previousForkaraHome = process.env.FORKARA_HOME;
+    process.env.FORKARA_HOME = forkaraHome;
     try {
       const result = await resolveAllowedLocalPreviewFile({
         requestedPath: imagePath,
@@ -95,17 +95,17 @@ describe("resolveAllowedLocalPreviewFile", () => {
 
       assert.equal(result?.path, realpathSync(imagePath));
     } finally {
-      if (previousSynaraHome === undefined) {
-        delete process.env.SYNARA_HOME;
+      if (previousForkaraHome === undefined) {
+        delete process.env.FORKARA_HOME;
       } else {
-        process.env.SYNARA_HOME = previousSynaraHome;
+        process.env.FORKARA_HOME = previousForkaraHome;
       }
       rmSync(fakeRoot, { recursive: true, force: true });
     }
   });
 
   it("allows PDFs inside the current workspace", async () => {
-    const workspace = makeTempDir("synara-pdf-workspace-");
+    const workspace = makeTempDir("forkara-pdf-workspace-");
     writeFileSync(path.join(workspace, ".git"), "gitdir: .git");
     const pdfPath = path.join(workspace, "docs", "spec.pdf");
     mkdirSync(path.dirname(pdfPath), { recursive: true });
@@ -123,9 +123,9 @@ describe("resolveAllowedLocalPreviewFile", () => {
 
   it("allows PDFs inside a per-thread scratch workspace without a cwd", async () => {
     // Sessions that start before a project workspace exists run in
-    // <tmpdir>/synara-codex-workspaces/<threadId>; files agents create there
+    // <tmpdir>/forkara-codex-workspaces/<threadId>; files agents create there
     // are workspace-equivalent, so documents must be servable from that root.
-    const scratchRoot = path.join(os.tmpdir(), "synara-codex-workspaces");
+    const scratchRoot = path.join(os.tmpdir(), "forkara-codex-workspaces");
     const threadDir = path.join(scratchRoot, `test-thread-${process.pid}-${Date.now()}`);
     const pdfPath = path.join(threadDir, "viewer-test.pdf");
     mkdirSync(threadDir, { recursive: true });
@@ -147,8 +147,8 @@ describe("resolveAllowedLocalPreviewFile", () => {
   });
 
   it("allows PDFs inside the configured private scratch root without a cwd", async () => {
-    const privateTempRoot = makeTempDir("synara-private-scratch-");
-    const scratchRoot = path.join(privateTempRoot, "synara-codex-workspaces");
+    const privateTempRoot = makeTempDir("forkara-private-scratch-");
+    const scratchRoot = path.join(privateTempRoot, "forkara-codex-workspaces");
     const threadDir = path.join(scratchRoot, "private-thread");
     const pdfPath = path.join(threadDir, "private-scratch.pdf");
     mkdirSync(threadDir, { recursive: true });
@@ -167,7 +167,7 @@ describe("resolveAllowedLocalPreviewFile", () => {
   it("rejects PDFs outside the workspace even under the temp-dir image roots", async () => {
     // Temp/generated-image roots exist for agent-produced images in chat
     // markdown; documents must only ever be served from the workspace.
-    const tempDir = makeTempDir("synara-pdf-outside-");
+    const tempDir = makeTempDir("forkara-pdf-outside-");
     const pdfPath = path.join(tempDir, "leak.pdf");
     writeFileSync(pdfPath, Buffer.from("%PDF-1.4"));
 
@@ -180,7 +180,7 @@ describe("resolveAllowedLocalPreviewFile", () => {
   });
 
   it("still allows images under the temp-dir roots without a workspace", async () => {
-    const tempDir = makeTempDir("synara-image-tmp-root-");
+    const tempDir = makeTempDir("forkara-image-tmp-root-");
     const imagePath = path.join(tempDir, "clip.png");
     writeFileSync(imagePath, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
 

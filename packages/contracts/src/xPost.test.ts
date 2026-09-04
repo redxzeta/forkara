@@ -9,7 +9,7 @@ describe("X posting contracts", () => {
       Schema.decodeUnknownSync(XConnectionStatus)({
         state: "unconfigured",
         redirectUri: null,
-        message: "Set SYNARA_X_CLIENT_ID.",
+        message: "Set FORKARA_X_CLIENT_ID.",
       }),
     ).toMatchObject({ state: "unconfigured", redirectUri: null });
     expect(() =>

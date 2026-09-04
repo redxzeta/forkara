@@ -29,8 +29,8 @@ describe("helper cache path agreement", () => {
     const commands: Array<{ command: string; args: readonly string[] }> = [];
     const backend = new IosSimulatorBackend({
       platform: "darwin",
-      helperSourceDir: "/tmp/synara-helper-src",
-      helperCacheRoot: "/tmp/synara-helper-cache",
+      helperSourceDir: "/tmp/forkara-helper-src",
+      helperCacheRoot: "/tmp/forkara-helper-cache",
       run: async (command, args) => {
         commands.push({ command, args });
         if (command === "xcodebuild") return result(XCODEBUILD_OUTPUT);
@@ -45,7 +45,7 @@ describe("helper cache path agreement", () => {
 
     const build = commands.find((entry) => entry.command === "/bin/sh");
     const expectedKey = deviceHelperCacheKey(XCODEBUILD_OUTPUT)!;
-    expect(build?.args[1]).toBe(join("/tmp/synara-helper-cache", expectedKey));
+    expect(build?.args[1]).toBe(join("/tmp/forkara-helper-cache", expectedKey));
   });
 
   it("roots the cache where the smoke script writes it", () => {
@@ -53,6 +53,6 @@ describe("helper cache path agreement", () => {
   });
 
   it("names the binary the build script produces", () => {
-    expect(DEVICE_HELPER_BINARY_NAME).toBe("synara-device-helper");
+    expect(DEVICE_HELPER_BINARY_NAME).toBe("forkara-device-helper");
   });
 });

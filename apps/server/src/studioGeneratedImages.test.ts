@@ -22,7 +22,7 @@ import {
 const temporaryRoots: string[] = [];
 
 async function temporaryRoot(): Promise<string> {
-  const root = await mkdtemp(path.join(os.tmpdir(), "synara-studio-images-"));
+  const root = await mkdtemp(path.join(os.tmpdir(), "forkara-studio-images-"));
   temporaryRoots.push(root);
   return root;
 }

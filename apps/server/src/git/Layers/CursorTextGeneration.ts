@@ -111,7 +111,7 @@ const makeCursorTextGeneration = Effect.gen(function* () {
         cursorSettings: resolveCursorSettings(providerOptions),
         childProcessSpawner: commandSpawner,
         cwd,
-        clientInfo: { name: "synara-git-text", version: "0.0.0" },
+        clientInfo: { name: "forkara-git-text", version: "0.0.0" },
       });
 
       yield* runtime.handleSessionUpdate((notification) => {

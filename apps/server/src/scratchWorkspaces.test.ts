@@ -27,7 +27,7 @@ import {
   resolveScratchWorkspacesRoot,
 } from "./scratchWorkspaces";
 
-const testScratchParent = mkdtempSync(path.join(tmpdir(), "synara-scratch-test-"));
+const testScratchParent = mkdtempSync(path.join(tmpdir(), "forkara-scratch-test-"));
 const testScratchRoot = path.join(testScratchParent, SCRATCH_WORKSPACES_DIRNAME);
 
 afterAll(() => {
@@ -45,7 +45,7 @@ describe("ensureIsolatedScratchWorkspace", () => {
     try {
       expect(path.relative(process.cwd(), root).startsWith("..")).toBe(true);
       expect(path.relative(homedir(), root).startsWith("..")).toBe(false);
-      expect(path.dirname(root)).toMatch(/\.synara-[a-f0-9]{16}$/);
+      expect(path.dirname(root)).toMatch(/\.forkara-[a-f0-9]{16}$/);
       expect(workspace.startsWith(`${root}${path.sep}`)).toBe(true);
     } finally {
       rmSync(workspace, { recursive: true, force: true });
@@ -97,7 +97,7 @@ describe("ensureIsolatedScratchWorkspace", () => {
         SCRATCH_WORKSPACES_DIRNAME,
       );
       const legacyRoot = path.join(testScratchParent, "legacy-link");
-      const redirectedRoot = mkdtempSync(path.join(tmpdir(), "synara-legacy-redirect-"));
+      const redirectedRoot = mkdtempSync(path.join(tmpdir(), "forkara-legacy-redirect-"));
       const workspaceSegment = path.basename(
         ensureIsolatedScratchWorkspace(threadId, privateRoot, redirectedRoot),
       );
@@ -233,7 +233,7 @@ describe("ensureIsolatedScratchWorkspace", () => {
     () => {
       const threadId = ThreadId.makeUnsafe("symlinked-private-thread");
       const workspace = ensureTestScratchWorkspace(threadId);
-      const redirected = mkdtempSync(path.join(tmpdir(), "synara-scratch-redirect-"));
+      const redirected = mkdtempSync(path.join(tmpdir(), "forkara-scratch-redirect-"));
       rmSync(workspace, { recursive: true, force: true });
       symlinkSync(redirected, workspace, "dir");
       try {

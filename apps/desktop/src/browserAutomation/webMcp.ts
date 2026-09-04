@@ -15,7 +15,7 @@ import type { BrowserAutomationVisibleRuntime } from "../browserManager";
 import { BrowserAutomationHostError, browserHostError } from "./hostErrors";
 import { callFunctionOn, evaluateInContext, observePage, throwIfAborted } from "./cdpRuntime";
 
-const WEB_MCP_BRIDGE_EXPRESSION = "globalThis.__synaraWebMcpBridgeV1";
+const WEB_MCP_BRIDGE_EXPRESSION = "globalThis.__forkaraWebMcpBridgeV1";
 const MAX_DISCOVERED_TOOLS = 128;
 const WEB_MCP_SIGNATURE_PATTERN = /^[0-9a-f]{64}$/u;
 // Discovery is model context, not a bulk transport. Keep enough room for

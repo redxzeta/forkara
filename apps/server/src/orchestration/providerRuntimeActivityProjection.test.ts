@@ -582,7 +582,7 @@ describe("provider runtime activity projection", () => {
     const payload = activity?.payload as { data?: Record<string, unknown> };
 
     expect(JSON.stringify(payload.data).length).toBeLessThanOrEqual(16_000);
-    expect(payload.data?.__synaraTruncated).toBe(true);
+    expect(payload.data?.__forkaraTruncated).toBe(true);
     expect(payload.data?.originalJsonChars).toBeGreaterThan(300_000);
   });
 
@@ -705,7 +705,7 @@ describe("provider runtime activity projection", () => {
       payload: {
         nativeEventType: "item/agentMessage/completed",
         detail: "Finished the refactor",
-        data: expect.objectContaining({ __synaraTruncated: true }),
+        data: expect.objectContaining({ __forkaraTruncated: true }),
       },
     });
     const serializedPayload = JSON.stringify(activity?.payload);

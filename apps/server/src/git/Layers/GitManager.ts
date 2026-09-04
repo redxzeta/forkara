@@ -159,7 +159,7 @@ function resolvePullRequestWorktreeLocalBranchName(
 
   const sanitizedHeadBranch = sanitizeBranchFragment(pullRequest.headBranch).trim();
   const suffix = sanitizedHeadBranch.length > 0 ? sanitizedHeadBranch : "head";
-  return `synara/pr-${pullRequest.number}/${suffix}`;
+  return `forkara/pr-${pullRequest.number}/${suffix}`;
 }
 
 function parseRepositoryOwnerLogin(nameWithOwner: string | null): string | null {
@@ -1323,7 +1323,7 @@ export const makeGitManager = Effect.gen(function* () {
         prBody ??= generated.body;
       }
 
-      const bodyFile = path.join(tempDir, `synara-pr-body-${process.pid}-${randomUUID()}.md`);
+      const bodyFile = path.join(tempDir, `forkara-pr-body-${process.pid}-${randomUUID()}.md`);
       yield* fileSystem
         .writeFileString(bodyFile, prBody)
         .pipe(
@@ -2109,11 +2109,11 @@ The local stash entry was kept for recovery.`,
 
       const preservedLocalStash = yield* stashWorkingTree(
         input.cwd,
-        `synara preserve local handoff ${randomUUID()}`,
+        `forkara preserve local handoff ${randomUUID()}`,
       );
       const sourceStash = yield* stashWorkingTree(
         input.worktreePath,
-        `synara handoff to local ${randomUUID()}`,
+        `forkara handoff to local ${randomUUID()}`,
       );
 
       yield* gitCore
@@ -2276,7 +2276,7 @@ The local stash entry was kept for recovery.`,
 
     const sourceStash = yield* stashWorkingTree(
       input.cwd,
-      `synara handoff to worktree ${randomUUID()}`,
+      `forkara handoff to worktree ${randomUUID()}`,
     );
     const sourceBranch = currentLocalStatus.branch ?? input.currentBranch ?? null;
     const sourceHeadRef = yield* readHeadRef(input.cwd);

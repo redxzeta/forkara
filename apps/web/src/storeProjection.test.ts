@@ -57,7 +57,7 @@ describe("store projection", () => {
       makeState(initialThread),
       makeReadModel(
         makeReadModelThread({
-          branch: "synara/abc123ef",
+          branch: "forkara/abc123ef",
           updatedAt: "2026-02-27T00:05:00.000Z",
         }),
       ),
@@ -555,7 +555,7 @@ describe("store projection", () => {
     const initialState = makeState(makeThread());
     const readModel = makeReadModel(
       makeReadModelThread({
-        creationSource: "synara_mcp",
+        creationSource: "forkara_mcp",
         sourceThreadId,
       }),
     );
@@ -563,7 +563,7 @@ describe("store projection", () => {
     const next = syncServerReadModel(initialState, readModel);
     const thread = getThreadFromState(next, ThreadId.makeUnsafe("thread-1"));
 
-    expect(thread?.creationSource).toBe("synara_mcp");
+    expect(thread?.creationSource).toBe("forkara_mcp");
     expect(thread?.sourceThreadId).toBe(sourceThreadId);
   });
 
@@ -628,7 +628,7 @@ describe("store projection", () => {
   it("adds the desktop bridge token to server attachment preview URLs", () => {
     const previousWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
     const testWindow = {
-      location: { origin: "synara://app" },
+      location: { origin: "forkara://app" },
       desktopBridge: {
         getWsUrl: () => "ws://127.0.0.1:53036/?token=desktop-secret",
       },
@@ -1336,7 +1336,7 @@ describe("store projection", () => {
     const liveState = makeState(
       makeThread({
         id: threadId,
-        branch: "synara/tmp-working",
+        branch: "forkara/tmp-working",
         worktreePath: "/tmp/worktrees/thread-hot-path-branch-flow",
         createBranchFlowCompleted: true,
       }),
@@ -1346,7 +1346,7 @@ describe("store projection", () => {
       liveState,
       makeReadModelThread({
         id: threadId,
-        branch: "synara/tmp-working",
+        branch: "forkara/tmp-working",
         worktreePath: "/tmp/worktrees/thread-hot-path-branch-flow",
         createBranchFlowCompleted: false,
       }),
