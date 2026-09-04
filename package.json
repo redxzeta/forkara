@@ -44,6 +44,7 @@
     "test:personality:smoke": "bun run --cwd apps/web test:personality:smoke",
     "brand:check": "node scripts/check-brand-identity.ts",
     "migrations:check": "node scripts/check-migration-lineage.ts",
+    "architecture:check": "node scripts/check-architecture-boundaries.ts",
     "test:desktop-smoke": "turbo run smoke-test --filter=@forkara/desktop",
     "test:device": "bun scripts/device-helper-smoke.ts",
     "test:device:probe": "bun scripts/device-helper-smoke.ts --probe-only",
