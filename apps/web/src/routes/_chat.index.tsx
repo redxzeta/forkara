@@ -4,14 +4,14 @@
 // Layer: Routing
 // Depends on: the shared restore/create route surface plus the home-chat new-chat handler.
 
-import { SpaceId, type ProjectId } from "@forkara/contracts";
+import { SpaceId, ThreadId, type ProjectId } from "@forkara/contracts";
 import { createFileRoute } from "@tanstack/react-router";
 
 import {
   RestoreOrCreateChatRoute,
   type RestoreRouteResolver,
 } from "../components/RestoreOrCreateChatRoute";
-import { readSidebarUiState } from "../components/Sidebar.uiState";
+import { clearLastThreadRouteIfMatches, readSidebarUiState } from "../components/Sidebar.uiState";
 import { useComposerDraftStore } from "../composerDraftStore";
 import { useHandleNewChat } from "../hooks/useHandleNewChat";
 import { VOID_SPACE_KEY } from "../lib/spaceGrouping";
@@ -94,6 +94,12 @@ function ChatIndexRouteView() {
     <RestoreOrCreateChatRoute
       resolveRestoreRoute={resolveRestoreRoute}
       createFreshChat={createFreshChat}
+      onUnrestorableRememberedRoute={(route) => {
+        const threadId = ThreadId.makeUnsafe(route.threadId);
+        if (!threadIds.includes(threadId) && !draftProjectIdByThreadId.has(threadId)) {
+          clearLastThreadRouteIfMatches(route.threadId);
+        }
+      }}
     />
   );
 }

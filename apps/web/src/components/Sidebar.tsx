@@ -1342,6 +1342,7 @@ export default function Sidebar(props: {
   );
   const activeSpaceId = resolveActiveSpaceId(storedActiveSpaceId, spaces, pendingActiveSpaceId);
   const threadsHydrated = useStore((store) => store.threadsHydrated);
+  const serverThreadIds = useStore((store) => store.threadIds);
   const sidebarThreadSummaryById = useStore((store) => store.sidebarThreadSummaryById);
   const syncServerShellSnapshot = useStore((store) => store.syncServerShellSnapshot);
   const markThreadVisited = useStore((store) => store.markThreadVisited);
@@ -1656,6 +1657,15 @@ export default function Sidebar(props: {
   const routeActiveSidebarThreadId = routeThreadId;
   const activeSidebarThreadId = optimisticActiveThreadId ?? routeActiveSidebarThreadId;
   const visualActiveSidebarThreadId = optimisticActiveThreadId ?? routeThreadId;
+  // The router exposes params before shell hydration has proven that they refer
+  // to a thread. Persisting every param lets a stale URL win the recovery race:
+  // the route clears its remembered target, then the sidebar writes that same
+  // invalid target back on its deferred route-sync pass. Local drafts are valid
+  // before their first shell row, so they remain eligible restore targets.
+  const routeThreadIsKnown =
+    routeThreadId !== null &&
+    (serverThreadIds?.includes(routeThreadId) === true ||
+      draftThreadsByThreadId[routeThreadId] !== undefined);
   const selectSidebarThreads = useMemo(() => createSidebarThreadSummariesSelector(), []);
   const hideAutomationRunThreads = !appSettings.showAutomationRunThreads;
   const selectSidebarTreeThreads = useMemo(
@@ -4025,7 +4035,7 @@ export default function Sidebar(props: {
   ]);
 
   useEffect(() => {
-    if (isOnSettings || routeThreadId === null) {
+    if (isOnSettings || routeThreadId === null || !routeThreadIsKnown) {
       return;
     }
 
@@ -4045,7 +4055,7 @@ export default function Sidebar(props: {
       });
     }, 0);
     return () => window.clearTimeout(settle);
-  }, [isOnSettings, routeSearch.splitViewId, routeThreadId]);
+  }, [isOnSettings, routeSearch.splitViewId, routeThreadId, routeThreadIsKnown]);
 
   const handleThreadClick = useCallback(
     (event: MouseEvent, threadId: ThreadId, orderedProjectThreadIds: readonly ThreadId[]) => {

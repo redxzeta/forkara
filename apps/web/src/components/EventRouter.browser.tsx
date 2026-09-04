@@ -351,13 +351,16 @@ const worker = setupWorker(
 );
 
 async function mountApp(options?: {
+  initialEntry?: string;
   routeThreadId?: ThreadId;
   waitForThreadId?: ThreadId | null;
-}): Promise<{ cleanup: () => Promise<void> }> {
+}): Promise<{ cleanup: () => Promise<void>; router: ReturnType<typeof getRouter> }> {
   const host = createFullscreenTestHost();
 
   const routeThreadId = options?.routeThreadId ?? THREAD_ID;
-  const router = getRouter(createMemoryHistory({ initialEntries: [`/${routeThreadId}`] }));
+  const router = getRouter(
+    createMemoryHistory({ initialEntries: [options?.initialEntry ?? `/${routeThreadId}`] }),
+  );
   const screen = await render(<RouterProvider router={router} />, { container: host });
 
   try {
@@ -391,6 +394,7 @@ async function mountApp(options?: {
   let cleanedUp = false;
 
   return {
+    router,
     cleanup: async () => {
       if (cleanedUp) return;
       cleanedUp = true;
@@ -444,7 +448,10 @@ function sendShellEventPush(event: OrchestrationShellStreamItem) {
   sendEffectRpcChunk(shellStreamClient, shellStreamRequestId, event);
 }
 
-describe("EventRouter scoped orchestration sync", () => {
+// This file drives one browser app, WebSocket mock, and projection fixture. Keep
+// the cases serialized: several intentionally advance the fixture while their
+// route/stream assertions are pending, which is not safe to overlap.
+describe.sequential("EventRouter scoped orchestration sync", () => {
   beforeAll(async () => {
     fixture = buildFixture();
     await worker.start({
@@ -518,6 +525,133 @@ describe("EventRouter scoped orchestration sync", () => {
     try {
       expect(subscribeShellRequestCount).toBe(1);
     } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("keeps a live assistant intro when a lagging thread snapshot arrives right after it", async () => {
+    await assertLiveAssistantIntroSurvivesLaggingSnapshot();
+  });
+
+  it("recovers a stale remembered route without opening a missing detail subscription", async () => {
+    const staleThreadId = ThreadId.makeUnsafe("thread-stale-route");
+    localStorage.setItem(
+      "synara:sidebar-ui:v1",
+      JSON.stringify({
+        chatSectionExpanded: true,
+        chatThreadListExtraPages: 2,
+        projectThreadListExtraPagesByCwd: { "/repo/project": 1 },
+        dismissedThreadStatusKeyByThreadId: {},
+        lastThreadRoute: { threadId: staleThreadId },
+        activityViewEnabled: false,
+      }),
+    );
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const mounted = await mountApp({ routeThreadId: staleThreadId, waitForThreadId: null });
+
+    try {
+      await vi.waitFor(
+        () => {
+          expect(mounted.router.state.location.pathname).not.toBe(`/${staleThreadId}`);
+          expect(
+            JSON.parse(localStorage.getItem("synara:sidebar-ui:v1") ?? "null")?.lastThreadRoute,
+          ).toBeNull();
+        },
+        { timeout: 4_000, interval: 16 },
+      );
+      await new Promise((resolve) => window.setTimeout(resolve, 120));
+      expect(subscribeThreadRequestCountById.get(staleThreadId)).toBeUndefined();
+      expect(consoleError).not.toHaveBeenCalled();
+    } finally {
+      consoleError.mockRestore();
+      await mounted.cleanup();
+    }
+  });
+
+  it("restores a valid remembered thread from the root route", async () => {
+    localStorage.setItem(
+      "synara:sidebar-ui:v1",
+      JSON.stringify({
+        lastThreadRoute: { threadId: THREAD_ID },
+      }),
+    );
+    const mounted = await mountApp({ initialEntry: "/" });
+
+    try {
+      await vi.waitFor(
+        () => {
+          expect(mounted.router.state.location.pathname).toBe(`/${THREAD_ID}`);
+          expect(subscribeThreadRequestCountById.get(THREAD_ID)).toBeGreaterThanOrEqual(1);
+        },
+        { timeout: 4_000, interval: 16 },
+      );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("clears a missing remembered thread while resolving the root route", async () => {
+    const staleThreadId = ThreadId.makeUnsafe("thread-stale-root-restore");
+    localStorage.setItem(
+      "synara:sidebar-ui:v1",
+      JSON.stringify({
+        chatSectionExpanded: true,
+        lastThreadRoute: { threadId: staleThreadId },
+      }),
+    );
+    const mounted = await mountApp({ initialEntry: "/", waitForThreadId: null });
+
+    try {
+      await vi.waitFor(
+        () => {
+          expect(
+            JSON.parse(localStorage.getItem("synara:sidebar-ui:v1") ?? "null")?.lastThreadRoute,
+          ).toBeNull();
+          expect(mounted.router.state.location.pathname).not.toBe(`/${staleThreadId}`);
+        },
+        { timeout: 4_000, interval: 16 },
+      );
+      expect(subscribeThreadRequestCountById.get(staleThreadId)).toBeUndefined();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("stops leasing a deleted route and clears its remembered location after recovery", async () => {
+    localStorage.setItem(
+      "synara:sidebar-ui:v1",
+      JSON.stringify({
+        lastThreadRoute: { threadId: THREAD_ID },
+      }),
+    );
+    const mounted = await mountApp();
+
+    try {
+      const subscribeCountBeforeDelete = subscribeThreadRequestCountById.get(THREAD_ID) ?? 0;
+      fixture.snapshot = {
+        ...fixture.snapshot,
+        snapshotSequence: 2,
+        threads: [],
+      };
+      sendShellEventPush({
+        kind: "thread-removed",
+        sequence: 2,
+        threadId: THREAD_ID,
+      });
+
+      await vi.waitFor(
+        () => {
+          expect(mounted.router.state.location.pathname).not.toBe(`/${THREAD_ID}`);
+          expect(
+            JSON.parse(localStorage.getItem("synara:sidebar-ui:v1") ?? "null")?.lastThreadRoute,
+          ).toBeNull();
+        },
+        { timeout: 5_000, interval: 16 },
+      );
+      await new Promise((resolve) => window.setTimeout(resolve, 120));
+      expect(subscribeThreadRequestCountById.get(THREAD_ID)).toBe(subscribeCountBeforeDelete);
+    } finally {
+      fixture = buildFixture();
       await mounted.cleanup();
     }
   });
@@ -1919,7 +2053,7 @@ describe("EventRouter scoped orchestration sync", () => {
     }
   });
 
-  it("keeps a live assistant intro when a lagging thread snapshot arrives right after it", async () => {
+  async function assertLiveAssistantIntroSurvivesLaggingSnapshot() {
     const mounted = await mountApp();
 
     try {
@@ -1997,5 +2131,5 @@ describe("EventRouter scoped orchestration sync", () => {
       fixture = buildFixture();
       await mounted.cleanup();
     }
-  });
+  }
 });

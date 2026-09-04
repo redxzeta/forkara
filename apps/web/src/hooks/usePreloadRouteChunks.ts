@@ -17,14 +17,20 @@ export function usePreloadRouteChunks() {
     // New-task navigation is a primary startup action. Warm that route as soon
     // as the root commits so an immediate click never waits for the browser's
     // idle callback (which can be delayed for several seconds during hydration).
-    router.preloadRoute({ to: "/$threadId", params: { threadId: "chunk-preload" } }).catch(() => {
-      // Preloading is best-effort; navigation falls back to loading on demand.
-    });
-
-    const preloadSettings = () => {
-      router.preloadRoute({ to: "/settings" }).catch(() => {
+    const threadRoute = router.routesByPath["/$threadId"];
+    if (threadRoute) {
+      router.loadRouteChunk(threadRoute)?.catch(() => {
         // Preloading is best-effort; navigation falls back to loading on demand.
       });
+    }
+
+    const preloadSettings = () => {
+      const settingsRoute = router.routesByPath["/settings"];
+      if (settingsRoute) {
+        router.loadRouteChunk(settingsRoute)?.catch(() => {
+          // Preloading is best-effort; navigation falls back to loading on demand.
+        });
+      }
     };
 
     if (typeof requestIdleCallback === "function") {

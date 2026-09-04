@@ -40,12 +40,15 @@ export type RestoreRouteResolver = (input: RestoreRouteResolverInput) => LastThr
 export function RestoreOrCreateChatRoute({
   resolveRestoreRoute,
   createFreshChat,
+  onUnrestorableRememberedRoute,
 }: {
   // Surface-specific policy for picking the thread route to restore (e.g. the last-visited route
   // for home chats, the latest Studio thread or draft for Studio). The remembered-route recovery
   // below still keys off the total thread count, which is shared across surfaces.
   readonly resolveRestoreRoute: RestoreRouteResolver;
   readonly createFreshChat: () => Promise<StartContainerChatResult>;
+  /** Called only after hydration/recovery has made fallback authoritative. */
+  readonly onUnrestorableRememberedRoute?: (route: LastThreadRoute) => void;
 }) {
   const navigate = useNavigate();
   const threadsHydrated = useStore((store) => store.threadsHydrated);
@@ -150,6 +153,9 @@ export function RestoreOrCreateChatRoute({
       if (cancelled || createFreshChatInFlightRef.current) {
         return;
       }
+      if (lastThreadRoute) {
+        onUnrestorableRememberedRoute?.(lastThreadRoute);
+      }
       createFreshChatInFlightRef.current = true;
       // .finally instead of try/finally: React Compiler does not yet support
       // try/finally and would skip optimizing this whole component.
@@ -170,6 +176,7 @@ export function RestoreOrCreateChatRoute({
     createFreshChat,
     emptyRestoreRecoveryState,
     navigate,
+    onUnrestorableRememberedRoute,
     resolveRestoreRoute,
     splitViewIds,
     splitViewsHydrated,
