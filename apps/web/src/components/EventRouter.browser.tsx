@@ -536,7 +536,7 @@ describe.sequential("EventRouter scoped orchestration sync", () => {
   it("recovers a stale remembered route without opening a missing detail subscription", async () => {
     const staleThreadId = ThreadId.makeUnsafe("thread-stale-route");
     localStorage.setItem(
-      "synara:sidebar-ui:v1",
+      "forkara:sidebar-ui:v1",
       JSON.stringify({
         chatSectionExpanded: true,
         chatThreadListExtraPages: 2,
@@ -554,7 +554,7 @@ describe.sequential("EventRouter scoped orchestration sync", () => {
         () => {
           expect(mounted.router.state.location.pathname).not.toBe(`/${staleThreadId}`);
           expect(
-            JSON.parse(localStorage.getItem("synara:sidebar-ui:v1") ?? "null")?.lastThreadRoute,
+            JSON.parse(localStorage.getItem("forkara:sidebar-ui:v1") ?? "null")?.lastThreadRoute,
           ).toBeNull();
         },
         { timeout: 4_000, interval: 16 },
@@ -570,7 +570,7 @@ describe.sequential("EventRouter scoped orchestration sync", () => {
 
   it("restores a valid remembered thread from the root route", async () => {
     localStorage.setItem(
-      "synara:sidebar-ui:v1",
+      "forkara:sidebar-ui:v1",
       JSON.stringify({
         lastThreadRoute: { threadId: THREAD_ID },
       }),
@@ -593,7 +593,7 @@ describe.sequential("EventRouter scoped orchestration sync", () => {
   it("clears a missing remembered thread while resolving the root route", async () => {
     const staleThreadId = ThreadId.makeUnsafe("thread-stale-root-restore");
     localStorage.setItem(
-      "synara:sidebar-ui:v1",
+      "forkara:sidebar-ui:v1",
       JSON.stringify({
         chatSectionExpanded: true,
         lastThreadRoute: { threadId: staleThreadId },
@@ -605,7 +605,7 @@ describe.sequential("EventRouter scoped orchestration sync", () => {
       await vi.waitFor(
         () => {
           expect(
-            JSON.parse(localStorage.getItem("synara:sidebar-ui:v1") ?? "null")?.lastThreadRoute,
+            JSON.parse(localStorage.getItem("forkara:sidebar-ui:v1") ?? "null")?.lastThreadRoute,
           ).toBeNull();
           expect(mounted.router.state.location.pathname).not.toBe(`/${staleThreadId}`);
         },
@@ -619,7 +619,7 @@ describe.sequential("EventRouter scoped orchestration sync", () => {
 
   it("stops leasing a deleted route and clears its remembered location after recovery", async () => {
     localStorage.setItem(
-      "synara:sidebar-ui:v1",
+      "forkara:sidebar-ui:v1",
       JSON.stringify({
         lastThreadRoute: { threadId: THREAD_ID },
       }),
@@ -643,7 +643,7 @@ describe.sequential("EventRouter scoped orchestration sync", () => {
         () => {
           expect(mounted.router.state.location.pathname).not.toBe(`/${THREAD_ID}`);
           expect(
-            JSON.parse(localStorage.getItem("synara:sidebar-ui:v1") ?? "null")?.lastThreadRoute,
+            JSON.parse(localStorage.getItem("forkara:sidebar-ui:v1") ?? "null")?.lastThreadRoute,
           ).toBeNull();
         },
         { timeout: 5_000, interval: 16 },
