@@ -133,4 +133,5 @@ These are current invariants where the corresponding mechanism exists and bindin
 - [Transport](./transport.md) — WebSocket negotiation, compatibility, compression, and replay-safe subscriptions.
 - [Runtime modes](./runtime-modes.md) — provider permission-mode mappings.
 - [Workspace layout](./workspace-layout.md) — workspace ownership map.
+- [State-ownership executable evidence](./ownership-evidence.md) — owner, representation class, and focused regression coverage.
 - [Historical plan status](../.plans/architecture-status.md) — disposition of plans that make architecture claims.
