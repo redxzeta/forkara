@@ -134,4 +134,5 @@ These are current invariants where the corresponding mechanism exists and bindin
 - [Runtime modes](./runtime-modes.md) — provider permission-mode mappings.
 - [Workspace layout](./workspace-layout.md) — workspace ownership map.
 - [State-ownership executable evidence](./ownership-evidence.md) — owner, representation class, and focused regression coverage.
+- [Migration governance](./migration-governance.md) — compatibility, projection repair, canary, and rollback rules for #174 work.
 - [Historical plan status](../.plans/architecture-status.md) — disposition of plans that make architecture claims.
