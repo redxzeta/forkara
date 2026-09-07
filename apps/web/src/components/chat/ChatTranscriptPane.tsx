@@ -83,6 +83,7 @@ interface ChatTranscriptPaneProps {
   onMessagesTouchStart: TouchEventHandler<HTMLDivElement>;
   onMessagesWheel: WheelEventHandler<HTMLDivElement>;
   onIsAtEndChange: (isAtEnd: boolean) => void;
+  onNavigate?: () => void;
   onCloseAgentActivityDetail?: () => void;
   onOpenAgentActivity?: ComponentProps<typeof MessagesTimeline>["onOpenAgentActivity"];
   onOpenTurnDiff: (turnId: TurnId, filePath?: string) => void;
@@ -155,6 +156,7 @@ export function ChatTranscriptPane({
   onMessagesTouchStart,
   onMessagesWheel,
   onIsAtEndChange,
+  onNavigate,
   onCloseAgentActivityDetail,
   onOpenAgentActivity,
   onOpenTurnDiff,
@@ -272,6 +274,7 @@ export function ChatTranscriptPane({
             onImageExpand={onExpandTimelineImage}
             followLiveOutput={followLiveOutput}
             onIsAtEndChange={onIsAtEndChange}
+            {...(onNavigate ? { onNavigate } : {})}
             onTrailHighlightsChange={activeTrailStore.set}
             onMessagesScroll={onMessagesScroll}
             onMessagesClickCapture={onMessagesClickCapture}
