@@ -76,6 +76,12 @@ and usage limits remain with that provider.
 See the [development guide](docs/development.md) for supported tool versions, repository structure,
 focused tests, and the pull-request base branch.
 
+### Type checking
+
+`bun run typecheck` uses TypeScript 7 with the native Effect checker for the TypeScript workspaces. The Astro marketing workspace retains `astro check` to validate its `.astro` files. Installation patches the native checker; the root check also reapplies the patch before running. TypeScript 5 remains installed for build tools and `bun run typecheck:legacy`. Native and legacy checks use separate caches.
+
+The native Effect checker does not currently enforce every legacy diagnostic, including `importFromBarrel`. `bun run architecture:check` remains mandatory; use the legacy check when investigating diagnostic differences. `bun run typecheck:native` is an alias for the default check.
+
 ## Documentation
 
 - [Quickstart](docs/quickstart.md)

@@ -4,7 +4,7 @@ This guide is the shortest path from a fresh fork to a reviewable Forkara change
 
 ## Requirements
 
-- [Bun](https://bun.sh/) 1.3.9 or newer in the 1.x line. The repository currently pins Bun 1.3.12.
+- [Bun](https://bun.sh/) 1.4.2 or newer in the 1.x line. The repository currently pins Bun 1.4.2.
 - [Node.js](https://nodejs.org/) 24.13.1 or a compatible 24.x release.
 - Git and a supported desktop operating system.
 
