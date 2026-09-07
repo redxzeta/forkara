@@ -44,8 +44,8 @@ Include:
 - before/after screenshots for visual changes, plus a short recording for motion or interaction
   changes.
 
-CI runs workspace quality/build, Windows process regression, migration lineage, and release-smoke
-jobs. A pull request is ready to merge only when the required jobs pass and review conversations are
+CI runs [scoped quality validation](docs/ci.md), Windows process regression, migration lineage,
+and release-smoke jobs. A pull request is ready to merge only when the required jobs pass and review conversations are
 resolved. GitHub may require approval before workflows run for a first-time contributor.
 
 ## Review expectations
