@@ -302,7 +302,7 @@ managedAttachmentsLegacyLayer("managed attachment migration after private migrat
       ]);
 
       const tracker = yield* trackerRows(sql);
-      assert.deepStrictEqual(tracker.slice(-45), [
+      assert.deepStrictEqual(tracker.slice(-43), [
         { migration_id: 55, name: "ManagedAttachments" },
         { migration_id: 56, name: "CommandReceiptFingerprints" },
         { migration_id: 57, name: "ThreadScopedProjectionMessageIdentity" },
@@ -345,7 +345,7 @@ managedAttachmentsLegacyLayer("managed attachment migration after private migrat
         { migration_id: 94, name: "ProjectionThreadsGoal" },
         { migration_id: 95, name: "ProjectionThreadsGoalTiming" },
         { migration_id: 96, name: "ProjectionThreadsGoalAchievements" },
-        { migration_id: 99, name: "InvalidateProjectionThreadsCursor" },
+        { migration_id: 97, name: "InvalidateProjectionThreadsCursor" },
       ]);
       const preserved = yield* sql<{ readonly count: number }>`
         SELECT COUNT(*) AS count FROM orchestration_consumer_state
@@ -531,7 +531,7 @@ spacesMigrationCollisionLayer("Spaces migration after the private migration 70 c
 
       const tracker = yield* trackerRows(sql);
       assert.deepStrictEqual(
-        tracker.slice(-29).map((row) => [row.migration_id, row.name]),
+        tracker.slice(-27).map((row) => [row.migration_id, row.name]),
         [
           [71, "ProjectionThreadsGatewayProvenance"],
           [72, "AgentGatewayOperationRetention"],

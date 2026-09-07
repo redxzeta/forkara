@@ -77,6 +77,9 @@ interface TestFixture {
 let fixture: TestFixture;
 let shellStreamRequestId: string | null = null;
 let shellStreamClient: EffectRpcWebSocketClient | null = null;
+let serverLifecycleRequestId: string | null = null;
+let serverLifecycleClient: EffectRpcWebSocketClient | null = null;
+let suppressNextShellSnapshot = false;
 const threadStreamRequestIdByThreadId = new Map<ThreadId, string>();
 const threadStreamClientByThreadId = new Map<ThreadId, EffectRpcWebSocketClient>();
 let delayNextThreadSnapshot = false;
@@ -85,6 +88,7 @@ const subscribeThreadRequestCountById = new Map<ThreadId, number>();
 let subscribeThreadRequests: ThreadId[] = [];
 let replayEvents: OrchestrationEvent[] = [];
 let replayRequestCursors: number[] = [];
+let getShellSnapshotRequestCount = 0;
 let getThreadDetailSnapshotRequestCount = 0;
 let delayNextThreadDetailSnapshotResponse = false;
 let pendingThreadDetailSnapshotResponse: {
@@ -196,6 +200,7 @@ function findThreadDetailFromFixtureSnapshot(threadId: ThreadId): OrchestrationT
 
 function resolveWsRpc(tag: string, body?: unknown): unknown {
   if (tag === ORCHESTRATION_WS_METHODS.getShellSnapshot) {
+    getShellSnapshotRequestCount += 1;
     return createShellSnapshotFromReadModel(fixture.snapshot);
   }
   if (tag === ORCHESTRATION_WS_METHODS.getSnapshot) {
@@ -269,6 +274,10 @@ const worker = setupWorker(
         subscribeShellRequestCount += 1;
         shellStreamRequestId = request.id;
         shellStreamClient = client;
+        if (suppressNextShellSnapshot) {
+          suppressNextShellSnapshot = false;
+          return;
+        }
         sendEffectRpcChunk(client, request.id, {
           kind: "snapshot",
           snapshot: createShellSnapshotFromReadModel(fixture.snapshot),
@@ -276,6 +285,8 @@ const worker = setupWorker(
         return;
       }
       if (method === WS_METHODS.subscribeServerLifecycle) {
+        serverLifecycleRequestId = request.id;
+        serverLifecycleClient = client;
         sendEffectRpcChunk(client, request.id, {
           type: "welcome",
           payload: fixture.welcome,
@@ -448,6 +459,16 @@ function sendShellEventPush(event: OrchestrationShellStreamItem) {
   sendEffectRpcChunk(shellStreamClient, shellStreamRequestId, event);
 }
 
+function sendServerWelcomePush() {
+  if (!serverLifecycleRequestId || !serverLifecycleClient) {
+    throw new Error("Server lifecycle stream is not connected");
+  }
+  sendEffectRpcChunk(serverLifecycleClient, serverLifecycleRequestId, {
+    type: "welcome",
+    payload: fixture.welcome,
+  });
+}
+
 // This file drives one browser app, WebSocket mock, and projection fixture. Keep
 // the cases serialized: several intentionally advance the fixture while their
 // route/stream assertions are pending, which is not safe to overlap.
@@ -473,6 +494,9 @@ describe.sequential("EventRouter scoped orchestration sync", () => {
     document.body.innerHTML = "";
     shellStreamRequestId = null;
     shellStreamClient = null;
+    serverLifecycleRequestId = null;
+    serverLifecycleClient = null;
+    suppressNextShellSnapshot = false;
     threadStreamRequestIdByThreadId.clear();
     threadStreamClientByThreadId.clear();
     delayNextThreadSnapshot = false;
@@ -509,6 +533,7 @@ describe.sequential("EventRouter scoped orchestration sync", () => {
     subscribeThreadRequests = [];
     replayEvents = [];
     replayRequestCursors = [];
+    getShellSnapshotRequestCount = 0;
     getThreadDetailSnapshotRequestCount = 0;
     delayNextThreadDetailSnapshotResponse = false;
     pendingThreadDetailSnapshotResponse = null;
@@ -652,6 +677,47 @@ describe.sequential("EventRouter scoped orchestration sync", () => {
       expect(subscribeThreadRequestCountById.get(THREAD_ID)).toBe(subscribeCountBeforeDelete);
     } finally {
       fixture = buildFixture();
+      await mounted.cleanup();
+    }
+  });
+
+  it("does not query a fallback after a streamed shell snapshot with no spaces", async () => {
+    const mounted = await mountApp();
+
+    try {
+      await new Promise((resolve) => window.setTimeout(resolve, 2_000));
+      expect(useStore.getState().spaces).toEqual([]);
+      expect(getShellSnapshotRequestCount).toBe(0);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("applies the shell fallback when a reconnect snapshot does not arrive", async () => {
+    const mounted = await mountApp();
+
+    try {
+      fixture.snapshot = {
+        ...fixture.snapshot,
+        snapshotSequence: 2,
+        threads: fixture.snapshot.threads.map((thread) => ({
+          ...thread,
+          title: "Updated after reconnect",
+        })),
+      };
+      suppressNextShellSnapshot = true;
+      sendServerWelcomePush();
+
+      await vi.waitFor(() => expect(subscribeShellRequestCount).toBe(2));
+      await vi.waitFor(() => expect(getShellSnapshotRequestCount).toBe(1), {
+        timeout: 3_000,
+      });
+      await vi.waitFor(() =>
+        expect(getThreadFromState(useStore.getState(), THREAD_ID)?.title).toBe(
+          "Updated after reconnect",
+        ),
+      );
+    } finally {
       await mounted.cleanup();
     }
   });
