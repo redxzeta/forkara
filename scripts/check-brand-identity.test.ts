@@ -32,6 +32,25 @@ describe("brand identity guard", () => {
     ).toHaveLength(1);
   });
 
+  it("allows only the exact upstream provenance lines in their intended files", () => {
+    const upstreamUrl = `https://github.com/Emanuele-web04/${["syn", "ara"].join("")}.git`;
+    const script = `const upstreamUrl = "${upstreamUrl}";`;
+    const documentation = `2. Ensure \`upstream\` points at \`${upstreamUrl}\`.`;
+    expect(
+      findLegacyIdentityViolations([
+        { path: "scripts/sync-upstream.ts", contents: script },
+        { path: "docs/upstream-sync-playbook.md", contents: documentation },
+      ]),
+    ).toEqual([]);
+    for (const [path, contents] of [
+      ["apps/server/src/main.ts", script],
+      ["scripts/sync-upstream.ts", script.replace(".git", ".git/other")],
+      ["scripts/sync-upstream.ts", `${script} // ${["Syn", "ara"].join("")}`],
+      ["docs/upstream-sync-playbook.md", upstreamUrl],
+    ])
+      expect(findLegacyIdentityViolations([{ path: path!, contents: contents! }])).toHaveLength(1);
+  });
+
   it("detects retired names in paths and text", () => {
     const violations = findBrandIdentityViolations([
       { path: `docs/${firstName}.md`, contents: "Forkara" },

@@ -287,6 +287,8 @@ export const ProviderModelDescriptor = Schema.Struct({
 export type ProviderModelDescriptor = typeof ProviderModelDescriptor.Type;
 
 export const ProviderListModelsResult = Schema.Struct({
+  // Redacted discovery failure when an adapter supplies a static fallback.
+  error: Schema.optional(TrimmedNonEmptyString),
   models: Schema.Array(ProviderModelDescriptor),
   source: Schema.optional(TrimmedNonEmptyString),
   cached: Schema.optional(Schema.Boolean),

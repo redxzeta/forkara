@@ -64,7 +64,9 @@ it.skipIf(process.env.FORKARA_PERF !== "1")(
         }
         return { fixtureRows: 10_000, samples };
       }).pipe(
-        Effect.provide(ProviderRuntimeEventRepositoryLive.pipe(Layer.provideMerge(SqlitePersistenceMemory))),
+        Effect.provide(
+          ProviderRuntimeEventRepositoryLive.pipe(Layer.provideMerge(SqlitePersistenceMemory)),
+        ),
       ),
     );
     writeFileSync(

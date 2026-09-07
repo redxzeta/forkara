@@ -467,10 +467,7 @@ export function useProviderModelCatalog(input: {
         cursorDynamicModelsQuery.data?.error,
         cursorDynamicModelsQuery.error,
       ),
-      kilo: modelDiscoveryError(
-        kiloDynamicModelsQuery.data?.error,
-        kiloDynamicModelsQuery.error,
-      ),
+      kilo: modelDiscoveryError(kiloDynamicModelsQuery.data?.error, kiloDynamicModelsQuery.error),
       antigravity: modelDiscoveryError(
         antigravityModelsQuery.data?.error,
         antigravityModelsQuery.error,

@@ -84,6 +84,17 @@ const legacyIdentityPattern = new RegExp(
   "i",
 );
 
+// Exact source-provenance lines are not runtime identity. Do not allow an
+// arbitrary predecessor URL, path, or extra text through this boundary.
+const upstreamRepositoryUrl = `https://github.com/Emanuele-web04/${characters(115, 121, 110, 97, 114, 97)}.git`;
+const upstreamProvenanceLines = new Map([
+  ["scripts/sync-upstream.ts", `const upstreamUrl = "${upstreamRepositoryUrl}";`],
+  [
+    "docs/upstream-sync-playbook.md",
+    "2. Ensure `upstream` points at `" + upstreamRepositoryUrl + "`.",
+  ],
+]);
+
 export function findLegacyIdentityViolations(
   files: readonly BrandIdentityFile[],
 ): BrandIdentityViolation[] {
@@ -100,7 +111,7 @@ export function findLegacyIdentityViolations(
     const contentViolations = file.contents
       .split(/\r?\n/)
       .flatMap((line, index) =>
-        legacyIdentityPattern.test(line)
+        legacyIdentityPattern.test(line) && upstreamProvenanceLines.get(file.path) !== line.trim()
           ? [{ path: file.path, line: index + 1, text: line.trim() }]
           : [],
       );

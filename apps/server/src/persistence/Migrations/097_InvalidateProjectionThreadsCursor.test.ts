@@ -32,7 +32,7 @@ import * as NodeSqliteClient from "../NodeSqliteClient.ts";
 const testLayer = OrchestrationProjectionPipelineLive.pipe(
   Layer.provideMerge(OrchestrationEventStoreLive),
   Layer.provideMerge(
-    ServerConfig.layerTest(process.cwd(), { prefix: "099-projection-threads-cursor" }),
+    ServerConfig.layerTest(process.cwd(), { prefix: "097-projection-threads-cursor" }),
   ),
   Layer.provideMerge(NodeSqliteClient.layerMemory()),
   Layer.provideMerge(NodeServices.layer),
@@ -58,14 +58,14 @@ it.layer(Layer.fresh(testLayer))("097_InvalidateProjectionThreadsCursor", (it) =
         const projectionPipeline = yield* OrchestrationProjectionPipeline;
 
         // Run all migrations before this one, simulating an installation that
-        // already has migration 98 applied and a projection.threads cursor at
+        // already has migration 96 applied and a projection.threads cursor at
         // the journal head.
-        yield* runMigrations({ toMigrationInclusive: 98 });
+        yield* runMigrations({ toMigrationInclusive: 96 });
 
-        const threadId = ThreadId.makeUnsafe("thread-099");
-        const projectId = ProjectId.makeUnsafe("project-099");
-        const turnId = TurnId.makeUnsafe("turn-099");
-        const messageId = MessageId.makeUnsafe("message-099");
+        const threadId = ThreadId.makeUnsafe("thread-097");
+        const projectId = ProjectId.makeUnsafe("project-097");
+        const turnId = TurnId.makeUnsafe("turn-097");
+        const messageId = MessageId.makeUnsafe("message-097");
         const createdAt = "2026-09-01T00:00:00.000Z";
         const requestedAt = "2026-09-01T00:00:01.000Z";
         const startedAt = "2026-09-01T00:00:02.000Z";
@@ -73,7 +73,7 @@ it.layer(Layer.fresh(testLayer))("097_InvalidateProjectionThreadsCursor", (it) =
 
         const appendAndProject = makeAppendAndProject(eventStore, projectionPipeline);
         let sequence = 0;
-        const nextEventId = () => EventId.makeUnsafe(`evt-099-${++sequence}`);
+        const nextEventId = () => EventId.makeUnsafe(`evt-097-${++sequence}`);
 
         yield* appendAndProject({
           type: "project.created",
@@ -81,14 +81,14 @@ it.layer(Layer.fresh(testLayer))("097_InvalidateProjectionThreadsCursor", (it) =
           aggregateKind: "project",
           aggregateId: projectId,
           occurredAt: createdAt,
-          commandId: CommandId.makeUnsafe("cmd-099-project"),
+          commandId: CommandId.makeUnsafe("cmd-097-project"),
           causationEventId: null,
-          correlationId: CorrelationId.makeUnsafe("cmd-099-project"),
+          correlationId: CorrelationId.makeUnsafe("cmd-097-project"),
           metadata: {},
           payload: {
             projectId,
-            title: "Project 099",
-            workspaceRoot: "/tmp/project-099",
+            title: "Project 097",
+            workspaceRoot: "/tmp/project-097",
             defaultModelSelection: null,
             scripts: [],
             createdAt,
@@ -102,14 +102,14 @@ it.layer(Layer.fresh(testLayer))("097_InvalidateProjectionThreadsCursor", (it) =
           aggregateKind: "thread",
           aggregateId: threadId,
           occurredAt: createdAt,
-          commandId: CommandId.makeUnsafe("cmd-099-thread"),
+          commandId: CommandId.makeUnsafe("cmd-097-thread"),
           causationEventId: null,
-          correlationId: CorrelationId.makeUnsafe("cmd-099-thread"),
+          correlationId: CorrelationId.makeUnsafe("cmd-097-thread"),
           metadata: {},
           payload: {
             threadId,
             projectId,
-            title: "Thread 099",
+            title: "Thread 097",
             modelSelection: { provider: "codex", model: "gpt-5-codex" },
             runtimeMode: "full-access",
             branch: null,
@@ -131,8 +131,6 @@ it.layer(Layer.fresh(testLayer))("097_InvalidateProjectionThreadsCursor", (it) =
             subagentRole: null,
             forkSourceThreadId: null,
             sidechatSourceThreadId: null,
-            sidechatLastActivityAt: null,
-            sidechatExpiredAt: null,
             lastKnownPr: null,
             handoff: null,
             createdAt,
@@ -146,9 +144,9 @@ it.layer(Layer.fresh(testLayer))("097_InvalidateProjectionThreadsCursor", (it) =
           aggregateKind: "thread",
           aggregateId: threadId,
           occurredAt: requestedAt,
-          commandId: CommandId.makeUnsafe("cmd-099-turn-start"),
+          commandId: CommandId.makeUnsafe("cmd-097-turn-start"),
           causationEventId: null,
-          correlationId: CorrelationId.makeUnsafe("cmd-099-turn-start"),
+          correlationId: CorrelationId.makeUnsafe("cmd-097-turn-start"),
           metadata: {},
           payload: {
             threadId,
@@ -182,9 +180,9 @@ it.layer(Layer.fresh(testLayer))("097_InvalidateProjectionThreadsCursor", (it) =
           aggregateKind: "thread",
           aggregateId: threadId,
           occurredAt: startedAt,
-          commandId: CommandId.makeUnsafe("cmd-099-session-start"),
+          commandId: CommandId.makeUnsafe("cmd-097-session-start"),
           causationEventId: null,
-          correlationId: CorrelationId.makeUnsafe("cmd-099-session-start"),
+          correlationId: CorrelationId.makeUnsafe("cmd-097-session-start"),
           metadata: {},
           payload: {
             threadId,
@@ -198,9 +196,9 @@ it.layer(Layer.fresh(testLayer))("097_InvalidateProjectionThreadsCursor", (it) =
           aggregateKind: "thread",
           aggregateId: threadId,
           occurredAt: completedAt,
-          commandId: CommandId.makeUnsafe("cmd-099-session-end"),
+          commandId: CommandId.makeUnsafe("cmd-097-session-end"),
           causationEventId: null,
-          correlationId: CorrelationId.makeUnsafe("cmd-099-session-end"),
+          correlationId: CorrelationId.makeUnsafe("cmd-097-session-end"),
           metadata: {},
           payload: {
             threadId,
@@ -230,9 +228,9 @@ it.layer(Layer.fresh(testLayer))("097_InvalidateProjectionThreadsCursor", (it) =
         `;
         assert.strictEqual(cursorBefore!.lastAppliedSequence, 5);
 
-        // Apply migration 99. This must delete the projection.threads cursor so
+        // Apply migration 97. This must delete the projection.threads cursor so
         // the next bootstrap will replay with the updated event filter.
-        yield* runMigrations({ toMigrationInclusive: 99 });
+        yield* runMigrations({ toMigrationInclusive: 97 });
 
         const [cursorAfter] = yield* sql<{ readonly count: number }>`
           SELECT COUNT(*) AS "count"
@@ -242,7 +240,7 @@ it.layer(Layer.fresh(testLayer))("097_InvalidateProjectionThreadsCursor", (it) =
         assert.strictEqual(cursorAfter!.count, 0);
 
         // Rerunning the migration with the cursor already absent must stay safe.
-        yield* runMigrations({ toMigrationInclusive: 99 });
+        yield* runMigrations({ toMigrationInclusive: 97 });
 
         const [cursorRerun] = yield* sql<{ readonly count: number }>`
           SELECT COUNT(*) AS "count"

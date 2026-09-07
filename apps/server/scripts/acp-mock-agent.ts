@@ -39,11 +39,9 @@ const loadReplayDelaysMs = (process.env.FORKARA_ACP_LOAD_REPLAY_DELAYS_MS ?? "")
   .filter((value) => Number.isFinite(value) && value >= 0);
 const rejectPromptDuringLoadReplay =
   process.env.FORKARA_ACP_REJECT_PROMPT_DURING_LOAD_REPLAY === "1";
-const rejectForkDuringLoadReplay =
-  process.env.FORKARA_ACP_REJECT_FORK_DURING_LOAD_REPLAY === "1";
+const rejectForkDuringLoadReplay = process.env.FORKARA_ACP_REJECT_FORK_DURING_LOAD_REPLAY === "1";
 const loadReplayModeId = process.env.FORKARA_ACP_LOAD_REPLAY_MODE_ID?.trim();
-const loadReplayAvailableCommands =
-  process.env.FORKARA_ACP_LOAD_REPLAY_AVAILABLE_COMMANDS === "1";
+const loadReplayAvailableCommands = process.env.FORKARA_ACP_LOAD_REPLAY_AVAILABLE_COMMANDS === "1";
 const modeConfigId = process.env.FORKARA_ACP_MODE_CONFIG_ID || "mode";
 const sessionId = "mock-session-1";
 

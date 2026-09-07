@@ -44,6 +44,7 @@ interface QueryResultLike {
   readonly data?: {
     readonly agents?: ReadonlyArray<{ name: string; displayName: string }>;
     readonly cached?: boolean;
+    readonly error?: string;
     readonly models?: ReadonlyArray<ProviderModelDescriptor>;
     readonly source?: string;
   };
