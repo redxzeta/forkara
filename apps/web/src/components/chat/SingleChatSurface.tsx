@@ -937,6 +937,7 @@ export function SingleChatSurface(props: {
             <DockExplorerPane
               threadId={props.threadId}
               workspaceRoot={workspaceRoot}
+              isVisible={context.isVisible}
               onReferenceInChat={handleReferenceInChat}
               onAskWhyInChat={handleAskWhyInChat}
               onCommentInChat={handleCommentInChat}
@@ -949,6 +950,7 @@ export function SingleChatSurface(props: {
             <DockFilePane
               workspaceRoot={workspaceRoot}
               filePath={pane.filePath}
+              isVisible={context.isVisible}
               onReferenceInChat={handleReferenceInChat}
               onAskWhyInChat={handleAskWhyInChat}
               onCommentInChat={handleCommentInChat}

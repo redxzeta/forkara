@@ -9,6 +9,7 @@ import {
   WsProjectsDiscoverScriptsRpc,
   WsProjectsProvisionFromGitHubRpc,
   WsPullRequestsMergedTodayRpc,
+  WsProjectsSubscribeFileChangeRpc,
   WsPullRequestsReviewRequestCountRpc,
   WsRpcError,
   WsRpcGroup,
@@ -35,7 +36,9 @@ describe("WS RPC contracts", () => {
   it("exports the project script discovery RPC", () => {
     expect(WsProjectsDiscoverScriptsRpc).toBeDefined();
     expect(WsProjectsProvisionFromGitHubRpc).toBeDefined();
+    expect(WsProjectsSubscribeFileChangeRpc).toBeDefined();
     expect(WsFeatureRpcGroup.requests.has("projects.provisionFromGitHub")).toBe(true);
+    expect(WsFeatureRpcGroup.requests.has("projects.subscribeFileChange")).toBe(true);
   });
 
   it("exports the automation create RPC", () => {

@@ -4,6 +4,7 @@ import {
   WS_PROTOCOL_EPOCH,
   WS_PROTOCOL_MAX_REVISION,
   WS_PROTOCOL_MIN_REVISION,
+  WS_PROJECT_FILE_WATCH_CAPABILITY,
   WS_SERVER_CAPABILITIES,
 } from "@forkara/contracts";
 import { Effect } from "effect";
@@ -37,7 +38,9 @@ describe("WebSocket compatibility bootstrap", () => {
     expect(result.capabilities).toContain("orchestration.thread-detail-snapshot");
     expect(result.capabilities).toContain("projects.github-provisioning");
     expect(result.capabilities).toContain(WS_GITHUB_PROJECT_PROVISIONING_V2_CAPABILITY);
+    expect(result.capabilities).toContain(WS_PROJECT_FILE_WATCH_CAPABILITY);
     expect(WS_CLIENT_REQUIRED_CAPABILITIES).not.toContain("projects.github-provisioning");
+    expect(WS_CLIENT_REQUIRED_CAPABILITIES).not.toContain(WS_PROJECT_FILE_WATCH_CAPABILITY);
   });
 
   it("keeps v2 provisioning optional so an old server can run the rest of the new client", () => {
