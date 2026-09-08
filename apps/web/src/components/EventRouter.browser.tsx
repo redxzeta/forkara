@@ -559,23 +559,10 @@ describe.sequential("EventRouter scoped orchestration sync", () => {
       draftThreadsByThreadId: {},
       projectDraftThreadIdByProjectId: {},
     });
-    useStore.setState({
-      projects: [],
-      threadIds: [],
-      threadShellById: {},
-      threadSessionById: {},
-      threadTurnStateById: {},
-      messageIdsByThreadId: {},
-      messageByThreadId: {},
-      activityIdsByThreadId: {},
-      activityByThreadId: {},
-      proposedPlanIdsByThreadId: {},
-      proposedPlanByThreadId: {},
-      turnDiffIdsByThreadId: {},
-      turnDiffSummaryByThreadId: {},
-      sidebarThreadSummaryById: {},
-      threadsHydrated: false,
-    });
+    // Each fixture represents a fresh server journal. Reset the snapshot fence
+    // as well as detail slices, or a reconnect test at sequence 2 makes the
+    // next fixture's sequence-1 snapshot look stale.
+    useStore.setState(useStore.getInitialState(), true);
     useWorkspacePathsStore.setState({
       homeDir: null,
       chatWorkspaceRoot: null,

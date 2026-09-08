@@ -1670,6 +1670,7 @@ function EventRouter() {
           threadSnapshotRefreshPending.clear();
           threadReplayRequestInFlight.clear();
           threadProjectionReconcileInFlight.clear();
+          threadProjectionReconcilePendingById.clear();
           threadProjectionTerminalFencePending.clear();
           threadProjectionTerminalFenceSequenceById.clear();
           threadProjectionTerminalFenceArmedAtById.clear();

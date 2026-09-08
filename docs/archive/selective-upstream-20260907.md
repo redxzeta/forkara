@@ -41,4 +41,13 @@ Devin integration, Kilo removal, new dashboards/sidebar/rename/model catalogs, c
 
 ## Validation
 
-Focused regression, browser, performance, packaging, branding, migration-lineage, architecture, and workspace checks are required before claiming merge readiness. Final results and exact-head CI evidence belong in the PR; intermediate commits alone are not validation evidence.
+The user subsequently requested that remaining local tests be skipped. Tests already completed through `bun run test` are retained as evidence:
+
+- Server: 40 files, 1,160 tests passed, including synthetic migration/recovery, resume/replay, discovery, MCP, checkpoint, and watcher coverage.
+- Web unit tests: 17 files, 560 tests passed. Shared: 9 files, 83 tests passed. Contracts: 21 tests plus 2 discovery compatibility tests passed. Desktop: 5 files, 48 tests passed. Scripts: 2 files, 13 tests passed.
+- Browser: ChatView, PDF resource lifecycle, and workspace file editing suites passed. The combined run reported 126 passed, 13 skipped, and 16 EventRouter failures. The EventRouter fixture now resets the complete store, including its snapshot sequence fence; its verification run was stopped at the user's request. Passing browser coverage for the final head is still required.
+- The authorized workspace format and lint passes succeeded. Typechecking passed in six workspaces; after correcting a migration fixture's unsupported fields, the remaining server workspace passed its scoped recheck. Branding, migration lineage (82 release tags), architecture boundaries, and diff whitespace checks passed.
+- Baseline synthetic performance probes were collected against the same Forkara application base and upgraded toolchain. Updated comparisons were skipped following the user's instruction, so no measured performance improvement or no-regression claim is made.
+- Packaged-runtime import regression tests passed, but executing the smoke test inside a produced application was skipped locally. The desktop build and final CI results are recorded in the PR.
+
+This is a selective backport, not v0.8.3 feature parity. Intermediate commits and incomplete local validation do not establish merge readiness; consult the final PR head's CI and mergeability state.
