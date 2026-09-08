@@ -59,7 +59,7 @@ export function forkaraDesktopIdentity(flavor: ForkaraDesktopFlavor): ForkaraDes
       origin: FORKARA_DESKTOP_ORIGIN,
       entryUrl: FORKARA_DESKTOP_ENTRY_URL,
       userDataDirectoryName: "forkara-dev",
-      defaultHomeDirectoryName: ".forkara",
+      defaultHomeDirectoryName: ".forkara-dev",
       usesScriptedUpdates: false,
     };
   }

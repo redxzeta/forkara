@@ -21,12 +21,13 @@ import { ChildProcess } from "effect/unstable/process";
 const BASE_SERVER_PORT = 3773;
 const BASE_WEB_PORT = 5733;
 const CONTRIBUTOR_PORT_OFFSET = 3158;
+const DEVELOPMENT_HOME = "./.forkara/dev";
 const CONTRIBUTOR_HOME = "./.forkara/contributor";
 const MAX_HASH_OFFSET = 3000;
 const MAX_PORT = 65535;
 
-export const DEFAULT_FORKARA_HOME = Effect.map(Effect.service(Path.Path), (path) =>
-  path.join(homedir(), ".forkara"),
+export const DEFAULT_DEVELOPMENT_FORKARA_HOME = Effect.map(Effect.service(Path.Path), (path) =>
+  path.resolve(DEVELOPMENT_HOME),
 );
 
 const FULL_DEV_ARGS = [
@@ -144,7 +145,7 @@ function resolveBaseDir(baseDir: string | undefined): Effect.Effect<string, neve
       return path.resolve(configured);
     }
 
-    return yield* DEFAULT_FORKARA_HOME;
+    return yield* DEFAULT_DEVELOPMENT_FORKARA_HOME;
   });
 }
 
