@@ -106,6 +106,7 @@ import {
   setThreadDetailResumeCursor,
 } from "../threadDetailResumeCursors";
 import { hasPendingTurnDispatch } from "../pendingTurnDispatch";
+import { derivePendingApprovals, derivePendingUserInputs } from "../pendingInteractionDerivation";
 import { canApplyThreadSnapshot, selectOrphanedThreadDetailIds } from "./-threadDetailOwnership";
 import {
   doesSnapshotSatisfyTerminalFence,
@@ -1017,6 +1018,74 @@ function shouldPollThreadDetailCatchup(threadId: ThreadId): boolean {
   );
 }
 
+function isPendingInteractionDetailMissing(threadId: ThreadId): boolean {
+  const thread = getThreadFromState(useStore.getState(), threadId);
+  if (!thread) {
+    return false;
+  }
+  const options = {
+    latestTurnId: thread.latestTurn?.turnId,
+  };
+  const hasMatchingSettlement = (
+    interactionKind: "approval" | "userInput",
+    request: { readonly requestId: string; readonly lifecycleGeneration?: string },
+  ) =>
+    thread.pendingInteractions?.some(
+      (interaction) =>
+        interaction.interactionKind === interactionKind &&
+        interaction.requestId === request.requestId &&
+        (interaction.lifecycleGeneration ?? undefined) === request.lifecycleGeneration,
+    ) === true;
+
+  if (thread.hasPendingApprovals === true) {
+    const actionableApprovals = derivePendingApprovals(
+      thread.activities,
+      thread.pendingInteractions,
+      {
+        ...options,
+        authoritativeHasPending: true,
+      },
+    );
+    if (actionableApprovals.length === 0) {
+      const replayedApprovals = derivePendingApprovals(thread.activities, undefined, {
+        ...options,
+        authoritativeHasPending: true,
+      });
+      if (
+        replayedApprovals.length === 0 ||
+        replayedApprovals.some((request) => !hasMatchingSettlement("approval", request))
+      ) {
+        return true;
+      }
+    }
+  }
+
+  if (thread.hasPendingUserInput === true) {
+    const actionableUserInputs = derivePendingUserInputs(
+      thread.activities,
+      thread.pendingInteractions,
+      {
+        ...options,
+        authoritativeHasPending: true,
+      },
+    );
+    if (actionableUserInputs.length === 0) {
+      const replayedUserInputs = derivePendingUserInputs(thread.activities, undefined, {
+        ...options,
+        authoritativeHasPending: true,
+      });
+      if (
+        replayedUserInputs.length === 0 ||
+        replayedUserInputs.some((request) => !hasMatchingSettlement("userInput", request))
+      ) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 function shouldReconcileThreadProjection(threadId: ThreadId): boolean {
   const thread = getThreadFromState(useStore.getState(), threadId);
   return (
@@ -1025,6 +1094,7 @@ function shouldReconcileThreadProjection(threadId: ThreadId): boolean {
     thread?.latestTurn?.state === "running" ||
     thread?.messages.some((message) => message.role === "assistant" && message.streaming) ===
       true ||
+    isPendingInteractionDetailMissing(threadId) ||
     hasPendingTurnDispatch(threadId)
   );
 }
@@ -1176,6 +1246,8 @@ function EventRouter() {
     const immediatelyFlushedAssistantMessageIds = new Set<string>();
     let providerDiscoveryInvalidationFingerprint: string | null = null;
     let shellSnapshotSequence = -1;
+    let shellSubscriptionGeneration = 0;
+    let shellSnapshotReceivedGeneration = -1;
     let pendingShellEvents: OrchestrationShellStreamEvent[] = [];
     const subscribedThreadIds = new Set<ThreadId>();
     const threadSnapshotSequenceById = new Map<ThreadId, number>();
@@ -1185,6 +1257,7 @@ function EventRouter() {
     const threadSnapshotNotFoundRetryAttempted = new Set<ThreadId>();
     const threadReplayRequestInFlight = new Set<ThreadId>();
     const threadProjectionReconcileInFlight = new Map<ThreadId, number>();
+    const threadProjectionReconcilePendingById = new Map<ThreadId, number>();
     const threadProjectionTerminalFencePending = new Set<ThreadId>();
     // Sequence of the session-set / shell upsert that armed each terminal fence.
     // Cleared only once a detail snapshot proves post-settle assistant finals
@@ -1304,6 +1377,7 @@ function EventRouter() {
       threadSnapshotRefreshPending.delete(threadId);
       threadSnapshotNotFoundRetryAttempted.delete(threadId);
       threadProjectionReconcileInFlight.delete(threadId);
+      threadProjectionReconcilePendingById.delete(threadId);
       clearThreadProjectionTerminalFence(threadId);
       threadCatchupBackoffById.delete(threadId);
       nextThreadSubscriptionGeneration += 1;
@@ -1385,6 +1459,7 @@ function EventRouter() {
         threadSnapshotNotFoundRetryAttempted.delete(threadId);
         threadReplayRequestInFlight.delete(threadId);
         threadProjectionReconcileInFlight.delete(threadId);
+        threadProjectionReconcilePendingById.delete(threadId);
         clearThreadProjectionTerminalFence(threadId);
         threadSubscriptionGenerationById.delete(threadId);
         nextThreadProjectionReconcileAtById.delete(threadId);
@@ -1495,15 +1570,12 @@ function EventRouter() {
       }
     }
 
-    const applyQueriedShellSnapshot = (snapshot: OrchestrationShellSnapshot) => {
-      if (disposed) return;
+    const applyAuthoritativeShellSnapshot = (snapshot: OrchestrationShellSnapshot) => {
+      if (disposed) return false;
       // A query can resolve after the live shell stream has already moved
       // forward. Never roll the store back behind the EventRouter fence.
       if (shellSnapshotSequence >= 0 && snapshot.snapshotSequence < shellSnapshotSequence) {
-        return;
-      }
-      if (!shouldApplyBootstrapShellSnapshot(snapshot)) {
-        return;
+        return false;
       }
       const promotedDraftThreadIds = collectSubscribedDraftsInShell(snapshot.threads);
       shellSnapshotSequence = snapshot.snapshotSequence;
@@ -1512,13 +1584,55 @@ function EventRouter() {
       removeOrphanedTerminalsForCurrentState();
       flushShellBuffer(snapshot.snapshotSequence);
       reconcileMissingSubscribedThreadProjections(promotedDraftThreadIds);
+      return true;
     };
 
-    const loadShellSnapshotOnce = async () => {
-      if (disposed) return;
+    const applyQueriedShellSnapshot = (snapshot: OrchestrationShellSnapshot) => {
+      if (!shouldApplyBootstrapShellSnapshot(snapshot)) {
+        return false;
+      }
+      return applyAuthoritativeShellSnapshot(snapshot);
+    };
+
+    // The live shell stream normally delivers the bootstrap snapshot. Only
+    // fall back until either the stream or a query has returned one. Collection
+    // emptiness is valid user state, so it cannot indicate whether bootstrap
+    // succeeded. Every extra request recomputes and ships the whole sidebar
+    // (about 1 MB per 600 threads) and queues behind the thread-detail snapshot
+    // on the server's single SQLite connection.
+    const needsBootstrapShellSnapshot = (generation: number) =>
+      shellSnapshotReceivedGeneration < generation;
+
+    const loadBootstrapShellSnapshotIfMissing = async (generation: number) => {
+      if (
+        disposed ||
+        generation !== shellSubscriptionGeneration ||
+        !needsBootstrapShellSnapshot(generation)
+      ) {
+        return;
+      }
       const snapshot = await api.orchestration.getShellSnapshot();
-      if (disposed) return;
-      applyQueriedShellSnapshot(snapshot);
+      if (
+        disposed ||
+        generation !== shellSubscriptionGeneration ||
+        !needsBootstrapShellSnapshot(generation)
+      ) {
+        return;
+      }
+      if (applyAuthoritativeShellSnapshot(snapshot)) {
+        shellSnapshotReceivedGeneration = generation;
+      }
+    };
+
+    // Each subscription generation owns one fallback timer. Deferring it gives
+    // the shell stream's snapshot time to land first, while replacing an older
+    // generation's timer keeps reconnect recovery tied to the current stream.
+    let shellSnapshotFallbackTimer: number | null = null;
+    const scheduleShellSnapshotFallback = (generation: number) => {
+      shellSnapshotFallbackTimer = window.setTimeout(() => {
+        shellSnapshotFallbackTimer = null;
+        void loadBootstrapShellSnapshotIfMissing(generation).catch(() => undefined);
+      }, SHELL_SNAPSHOT_BOOTSTRAP_FALLBACK_DELAY_MS);
     };
 
     const unregisterEmptyRouteRestoreRefresh = registerEmptyRouteRestoreRefresh(() =>
@@ -1536,10 +1650,19 @@ function EventRouter() {
       if (scopedSubscriptionRefresh) {
         return scopedSubscriptionRefresh;
       }
+      shellSubscriptionGeneration += 1;
+      const generation = shellSubscriptionGeneration;
+      if (shellSnapshotFallbackTimer !== null) {
+        window.clearTimeout(shellSnapshotFallbackTimer);
+        shellSnapshotFallbackTimer = null;
+      }
+      scheduleShellSnapshotFallback(generation);
       const refresh = (async () => {
         shellSnapshotSequence = -1;
         pendingShellEvents = [];
-        await api.orchestration.subscribeShell().catch(() => loadShellSnapshotOnce());
+        await api.orchestration
+          .subscribeShell()
+          .catch(() => loadBootstrapShellSnapshotIfMissing(generation));
         await enqueueThreadSubscriptionOperation(async () => {
           threadSnapshotSequenceById.clear();
           pendingThreadEventsById.clear();
@@ -1547,6 +1670,7 @@ function EventRouter() {
           threadSnapshotRefreshPending.clear();
           threadReplayRequestInFlight.clear();
           threadProjectionReconcileInFlight.clear();
+          threadProjectionReconcilePendingById.clear();
           threadProjectionTerminalFencePending.clear();
           threadProjectionTerminalFenceSequenceById.clear();
           threadProjectionTerminalFenceArmedAtById.clear();
@@ -1748,14 +1872,18 @@ function EventRouter() {
         });
     };
 
-    const reconcileThreadProjection = async (threadId: ThreadId): Promise<void> => {
+    const reconcileThreadProjection = async (
+      threadId: ThreadId,
+      options?: { readonly queueIfInFlight?: boolean },
+    ): Promise<void> => {
       const subscriptionGeneration = threadSubscriptionGenerationById.get(threadId);
-      if (
-        disposed ||
-        !subscribedThreadIds.has(threadId) ||
-        subscriptionGeneration === undefined ||
-        threadProjectionReconcileInFlight.has(threadId)
-      ) {
+      if (disposed || !subscribedThreadIds.has(threadId) || subscriptionGeneration === undefined) {
+        return;
+      }
+      if (threadProjectionReconcileInFlight.has(threadId)) {
+        if (options?.queueIfInFlight === true) {
+          threadProjectionReconcilePendingById.set(threadId, subscriptionGeneration);
+        }
         return;
       }
       threadProjectionReconcileInFlight.set(threadId, subscriptionGeneration);
@@ -1839,6 +1967,11 @@ function EventRouter() {
           threadProjectionReconcileInFlight.delete(threadId);
         }
         if (threadSubscriptionGenerationById.get(threadId) === subscriptionGeneration) {
+          if (threadProjectionReconcilePendingById.get(threadId) === subscriptionGeneration) {
+            threadProjectionReconcilePendingById.delete(threadId);
+            void reconcileThreadProjection(threadId).catch(() => undefined);
+            return;
+          }
           if (projectionAttemptFailed) {
             // A failed reconcile is not evidence of a quiet healthy stream.
             // Retry it at the base cadence, while preserving backoff when the
@@ -1882,6 +2015,7 @@ function EventRouter() {
 
     const unsubShellEvent = api.orchestration.onShellEvent((item) => {
       if (item.kind === "snapshot") {
+        shellSnapshotReceivedGeneration = shellSubscriptionGeneration;
         const promotedDraftThreadIds = collectSubscribedDraftsInShell(item.snapshot.threads);
         shellSnapshotSequence = item.snapshot.snapshotSequence;
         syncServerShellSnapshot(item.snapshot);
@@ -1938,6 +2072,19 @@ function EventRouter() {
         // update; repeated ready/running/meta updates can otherwise keep
         // cancelling hydration before a snapshot reaches the renderer.
         void reconcileThreadProjection(item.thread.id).catch(() => undefined);
+      }
+      if (
+        item.kind === "thread-upserted" &&
+        subscribedThreadIds.has(item.thread.id) &&
+        isPendingInteractionDetailMissing(item.thread.id)
+      ) {
+        // A shell summary can expose an approval before its detail event reaches
+        // the client (notably for orchestrator-created threads with no projected
+        // session or turn yet). Fetch the authoritative detail immediately so
+        // the composer does not remain an empty, unactionable conversation.
+        void reconcileThreadProjection(item.thread.id, { queueIfInFlight: true }).catch(
+          () => undefined,
+        );
       }
       if (item.kind === "thread-upserted" && subscribedThreadIds.has(item.thread.id)) {
         void replayThreadEvents(item.thread.id, item.sequence).catch(() => undefined);
@@ -2140,7 +2287,6 @@ function EventRouter() {
         if (disposed) {
           return;
         }
-        await loadShellSnapshotOnce();
 
         if (!payload.bootstrapProjectId || !payload.bootstrapThreadId) {
           return;
@@ -2259,11 +2405,6 @@ function EventRouter() {
     });
     subscribed = true;
     void ensureScopedSubscriptions();
-    // The shell stream normally delivers the sidebar snapshot. If it fails before
-    // the first event, use the same lightweight query instead of the full history.
-    const shellBootstrapFallbackTimer = window.setTimeout(() => {
-      void loadShellSnapshotOnce().catch(() => undefined);
-    }, SHELL_SNAPSHOT_BOOTSTRAP_FALLBACK_DELAY_MS);
     const threadDetailCatchupInterval = window.setInterval(() => {
       const now = Date.now();
       let availableProjectionReconcileSlots = Math.max(
@@ -2322,7 +2463,10 @@ function EventRouter() {
     return () => {
       flushPendingDomainEvents();
       disposed = true;
-      window.clearTimeout(shellBootstrapFallbackTimer);
+      if (shellSnapshotFallbackTimer !== null) {
+        window.clearTimeout(shellSnapshotFallbackTimer);
+        shellSnapshotFallbackTimer = null;
+      }
       window.clearInterval(threadDetailCatchupInterval);
       needsProviderInvalidation = false;
       needsBroadGitInvalidation = false;

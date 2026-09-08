@@ -7,6 +7,7 @@
 
 import type {
   ProjectFileEncoding,
+  ProjectFileChangeEvent,
   ProjectFileLineEnding,
   ProjectReadFileResult,
 } from "@forkara/contracts";
@@ -40,6 +41,7 @@ import {
 
 import { basenameOfPath } from "~/file-icons";
 import { useTheme } from "~/hooks/useTheme";
+import { useProjectFileChangeSubscription } from "~/hooks/useProjectFileChangeSubscription";
 import { getSelectionWithin, type ChatFileReference } from "~/lib/chatReferences";
 import { resolveDiffThemeName, type DiffThemeName } from "~/lib/diffRendering";
 import { isEditableEventTarget } from "~/lib/editableEventTarget";
@@ -52,9 +54,12 @@ import { isRpcCapacityExceededError } from "~/lib/expensiveReadRetry";
 import {
   isLocalPreviewGrantUsable,
   projectLocalPreviewGrantQueryOptions,
+  projectQueryKeys,
   projectReadFileQueryOptions,
+  refetchFreshProjectFileQuery,
   projectResolveOutOfRootFileReferenceQueryOptions,
 } from "~/lib/projectReactQuery";
+import { gitQueryKeys } from "~/lib/gitReactQuery";
 import {
   MAX_SYNTAX_HIGHLIGHT_INPUT_CHARS,
   cacheSyntaxHighlightedHtml,
@@ -356,6 +361,8 @@ export interface WorkspaceFilePreviewProps {
   markdownPreviewDefault?: boolean;
   /** Enables guarded editing for complete, supported files inside the workspace. */
   editable?: boolean;
+  /** Keeps the file watcher bounded to a currently visible preview surface. */
+  liveRevalidationEnabled?: boolean;
   /** Shown when no file is selected yet. */
   emptyState?: ReactNode;
   onReferenceInChat?: ((reference: ChatFileReference) => void) | undefined;
@@ -425,6 +432,7 @@ function readFileSaveError(error: unknown): string {
 }
 
 export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
+  const liveRevalidationEnabled = props.liveRevalidationEnabled ?? true;
   const { resolvedTheme } = useTheme();
   const diffThemeName = resolveDiffThemeName(resolvedTheme);
   const previewRootRef = useRef<HTMLDivElement>(null);
@@ -457,6 +465,8 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
   const relocatedFullPath =
     relocation?.requestedKey === relocationRequestKey ? relocation.fullPath : null;
   const [binaryPreviewErrorKey, setBinaryPreviewErrorKey] = useState<string | null>(null);
+  const [binaryPreviewRevision, setBinaryPreviewRevision] = useState(0);
+  const [binaryPreviewReloading, setBinaryPreviewReloading] = useState(false);
   const filePath = relocatedFullPath ?? requestedFilePath;
   const markdownPreviewDefault = props.markdownPreviewDefault ?? false;
   const fileIsImage = filePath !== null && isSupportedLocalImagePath(filePath);
@@ -490,7 +500,7 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
     fileNeedsLocalPreviewGrant && isLocalPreviewGrantUsable(localPreviewGrantQuery.data)
       ? (localPreviewGrantQuery.data?.grant ?? null)
       : null;
-  const binaryPreviewKey = `${props.workspaceRoot ?? ""}\0${filePath ?? ""}\0${localPreviewGrant ?? ""}`;
+  const binaryPreviewKey = `${props.workspaceRoot ?? ""}\0${filePath ?? ""}\0${localPreviewGrant ?? ""}\0${binaryPreviewRevision}`;
   const fileQuery = useQuery(
     projectReadFileQueryOptions({
       cwd: props.workspaceRoot,
@@ -499,12 +509,63 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
       // Images and PDFs are binary: they stream through the local-image HTTP
       // route instead of the text file-read RPC.
       enabled:
+        liveRevalidationEnabled &&
         filePath !== null &&
         !fileIsImage &&
         !fileIsPdf &&
         (fileNeedsLocalPreviewGrant ? localPreviewGrant !== null : props.workspaceRoot !== null),
     }),
   );
+  const resolvedWorkspaceRelativePath =
+    fileQuery.data && isWorkspaceRelativePathSafe(fileQuery.data.relativePath)
+      ? fileQuery.data.relativePath
+      : null;
+  const watchedWorkspaceRelativePath =
+    resolvedWorkspaceRelativePath ??
+    ((fileIsImage || fileIsPdf) &&
+    workspaceRoot &&
+    requestedFilePath &&
+    isWorkspaceRelativePathSafe(requestedFilePath)
+      ? requestedFilePath
+      : null);
+  const handleWatchedFileChange = useCallback(
+    (event: ProjectFileChangeEvent) => {
+      if (!workspaceRoot || !watchedWorkspaceRelativePath) return;
+      void refetchFreshProjectFileQuery(queryClient, {
+        cwd: workspaceRoot,
+        relativePath: requestedFilePath,
+      });
+      void queryClient.invalidateQueries({
+        queryKey: gitQueryKeys.workingTreeDiffs(workspaceRoot),
+        refetchType: "none",
+      });
+      if (fileIsImage || fileIsPdf) {
+        setBinaryPreviewReloading(true);
+        setBinaryPreviewRevision((current) => current + 1);
+      }
+      if (event.type === "changed") {
+        setRelocation((current) =>
+          current?.requestedKey === relocationRequestKey ? null : current,
+        );
+        setBinaryPreviewErrorKey((current) => (current === relocationRequestKey ? null : current));
+      }
+    },
+    [
+      fileIsImage,
+      fileIsPdf,
+      queryClient,
+      relocationRequestKey,
+      requestedFilePath,
+      watchedWorkspaceRelativePath,
+      workspaceRoot,
+    ],
+  );
+  useProjectFileChangeSubscription({
+    cwd: workspaceRoot,
+    relativePath: watchedWorkspaceRelativePath,
+    enabled: liveRevalidationEnabled && watchedWorkspaceRelativePath !== null,
+    onChange: handleWatchedFileChange,
+  });
 
   // Out-of-root relocation kicks in only after the workspace-relative text
   // read or binary preview has actually failed. A reference the read RPC or
@@ -555,9 +616,11 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
     resolvedOutOfRootFullPath,
   ]);
   const handleBinaryPreviewReady = useCallback(() => {
+    setBinaryPreviewReloading(false);
     setBinaryPreviewErrorKey((current) => (current === relocationRequestKey ? null : current));
   }, [relocationRequestKey]);
   const handleBinaryPreviewError = useCallback(() => {
+    setBinaryPreviewReloading(false);
     setBinaryPreviewErrorKey(relocationRequestKey);
   }, [relocationRequestKey]);
 
@@ -589,6 +652,12 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
     : null;
   const editBufferDirty =
     activeEditBuffer !== null && activeEditBuffer.contents !== activeEditBuffer.savedContents;
+  const editBufferExternallyChanged =
+    editBufferDirty &&
+    activeEditBuffer !== null &&
+    editableDocument !== null &&
+    (activeEditBuffer.version !== editableDocument.version ||
+      activeEditBuffer.savedContents !== editableDocument.contents);
   const displayedFileContents = activeEditBuffer?.contents ?? fileContents;
   const lineCount =
     displayedFileContents.length === 0 ? 0 : displayedFileContents.split("\n").length;
@@ -788,6 +857,8 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
         lineEnding: activeEditBuffer.lineEnding,
       });
       const options = projectReadFileQueryOptions({ cwd: workspaceRoot, relativePath: filePath });
+      // A watcher read started before the save must not replace the saved snapshot.
+      await queryClient.cancelQueries({ queryKey: options.queryKey, exact: true });
       queryClient.setQueryData<ProjectReadFileResult>(options.queryKey, (current) =>
         current ? { ...current, contents: contentsToSave, version: result.version } : current,
       );
@@ -812,13 +883,33 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
     }
   };
 
+  const handleFileReload = useCallback(() => {
+    if (!filePath) return;
+    if (fileIsImage || fileIsPdf) {
+      setBinaryPreviewReloading(true);
+      setBinaryPreviewRevision((current) => current + 1);
+      return;
+    }
+    void refetchFreshProjectFileQuery(queryClient, {
+      cwd: workspaceRoot,
+      relativePath: filePath,
+    });
+  }, [fileIsImage, fileIsPdf, filePath, queryClient, workspaceRoot]);
+
   const handleEditBufferReload = () => {
     if (!editableDocument || !filePath) return;
     const documentKey = editableDocument.key;
-    const options = projectReadFileQueryOptions({ cwd: workspaceRoot, relativePath: filePath });
-    void queryClient
-      .invalidateQueries({ queryKey: options.queryKey })
+    const queryKey = projectQueryKeys.readFile(workspaceRoot, filePath);
+    void refetchFreshProjectFileQuery(queryClient, {
+      cwd: workspaceRoot,
+      relativePath: filePath,
+    })
       .then(() => {
+        const queryState = queryClient.getQueryState(queryKey);
+        if (queryState?.error) throw queryState.error;
+        if (queryClient.getQueryData(queryKey) === undefined) {
+          throw new Error("Could not reload this file from disk.");
+        }
         setEditBuffer((current) => (current?.key === documentKey ? null : current));
       })
       .catch((error: unknown) => {
@@ -1027,6 +1118,8 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
         filePath={filePath}
         cwd={props.workspaceRoot}
         previewGrant={localPreviewGrant}
+        cacheKey={binaryPreviewRevision}
+        onReload={handleFileReload}
         openInTarget={openInTarget}
         onPreviewReady={handleBinaryPreviewReady}
         onPreviewError={handleBinaryPreviewError}
@@ -1064,6 +1157,8 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
         truncated={fileQuery.data?.truncated ?? false}
         dirty={editBufferDirty}
         readOnlyReason={readOnlyReason}
+        reloading={fileIsImage || fileIsPdf ? binaryPreviewReloading : fileQuery.isFetching}
+        onReload={workspaceRoot && filePath ? handleFileReload : undefined}
       />
       <div data-file-find-host="true" className="pointer-events-none absolute top-0 right-0 z-40">
         <DisclosureRegion open={fileFindOpen} contentClassName="pointer-events-auto p-3">
@@ -1104,6 +1199,22 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
             Reload from disk
           </button>
         </div>
+      ) : editBufferExternallyChanged ? (
+        <div
+          role="alert"
+          className="flex shrink-0 items-center gap-3 border-b border-amber-500/25 bg-amber-500/5 px-3 py-2 text-[11px] text-foreground/80"
+        >
+          <span className="min-w-0 flex-1">
+            This file changed on disk. Your unsaved edits are preserved.
+          </span>
+          <button
+            type="button"
+            className="shrink-0 rounded-md px-2 py-1 font-medium text-foreground/80 hover:bg-foreground/8"
+            onClick={handleEditBufferReload}
+          >
+            Reload from disk
+          </button>
+        </div>
       ) : showFileReadErrorIndicator ? (
         <div
           role={fileReadCapacityError ? "status" : "alert"}
@@ -1134,6 +1245,7 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
             src={filePath}
             cwd={props.workspaceRoot}
             previewGrant={localPreviewGrant}
+            cacheKey={binaryPreviewRevision}
             alt={basenameOfPath(filePath)}
             className="min-h-full"
             imageClassName="max-h-[calc(100vh-13rem)]"

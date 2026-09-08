@@ -62,6 +62,12 @@ import { NetService } from "@forkara/shared/Net";
 import { applyShellEnvironmentHydrationMarker } from "@forkara/shared/shell";
 import { prepareForkaraHomeDirectory } from "@forkara/shared/forkaraHome";
 import { RotatingFileSink } from "@forkara/shared/logging";
+import {
+  MIGRATION_DIVERGENCE_CONSENT_ENV,
+  MIGRATION_RUNTIME_SOURCE_DIGEST_ENV,
+  type MigrationRuntimeIdentityMismatch,
+  type MigrationSchemaTooNewStartupBlock,
+} from "@forkara/shared/migrationRecovery";
 import { ensureStaticSnapshot, findAsarArchivePath } from "@forkara/shared/staticSnapshot";
 import { isBackendReadinessAborted, waitForHttpReady } from "./backendReadiness";
 import { resolveBackendNodeArgs } from "./backendNodeOptions";
@@ -117,10 +123,13 @@ import {
   shouldPromptForRunningChatsBeforeQuit,
 } from "./runningChatsQuitGuard";
 import {
+  hasVerifiedDesktopMigrationRestore,
   hasPendingDesktopMigrationRecovery,
+  invalidMigrationStartupRecoveryChoices,
   requiresDesktopMigrationRecovery,
   recoverDesktopMigrationIfRequired,
   resolveDesktopMigrationRecoveryPaths,
+  resolveDesktopMigrationRestoreCandidate,
   restoreDesktopMigrationBackup,
   type DesktopMigrationRecoveryDecision,
   type DesktopMigrationRecoveryOutcome,
@@ -152,6 +161,11 @@ import {
 } from "./backendSupervisionPolicy";
 import { captureBackendProcessOutput } from "./backendProcessOutput";
 import { syncShellEnvironment } from "./syncShellEnvironment";
+import {
+  embeddedDesktopMigrationRuntimeSourceDigest,
+  inspectDesktopMigrationRuntimeIdentity,
+} from "./migrationBundleIdentity";
+import { MigrationConsentHandoff } from "./migrationConsentHandoff";
 import {
   RENDERER_MAX_AUTOMATIC_RELOADS,
   RendererCrashPolicy,
@@ -375,7 +389,8 @@ const updateInstallPreparation = makeUpdateInstallPreparationCoordinator();
 const deferredDesktopQuitIntent = makeDeferredDesktopQuitIntentCoordinator();
 const runningChatsQuitGuard = makeRunningChatsQuitGuard();
 let desktopShutdownPromise: Promise<void> | null = null;
-let desktopStartupBlockedForMigrationRecovery = false;
+let desktopStartupBlockedForDatabaseRestore = false;
+const migrationConsentHandoff = new MigrationConsentHandoff();
 let desktopShutdownComplete = false;
 let desktopProtocolRegistered = false;
 let aboutCommitHashCache: string | null | undefined;
@@ -1111,6 +1126,56 @@ function resolveBackendCwd(): string {
   return OS.homedir();
 }
 
+async function requireCurrentDesktopMigrationBundle(): Promise<boolean> {
+  try {
+    const mismatch = inspectDesktopMigrationRuntimeIdentity({
+      appRoot: resolveAppRoot(),
+      isPackaged: app.isPackaged,
+      embeddedDigest: embeddedDesktopMigrationRuntimeSourceDigest(),
+    });
+    return mismatch ? rejectDesktopMigrationBundleMismatch(mismatch) : true;
+  } catch (error) {
+    return rejectUnverifiableDesktopMigrationBundle(error);
+  }
+}
+
+async function rejectUnverifiableDesktopMigrationBundle(error: unknown): Promise<false> {
+  const message = formatErrorMessage(error);
+  writeDesktopLogHeader(`migration bundle source check failed message=${message}`);
+  await dialog.showMessageBox({
+    type: "error",
+    title: "Forkara could not verify its server build",
+    message: "The migration source could not be checked safely.",
+    detail: `${message}\n\nRebuild with bun run build:desktop before starting Forkara. The database was not opened.`,
+    buttons: ["Quit"],
+    defaultId: 0,
+    noLink: true,
+  });
+  requestGracefulAppQuit("migration bundle source check failed");
+  return false;
+}
+
+async function rejectDesktopMigrationBundleMismatch(
+  mismatch: MigrationRuntimeIdentityMismatch,
+): Promise<false> {
+  writeDesktopLogHeader(
+    `migration bundle source mismatch expected=${mismatch.expectedDigest} actual=${mismatch.actualDigest}`,
+  );
+  await dialog.showMessageBox({
+    type: "error",
+    title: "Forkara's server build is stale",
+    message: "The built migration code does not match this checkout.",
+    detail:
+      `Expected ${mismatch.expectedDigest}, but the desktop bundle contains ` +
+      `${mismatch.actualDigest}.\n\nRebuild with bun run build:desktop before starting Forkara. The database was not opened.`,
+    buttons: ["Quit"],
+    defaultId: 0,
+    noLink: true,
+  });
+  requestGracefulAppQuit("stale migration bundle");
+  return false;
+}
+
 function desktopMigrationRecoveryPaths(): DesktopMigrationRecoveryPaths {
   return resolveDesktopMigrationRecoveryPaths({
     baseDir: BASE_DIR,
@@ -1142,7 +1207,7 @@ function formatRecoveryOptionList(options: ReadonlyArray<string>): string {
 
 async function handleDesktopMigrationRecovery(): Promise<DesktopMigrationRecoveryOutcome> {
   const paths = desktopMigrationRecoveryPaths();
-  desktopStartupBlockedForMigrationRecovery = true;
+  desktopStartupBlockedForDatabaseRestore = true;
   const outcome = await recoverDesktopMigrationIfRequired({
     // The gate opens only once the backend has spent its resume budget, while
     // the post-restore verification checks the marker file itself.
@@ -1236,7 +1301,7 @@ async function handleDesktopMigrationRecovery(): Promise<DesktopMigrationRecover
     log: writeDesktopLogHeader,
   });
   if (outcome === "continue") {
-    desktopStartupBlockedForMigrationRecovery = false;
+    desktopStartupBlockedForDatabaseRestore = false;
   }
   return outcome;
 }
@@ -3447,6 +3512,8 @@ function backendNodeArgs(): string[] {
 
 function backendEnv(): NodeJS.ProcessEnv {
   const servedStaticRoot = resolveServedStaticRoot();
+  const migrationSourceDigest = embeddedDesktopMigrationRuntimeSourceDigest();
+  const migrationDivergenceConsent = migrationConsentHandoff.take();
   const env: NodeJS.ProcessEnv = {
     ...resolveBrowserHostPipeBackendEnv(
       process.env,
@@ -3458,6 +3525,12 @@ function backendEnv(): NodeJS.ProcessEnv {
     ...(servedStaticRoot?.snapshotted ? { FORKARA_STATIC_DIR: servedStaticRoot.dir } : {}),
     ...(app.isPackaged
       ? { [DEVICE_HELPER_SOURCE_DIR_ENV]: Path.join(process.resourcesPath, "device-helper") }
+      : {}),
+    ...(migrationSourceDigest
+      ? { [MIGRATION_RUNTIME_SOURCE_DIGEST_ENV]: migrationSourceDigest }
+      : {}),
+    ...(migrationDivergenceConsent
+      ? { [MIGRATION_DIVERGENCE_CONSENT_ENV]: migrationDivergenceConsent }
       : {}),
     FORKARA_MODE: "desktop",
     FORKARA_NO_BROWSER: "1",
@@ -3593,10 +3666,227 @@ function presentBackendStartupGiveUp(reason: string): void {
   backendLifecycleDialogInFlight = task;
 }
 
+function schemaTooNewRestoreDetail(
+  block: MigrationSchemaTooNewStartupBlock,
+  restoreCandidate: ReturnType<typeof resolveDesktopMigrationRestoreCandidate>,
+): string {
+  if (restoreCandidate) {
+    return (
+      `Forkara verified the exact pre-migration backup at:\n${restoreCandidate.backupPath}\n\n` +
+      `Its tracker ends at migration ${restoreCandidate.backupMigrationId}; its shared lineage is compatible ` +
+      "with this build, and it passed SQLite integrity checking."
+    );
+  }
+
+  if (block.recovery.kind === "restore-available") {
+    return "The recorded backup does not match this desktop database exactly, so Forkara will not restore it.";
+  }
+
+  switch (block.recovery.reason) {
+    case "missing-provenance":
+      return "No completed migration backup record exists for this database, so Forkara cannot choose a backup safely.";
+    case "invalid-provenance":
+      return "The completed migration backup record does not describe this exact database state.";
+    case "invalid-backup":
+      return "The exact recorded backup is missing, unreadable, or failed SQLite integrity checking.";
+    case "incompatible-backup":
+      return "The exact recorded backup has a schema or migration lineage this Forkara build cannot open safely.";
+  }
+}
+
+async function handleDesktopSchemaTooNewRecovery(
+  block: MigrationSchemaTooNewStartupBlock,
+): Promise<void> {
+  const paths = desktopMigrationRecoveryPaths();
+  const restoreCandidate = resolveDesktopMigrationRestoreCandidate(paths, block);
+  desktopStartupBlockedForDatabaseRestore = true;
+
+  await recoverDesktopMigrationIfRequired({
+    requiresRecovery: () => true,
+    markerRemains: () =>
+      restoreCandidate === null ||
+      !hasVerifiedDesktopMigrationRestore(paths, restoreCandidate.backupPath),
+    choose: async ({ previousFailure }) => {
+      const restoreFailed = previousFailure?.attempt === "restore";
+      const canInstallUpdate = canInstallUpdateFromRecovery();
+      const releaseUrl = updateState.releaseUrl;
+      const choices: Array<{
+        readonly label: string;
+        readonly decision: DesktopMigrationRecoveryDecision;
+      }> = [];
+
+      if (restoreCandidate) {
+        choices.push({
+          label: restoreFailed ? "Try restore again" : "Restore backup and restart",
+          decision: "restore",
+        });
+      }
+      if (canInstallUpdate) {
+        choices.push({ label: "Update Forkara and restart", decision: "install-update" });
+      }
+      if (releaseUrl !== null) {
+        choices.push({ label: "Download latest release", decision: "open-release-page" });
+      }
+      choices.push(
+        { label: "Open logs", decision: "open-logs" },
+        { label: "Quit", decision: "quit" },
+      );
+
+      const result = await dialog.showMessageBox({
+        type: previousFailure === null ? "warning" : "error",
+        title:
+          previousFailure === null
+            ? "This database is newer than Forkara"
+            : restoreFailed
+              ? "Database restore failed"
+              : "Forkara could not update itself",
+        message:
+          previousFailure === null
+            ? `Database migration ${block.databaseMigrationId} is newer than this build supports (${block.latestSupportedMigrationId}).`
+            : restoreFailed
+              ? "The verified database backup could not be restored."
+              : "The newest Forkara release could not be installed.",
+        detail:
+          `${previousFailure === null ? "" : `${previousFailure.message}\n\n`}` +
+          `${schemaTooNewRestoreDetail(block, restoreCandidate)}\n\n` +
+          "The backend and provider processes will remain stopped until you update, restore, or quit.",
+        buttons: choices.map((choice) => choice.label),
+        defaultId: 0,
+        cancelId: choices.length - 1,
+        noLink: true,
+      });
+      return choices[result.response]?.decision ?? "quit";
+    },
+    installUpdate: installLatestUpdateForMigrationRecovery,
+    openReleasePage: () => {
+      const releaseUrl = updateState.releaseUrl;
+      if (releaseUrl !== null) void shell.openExternal(releaseUrl);
+    },
+    openLogs: openDesktopLogDirectory,
+    restore: async () => {
+      if (!restoreCandidate) {
+        throw new Error("No exact compatible migration backup is available.");
+      }
+      await restoreDesktopMigrationBackup({
+        executablePath: process.execPath,
+        nodeArgs: backendNodeArgs(),
+        paths,
+        cwd: resolveBackendCwd(),
+        env: process.env,
+        expectedBackupPath: restoreCandidate.backupPath,
+        expectedProvenancePath: restoreCandidate.provenancePath,
+        verifyRestore: () => hasVerifiedDesktopMigrationRestore(paths, restoreCandidate.backupPath),
+        restoreVerificationFailure:
+          "Migration restore completed without exact completed-provenance verification.",
+      });
+    },
+    requestRestart: () => app.relaunch(),
+    requestQuit: (reason) => requestGracefulAppQuit(reason),
+    formatError: formatErrorMessage,
+    log: writeDesktopLogHeader,
+  });
+}
+
 function handleBackendStartupBlock(block: BackendStartupBlock): void {
   if (isQuitting || backendLifecycleDialogInFlight) return;
 
   const task = (async () => {
+    if (block.kind === "migration-schema-too-new") {
+      await handleDesktopSchemaTooNewRecovery(block.block);
+      return;
+    }
+
+    if (block.kind === "migration-startup-block-invalid") {
+      desktopStartupBlockedForDatabaseRestore = true;
+      await recoverDesktopMigrationIfRequired({
+        requiresRecovery: () => true,
+        markerRemains: () => true,
+        choose: async ({ previousFailure }) => {
+          const releaseUrl = updateState.releaseUrl;
+          const choices = invalidMigrationStartupRecoveryChoices({
+            canInstallUpdate: canInstallUpdateFromRecovery(),
+            canOpenReleasePage: releaseUrl !== null,
+          });
+          const result = await dialog.showMessageBox({
+            type: "error",
+            title:
+              previousFailure === null
+                ? "Forkara could not verify migration recovery"
+                : "Forkara could not update itself",
+            message:
+              previousFailure === null
+                ? "The backend stopped for database safety, but its recovery details were invalid."
+                : "The newest Forkara release could not be installed.",
+            detail:
+              `${previousFailure === null ? "" : `${previousFailure.message}\n\n`}` +
+              "Forkara will keep the backend and provider processes stopped. The recovery record is not trusted, so restoring from it is disabled; choose one of the safe actions below.",
+            buttons: choices.map((choice) => choice.label),
+            defaultId: 0,
+            cancelId: choices.length - 1,
+            noLink: true,
+          });
+          return choices[result.response]?.decision ?? "quit";
+        },
+        installUpdate: installLatestUpdateForMigrationRecovery,
+        openReleasePage: () => {
+          const releaseUrl = updateState.releaseUrl;
+          if (releaseUrl !== null) void shell.openExternal(releaseUrl);
+        },
+        openLogs: openDesktopLogDirectory,
+        restore: async () => {
+          throw new Error("Invalid migration recovery details cannot authorize a restore.");
+        },
+        requestRestart: () => undefined,
+        requestQuit: (reason) => requestGracefulAppQuit(reason),
+        formatError: formatErrorMessage,
+        log: writeDesktopLogHeader,
+      });
+      return;
+    }
+
+    if (block.kind === "migration-divergence-consent-required") {
+      const challenge = block.challenge;
+      const result = await dialog.showMessageBox({
+        type: "warning",
+        title: "Forkara found a different database migration history",
+        message: `Migration ${challenge.firstDivergedId} does not match this build.`,
+        detail:
+          `The database records "${challenge.recordedName}", while this build expects ` +
+          `"${challenge.expectedName}". Continuing will first save an exact backup in:\n` +
+          `${challenge.backupDirectory}\n\nForkara will then rewrite tracker rows from migration ` +
+          `${challenge.firstDivergedId} and replay through ${challenge.targetVersion}. ` +
+          "Older builds may no longer be able to open the upgraded database. No provider or chat process will start until you choose.",
+        buttons: ["Back up and continue", "Quit"],
+        defaultId: 0,
+        cancelId: 1,
+        noLink: true,
+      });
+      if (result.response === 0) {
+        migrationConsentHandoff.approve(challenge.consentToken);
+        backendLifecycleDialogInFlight = null;
+        await restartBackendAfterCrash("approved migration lineage repair", "lifecycle");
+      } else {
+        requestGracefulAppQuit("migration lineage repair declined");
+      }
+      return;
+    }
+
+    if (block.kind === "migration-runtime-identity-mismatch") {
+      await dialog.showMessageBox({
+        type: "error",
+        title: "Forkara's server build does not match",
+        message: "The desktop and server migration code came from different builds.",
+        detail: app.isPackaged
+          ? "Update or reinstall Forkara before starting it again. The database was not opened."
+          : "Rebuild with bun run build:desktop before starting Forkara again. The database was not opened.",
+        buttons: ["Quit"],
+        defaultId: 0,
+        noLink: true,
+      });
+      requestGracefulAppQuit("migration bundle identity mismatch");
+      return;
+    }
+
     if (block.kind === "migration-recovery-required") {
       const result = await dialog.showMessageBox({
         type: "warning",
@@ -3692,7 +3982,7 @@ function startBackend(trigger: BackendStartTrigger = "lifecycle"): void {
   // Recovery owns the database until it clears the marker. Callers that restart
   // the backend after an unrelated failure — a given-up update install, say —
   // must not hand it a database the user is being asked how to repair.
-  if (desktopStartupBlockedForMigrationRecovery) {
+  if (desktopStartupBlockedForDatabaseRestore) {
     writeDesktopLogHeader("backend start suppressed while migration recovery is pending");
     return;
   }
@@ -4844,6 +5134,9 @@ if (!hasSingleInstanceLock) {
 
 async function bootstrap(): Promise<void> {
   writeDesktopLogHeader("bootstrap start");
+  if (!(await requireCurrentDesktopMigrationBundle())) {
+    return;
+  }
   // Ahead of the recovery gate on purpose. A startup that blocks below returns
   // early, and every path that could ship the fix for whatever blocked it lives
   // after that return: an install wedged on a bad migration would be unable to
@@ -4998,7 +5291,7 @@ if (hasSingleInstanceLock) {
       });
 
       app.on("activate", () => {
-        if (desktopStartupBlockedForMigrationRecovery || isQuitting) {
+        if (desktopStartupBlockedForDatabaseRestore || isQuitting) {
           return;
         }
         handleDesktopAppForegrounded();

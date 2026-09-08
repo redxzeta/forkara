@@ -303,8 +303,10 @@
   },
   "scripts": {
     "prepare": "effect-language-service patch",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "typecheck": "node ../../node_modules/@typescript/native/bin/tsc --noEmit",
+    "typecheck:native": "bun run typecheck",
+    "test": "vitest run",
+    "typecheck:legacy": "tsc --noEmit"
   },
   "dependencies": {
     "@forkara/contracts": "workspace:*",

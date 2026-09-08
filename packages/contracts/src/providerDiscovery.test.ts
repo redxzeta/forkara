@@ -29,3 +29,14 @@ describe("ProviderListModelsResult", () => {
     expect(result.models[1]?.resolvedModel).toBeUndefined();
   });
 });
+
+describe("model discovery fallback compatibility", () => {
+  it("accepts old responses and preserves a redacted fallback error", () => {
+    const decode = Schema.decodeUnknownSync(ProviderListModelsResult);
+    expect(decode({ models: [], cached: true })).toEqual({ models: [], cached: true });
+    expect(decode({ models: [], source: "static", error: "CLI unavailable" }).error).toBe(
+      "CLI unavailable",
+    );
+    expect(() => decode({ models: [], error: " " })).toThrow();
+  });
+});

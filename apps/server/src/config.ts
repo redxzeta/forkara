@@ -108,6 +108,7 @@ export interface ServerConfigShape extends ServerDerivedPaths {
   /** Public OAuth client id for the optional X integration. Tokens live in ServerSecretStore. */
   readonly xClientId?: string | undefined;
   readonly desktopShutdownToken?: string | undefined;
+  readonly migrationDivergenceConsent?: string | undefined;
   readonly autoBootstrapProjectFromCwd: boolean;
   readonly logProviderEvents: boolean;
   readonly logWebSocketEvents: boolean;
@@ -265,6 +266,7 @@ export class ServerConfig extends ServiceMap.Service<ServerConfig, ServerConfigS
           host: undefined,
           authToken: undefined,
           desktopShutdownToken: undefined,
+          migrationDivergenceConsent: undefined,
           staticDir: undefined,
           devUrl,
           publicUrl: undefined,

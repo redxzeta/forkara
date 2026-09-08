@@ -3690,10 +3690,15 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                   }).pipe(Effect.provideService(Scope.Scope, sessionScope)),
                 );
                 if (Exit.isFailure(startedExit)) {
-                  return yield* toAdapterProcessError(
-                    input.threadId,
-                    Cause.squash(startedExit.cause),
-                  );
+                  const startError = Cause.squash(startedExit.cause);
+                  if (
+                    resumedSessionId &&
+                    OpenCodeRuntimeError.is(startError) &&
+                    startError.operation === "session.update"
+                  ) {
+                    return yield* toAdapterRequestError(startError);
+                  }
+                  return yield* toAdapterProcessError(input.threadId, startError);
                 }
 
                 const started = startedExit.value;
@@ -4751,6 +4756,17 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
           );
         });
 
+      const didResumeSession: NonNullable<OpenCodeAdapterShape["didResumeSession"]> = (
+        input,
+        session,
+      ) => {
+        const requestedSessionId = extractResumeSessionId(input.resumeCursor);
+        return (
+          requestedSessionId !== undefined &&
+          extractResumeSessionId(session.resumeCursor) === requestedSessionId
+        );
+      };
+
       return {
         provider,
         capabilities: {
@@ -4759,6 +4775,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
           supportsNativeSlashCommandDiscovery: provider === "opencode",
         },
         startSession,
+        didResumeSession,
         sendTurn,
         interruptTurn,
         respondToRequest,
