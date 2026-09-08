@@ -712,7 +712,13 @@ describe("provider runtime activity projection", () => {
         tokenAccountingVersion: 1,
         mainLoopTokens: 1_000,
         modelUsage: {
-          "claude-fable-5": { inputTokens: 960, outputTokens: 40, totalTokens: 1_000 },
+          "claude-fable-5": {
+            inputTokens: 960,
+            outputTokens: 40,
+            totalTokens: 1_000,
+            cacheReadInputTokens: 800,
+            cacheCreationInputTokens: 60,
+          },
         },
       },
     });

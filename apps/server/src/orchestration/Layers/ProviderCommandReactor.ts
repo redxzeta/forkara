@@ -1467,6 +1467,7 @@ const make = Effect.gen(function* () {
       };
     }
 
+    let bootstrapTranscriptIfResumeFails = false;
     const hasSourceThreadId = thread.forkSourceThreadId != null;
     const sourceThread = hasSourceThreadId ? yield* resolveThread(thread.forkSourceThreadId) : null;
     const shouldBootstrapFromImportsOnly =
@@ -1516,9 +1517,10 @@ const make = Effect.gen(function* () {
           nativeResumeSucceeded: false,
         };
       }
-      if (shouldRegisterContextBootstrap && !thread.sidechatSourceThreadId) {
-        freshSessionContextBootstrapThreadIds.add(threadId);
-      }
+      // An existing fork also returns null: wait for its native resume result
+      // before treating the conversation as missing provider history.
+      bootstrapTranscriptIfResumeFails =
+        shouldRegisterContextBootstrap && !thread.sidechatSourceThreadId;
     }
 
     if (
@@ -1559,6 +1561,9 @@ const make = Effect.gen(function* () {
         });
       }),
     );
+    if (bootstrapTranscriptIfResumeFails && !startOutcome.nativeResumeSucceeded) {
+      freshSessionContextBootstrapThreadIds.add(threadId);
+    }
     let retainContextBootstrapSuppression = false;
     if (startOutcome.priorTranscriptBootstrapPending) {
       if (shouldRegisterContextBootstrap) {
