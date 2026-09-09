@@ -370,6 +370,7 @@ export function makePiRuntimeEventBase(
 interface PiStoredTurn {
   readonly id: TurnId;
   readonly items: unknown[];
+  readonly toolItemIndexes: Map<string, number>;
   leafId?: string | null;
 }
 
@@ -1679,11 +1680,22 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
       } satisfies ProviderRuntimeEvent);
     };
 
-    const recordItem = (context: PiSessionContext, item: unknown) => {
+    const recordItem = (context: PiSessionContext, item: unknown, toolCallId?: string) => {
       const turn = context.activeTurnId
         ? context.turns.find((candidate) => candidate.id === context.activeTurnId)
         : context.turns.at(-1);
-      turn?.items.push(item);
+      if (!turn) return;
+      if (toolCallId !== undefined) {
+        const index = turn.toolItemIndexes.get(toolCallId);
+        if (index !== undefined) {
+          const previous = turn.items[index];
+          turn.items[index] =
+            isRecord(previous) && isRecord(item) ? { ...previous, ...item } : item;
+          return;
+        }
+        turn.toolItemIndexes.set(toolCallId, turn.items.length);
+      }
+      turn.items.push(item);
     };
 
     const requireSession = Effect.fn("PiAdapter.requireSession")(function* (threadId: ThreadId) {
@@ -1835,12 +1847,17 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
           };
           context.activeToolItems.set(event.toolCallId, tracked);
           const title = toolTitle(event.toolName, event.args);
-          recordItem(context, {
-            type: "tool_call",
-            status: "started",
-            toolName: event.toolName,
-            args: event.args,
-          });
+          recordItem(
+            context,
+            {
+              type: "tool_call",
+              callId: event.toolCallId,
+              status: "started",
+              toolName: event.toolName,
+              args: event.args,
+            },
+            event.toolCallId,
+          );
           offerRuntimeEvent({
             ...makeEventBase(context),
             itemId,
@@ -1864,12 +1881,18 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
           const tracked = context.activeToolItems.get(event.toolCallId);
           if (!tracked) return;
           const detail = textFromToolResult(event.partialResult);
-          recordItem(context, {
-            type: "tool_call",
-            status: "updated",
-            toolName: event.toolName,
-            output: detail,
-          });
+          recordItem(
+            context,
+            {
+              type: "tool_call",
+              callId: event.toolCallId,
+              status: "updated",
+              toolName: event.toolName,
+              args: tracked.args,
+              output: detail,
+            },
+            event.toolCallId,
+          );
           offerRuntimeEvent({
             ...makeEventBase(context),
             itemId: tracked.itemId,
@@ -1901,13 +1924,19 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
           };
           context.activeToolItems.delete(event.toolCallId);
           const detail = textFromToolResult(event.result);
-          recordItem(context, {
-            type: "tool_call",
-            status: event.isError ? "failed" : "completed",
-            toolName: event.toolName,
-            output: detail,
-            result: event.result,
-          });
+          recordItem(
+            context,
+            {
+              type: "tool_call",
+              callId: event.toolCallId,
+              status: event.isError ? "failed" : "completed",
+              toolName: event.toolName,
+              ...(tracked.args !== undefined ? { args: tracked.args } : {}),
+              output: detail,
+              result: event.result,
+            },
+            event.toolCallId,
+          );
           offerRuntimeEvent({
             ...makeEventBase(context),
             itemId: tracked.itemId,
@@ -2448,7 +2477,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
         const payload = yield* buildPromptPayload(input);
         const turnId = TurnId.makeUnsafe(crypto.randomUUID());
         context.activeTurnId = turnId;
-        context.turns.push({ id: turnId, items: [] });
+        context.turns.push({ id: turnId, items: [], toolItemIndexes: new Map() });
         context.session = makeSessionSnapshot(context);
         if (payload.images.length === 0 && isPiReloadCommand(payload.text)) {
           offerRuntimeEvent({
@@ -2539,7 +2568,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
         const turnId = context.activeTurnId ?? TurnId.makeUnsafe(crypto.randomUUID());
         if (!context.activeTurnId) {
           context.activeTurnId = turnId;
-          context.turns.push({ id: turnId, items: [] });
+          context.turns.push({ id: turnId, items: [], toolItemIndexes: new Map() });
         }
         if (context.runtime.session.isStreaming) {
           yield* Effect.tryPromise({

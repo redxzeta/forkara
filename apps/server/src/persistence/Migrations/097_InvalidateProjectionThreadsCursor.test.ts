@@ -28,6 +28,7 @@ import {
 } from "../../orchestration/Services/ProjectionPipeline.ts";
 import { runMigrations } from "../Migrations.ts";
 import * as NodeSqliteClient from "../NodeSqliteClient.ts";
+import messageTextChunkSchema from "./098_MessageTextChunks.ts";
 
 const testLayer = OrchestrationProjectionPipelineLive.pipe(
   Layer.provideMerge(OrchestrationEventStoreLive),
@@ -61,6 +62,9 @@ it.layer(Layer.fresh(testLayer))("097_InvalidateProjectionThreadsCursor", (it) =
         // already has migration 96 applied and a projection.threads cursor at
         // the journal head.
         yield* runMigrations({ toMigrationInclusive: 96 });
+        // Current projector readers require the additive chunk schema. Install it
+        // without changing the migration-97 cursor/tracker state under test.
+        yield* messageTextChunkSchema;
 
         const threadId = ThreadId.makeUnsafe("thread-097");
         const projectId = ProjectId.makeUnsafe("project-097");
