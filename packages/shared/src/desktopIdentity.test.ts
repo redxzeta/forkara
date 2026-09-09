@@ -58,4 +58,9 @@ describe("desktopIdentity", () => {
       "canary",
     );
   });
+
+  it("keeps an unconfigured development desktop home separate from production", () => {
+    expect(forkaraDesktopIdentity("development").defaultHomeDirectoryName).toBe(".forkara-dev");
+    expect(forkaraDesktopIdentity("production").defaultHomeDirectoryName).toBe(".forkara");
+  });
 });

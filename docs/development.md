@@ -43,9 +43,10 @@ Inspect the resolved setup without starting Turbo or any application process:
 bun run dev:contributor -- --dry-run
 ```
 
-The repository-local state directory is ignored by Git. The ordinary `bun run dev` and its existing
-flags remain available for maintainers and custom setups, but contributor mode is the safe default
-when an installed Forkara instance may already be open.
+The repository-local state directory is ignored by Git. Ordinary `bun run dev` also defaults to
+`./.forkara/dev`; use `--home-dir` or `FORKARA_HOME` when you deliberately need another state root.
+Contributor mode remains the safest option for an isolated setup with its own ports and no inherited
+auth token.
 
 ## Repository architecture
 

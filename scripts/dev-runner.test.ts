@@ -1,6 +1,6 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { readFileSync } from "node:fs";
-import { homedir } from "node:os";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { assert, describe, it } from "@effect/vitest";
@@ -233,6 +233,44 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
   });
 
   describe("createDevRunnerEnv", () => {
+    it("gives CLI state-root overrides precedence over FORKARA_HOME", () => {
+      const repositoryRoot = resolve(import.meta.dirname, "..");
+      const root = mkdtempSync(resolve(tmpdir(), "forkara-dev-runner-home-"));
+      const environmentHome = resolve(root, "from-environment");
+      const cliHome = resolve(root, "from-cli");
+      try {
+        const environmentResult = spawnSync("bun", ["run", "dev", "--", "--dry-run"], {
+          cwd: repositoryRoot,
+          encoding: "utf8",
+          env: { ...process.env, FORKARA_HOME: environmentHome },
+        });
+        const cliResult = spawnSync(
+          "bun",
+          ["run", "dev", "--", "--dry-run", "--home-dir", cliHome],
+          {
+            cwd: repositoryRoot,
+            encoding: "utf8",
+            env: { ...process.env, FORKARA_HOME: environmentHome },
+          },
+        );
+
+        assert.equal(
+          environmentResult.status,
+          0,
+          `${environmentResult.stdout}${environmentResult.stderr}`,
+        );
+        assert.equal(cliResult.status, 0, `${cliResult.stdout}${cliResult.stderr}`);
+        assert.ok(
+          `${environmentResult.stdout}${environmentResult.stderr}`.includes(
+            `baseDir=${environmentHome}`,
+          ),
+        );
+        assert.ok(`${cliResult.stdout}${cliResult.stderr}`.includes(`baseDir=${cliHome}`));
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    }, 15_000);
+
     it.effect("marks an inherited terminal PATH as already hydrated", () =>
       Effect.gen(function* () {
         const env = yield* createDevRunnerEnv({
@@ -255,7 +293,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
       }),
     );
 
-    it.effect("defaults FORKARA_HOME to ~/.forkara when not provided", () =>
+    it.effect("defaults FORKARA_HOME to repository-local development state when not provided", () =>
       Effect.gen(function* () {
         const env = yield* createDevRunnerEnv({
           mode: "dev",
@@ -272,7 +310,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           devUrl: undefined,
         });
 
-        assert.equal(env.FORKARA_HOME, resolve(homedir(), ".forkara"));
+        assert.equal(env.FORKARA_HOME, resolve("./.forkara/dev"));
         assert.equal(env.FORKARA_HOST, "127.0.0.1");
         assert.equal(env.VITE_WS_URL, "ws://127.0.0.1:3773");
       }),

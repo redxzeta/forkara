@@ -36,9 +36,9 @@ function mode(filePath: string): number {
   return fs.statSync(filePath).mode & 0o777;
 }
 
-function derivePaths(baseDir: string) {
+function derivePaths(baseDir: string, devUrl: URL | undefined = undefined) {
   return Effect.runSync(
-    deriveServerPaths(baseDir, undefined).pipe(Effect.provide(NodeServices.layer)),
+    deriveServerPaths(baseDir, devUrl).pipe(Effect.provide(NodeServices.layer)),
   );
 }
 
@@ -47,6 +47,26 @@ afterEach(() => {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
   tempDirs.clear();
+});
+
+describe("development state isolation", () => {
+  it("initializes development state without opening the production database", () => {
+    const root = makeTempDir();
+    const productionPaths = derivePaths(path.join(root, "production"));
+    const developmentPaths = derivePaths(
+      path.join(root, "development"),
+      new URL("http://127.0.0.1:5733"),
+    );
+
+    fs.mkdirSync(path.dirname(productionPaths.dbPath), { recursive: true });
+    fs.writeFileSync(productionPaths.dbPath, "production database sentinel");
+
+    preparePrivateServerPaths(developmentPaths);
+
+    expect(developmentPaths.dbPath).not.toBe(productionPaths.dbPath);
+    expect(fs.readFileSync(productionPaths.dbPath, "utf8")).toBe("production database sentinel");
+    expect(fs.existsSync(developmentPaths.dbPath)).toBe(true);
+  });
 });
 
 describe.skipIf(process.platform === "win32")("private server state permissions", () => {
