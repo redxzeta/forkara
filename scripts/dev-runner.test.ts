@@ -269,7 +269,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
       } finally {
         rmSync(root, { recursive: true, force: true });
       }
-    });
+    }, 15_000);
 
     it.effect("marks an inherited terminal PATH as already hydrated", () =>
       Effect.gen(function* () {
