@@ -141,7 +141,7 @@ export function openCodeRuntimeErrorDetail(cause: unknown): string {
 
 export const runOpenCodeSdk = <A>(
   operation: string,
-  fn: () => Promise<A>,
+  fn: (signal: AbortSignal) => Promise<A>,
 ): Effect.Effect<A, OpenCodeRuntimeError> =>
   Effect.tryPromise({
     try: fn,
@@ -1381,7 +1381,7 @@ const makeOpenCodeRuntime = (options?: OpenCodeRuntimeLiveOptions) =>
       });
 
     const loadProviders = (client: OpencodeClient) =>
-      runOpenCodeSdk("provider.list", () => client.provider.list()).pipe(
+      runOpenCodeSdk("provider.list", (signal) => client.provider.list(undefined, { signal })).pipe(
         Effect.filterMapOrFail(
           (list) =>
             list.data
@@ -1397,7 +1397,7 @@ const makeOpenCodeRuntime = (options?: OpenCodeRuntimeLiveOptions) =>
       );
 
     const loadAgents = (client: OpencodeClient) =>
-      runOpenCodeSdk("app.agents", () => client.app.agents()).pipe(
+      runOpenCodeSdk("app.agents", (signal) => client.app.agents(undefined, { signal })).pipe(
         Effect.map((result) => result.data ?? []),
       );
 
@@ -1413,9 +1413,13 @@ const makeOpenCodeRuntime = (options?: OpenCodeRuntimeLiveOptions) =>
       );
 
     const loadConsoleState = (client: OpencodeClient) =>
-      runOpenCodeSdk("experimental.console.get", () => client.experimental.console.get()).pipe(
+      runOpenCodeSdk("experimental.console.get", (signal) =>
+        client.experimental.console.get(undefined, { signal }),
+      ).pipe(
         Effect.map((result) => result.data ?? null),
         // Console metadata is optional and should not block model discovery.
+        Effect.timeoutOption("2 seconds"),
+        Effect.map(Option.getOrElse(() => null)),
         Effect.catch(() => Effect.succeed(null)),
       );
 

@@ -8,7 +8,8 @@ import type {
   Provider,
   QuestionRequest,
 } from "@opencode-ai/sdk/v2";
-import { Deferred, Effect, Exit, Fiber, Layer, Scope, Stream } from "effect";
+import { Deferred, Effect, Exit, Fiber, Layer, Option, Scope, Stream } from "effect";
+import { TestClock } from "effect/testing";
 import { describe, it, expect, vi } from "vitest";
 
 import { ServerConfig } from "../../config.ts";
@@ -76,7 +77,10 @@ function createMockOpenCodeRuntime(options?: {
   readonly pendingQuestions?: ReadonlyArray<QuestionRequest>;
   readonly questionList?: () => Promise<unknown>;
   readonly permissionReply?: (input: Record<string, unknown>) => Promise<unknown>;
-  readonly mcpAdd?: (input: Record<string, unknown>) => Promise<unknown>;
+  readonly mcpAdd?: (
+    input: Record<string, unknown>,
+    options?: { signal?: AbortSignal },
+  ) => Promise<unknown>;
   readonly serverExit?: Effect.Effect<number>;
   readonly sessionCreateError?: Error;
   readonly sessionUpdate?: (input: Record<string, unknown>) => Promise<unknown>;
@@ -177,10 +181,10 @@ function createMockOpenCodeRuntime(options?: {
       list: options?.commandList ?? (async () => ({ data: [] })),
     },
     mcp: {
-      add: async (input: Record<string, unknown>) => {
+      add: async (input: Record<string, unknown>, requestOptions?: { signal?: AbortSignal }) => {
         mcpAddCalls.push(input);
         return options?.mcpAdd
-          ? options.mcpAdd(input)
+          ? options.mcpAdd(input, requestOptions)
           : { data: { forkara: { status: "connected" } } };
       },
     },
@@ -1397,6 +1401,100 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
     expect(gateway.revoked).toEqual(["gateway-token-1"]);
     expect(gateway.ownerByToken.size).toBe(0);
     expect(JSON.stringify(runtime.promptCalls[0])).toContain("Forkara MCP control is unavailable");
+  });
+
+  it("cancels stalled MCP setup and starts with the gateway marked unavailable", async () => {
+    const requested = Effect.runSync(Deferred.make<void>());
+    let requestSignal: AbortSignal | undefined;
+    const runtime = createMockOpenCodeRuntime({
+      mcpAdd: async (_input, options) => {
+        requestSignal = options?.signal;
+        Effect.runSync(Deferred.succeed(requested, undefined));
+        return await new Promise(() => {});
+      },
+    });
+    const gateway = makeGatewayCredentials();
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const adapter = yield* OpenCodeAdapter;
+        const threadId = asThreadId("thread-stalled-gateway");
+        const starting = yield* adapter
+          .startSession({
+            provider: "opencode",
+            threadId,
+            runtimeMode: "full-access",
+          })
+          .pipe(Effect.forkChild);
+        yield* Deferred.await(requested);
+        yield* TestClock.adjust("10 seconds");
+        const session = yield* Fiber.join(starting);
+        expect(session.status).toBe("ready");
+        expect(requestSignal?.aborted).toBe(true);
+        yield* adapter.sendTurn({
+          threadId,
+          input: "hello",
+          attachments: [],
+          modelSelection: { provider: "opencode", model: "openai/gpt-5" },
+        });
+        yield* adapter.stopSession(threadId);
+      }).pipe(
+        Effect.provide(
+          makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
+            Layer.provide(Layer.succeed(AgentGatewayCredentials, gateway.credentials)),
+            Layer.provideMerge(
+              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-gateway-timeout-test-" }),
+            ),
+            Layer.provideMerge(NodeServices.layer),
+          ),
+        ),
+        Effect.provide(TestClock.layer()),
+        Effect.scoped,
+      ),
+    );
+    expect(gateway.ownerByToken.size).toBe(0);
+    expect(JSON.stringify(runtime.promptCalls[0])).toContain("Forkara MCP control is unavailable");
+  });
+
+  it("submits OpenCode turns through the asynchronous prompt endpoint", async () => {
+    const runtime = createMockOpenCodeRuntime({
+      prompt: async () => {
+        throw new Error("OpenCode's blocking prompt endpoint must not be used");
+      },
+    });
+    const threadId = asThreadId("thread-opencode-async-prompt");
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const adapter = yield* OpenCodeAdapter;
+        yield* adapter.startSession({
+          provider: "opencode",
+          threadId,
+          runtimeMode: "full-access",
+          cwd: "/repo",
+        });
+        yield* adapter.sendTurn({
+          threadId,
+          input: "perform a long-running task",
+          attachments: [],
+          modelSelection: { provider: "opencode", model: "openai/gpt-5" },
+        });
+        yield* adapter.stopSession(threadId);
+      }).pipe(
+        Effect.provide(
+          makeOpenCodeAdapterLive({ runtime: runtime.runtime }).pipe(
+            Layer.provideMerge(
+              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-adapter-test-" }),
+            ),
+            Layer.provideMerge(NodeServices.layer),
+          ),
+        ),
+      ),
+    );
+
+    expect(runtime.promptCallKinds).toEqual(["async"]);
+    expect(runtime.promptCalls[0]).toMatchObject({
+      sessionID: "opencode-session-1",
+    });
   });
 
   it("applies the same isolated gateway lifecycle to managed Kilo sessions", async () => {
@@ -5038,6 +5136,56 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         },
       },
     });
+  });
+
+  it("starts and sends a turn while optional model inventory is stalled", async () => {
+    const runtime = createMockOpenCodeRuntime();
+    let inventoryCancelled = false;
+    const stalledRuntime = {
+      ...runtime.runtime,
+      loadOpenCodeInventory: () =>
+        Effect.never.pipe(
+          Effect.onInterrupt(() =>
+            Effect.sync(() => {
+              inventoryCancelled = true;
+            }),
+          ),
+        ),
+    };
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const adapter = yield* OpenCodeAdapter;
+        return yield* Effect.gen(function* () {
+          const session = yield* adapter.startSession({
+            provider: "opencode",
+            threadId: asThreadId("thread-stalled-inventory"),
+            runtimeMode: "full-access",
+          });
+          const turn = yield* adapter.sendTurn({
+            threadId: session.threadId,
+            input: "hello",
+            attachments: [],
+            modelSelection: { provider: "opencode", model: "openai/gpt-5.4" },
+          });
+          yield* adapter.stopSession(session.threadId);
+          return { session, turn };
+        }).pipe(Effect.timeoutOption("1 second"));
+      }).pipe(
+        Effect.provide(
+          makeOpenCodeAdapterLive({ runtime: stalledRuntime }).pipe(
+            Layer.provideMerge(
+              ServerConfig.layerTest(process.cwd(), { prefix: "opencode-inventory-test-" }),
+            ),
+            Layer.provideMerge(NodeServices.layer),
+          ),
+        ),
+      ),
+    );
+
+    expect(Option.isSome(result)).toBe(true);
+    expect(runtime.promptCalls).toHaveLength(1);
+    expect(inventoryCancelled).toBe(true);
   });
 
   it("does not block sendTurn when the OpenCode prompt request stalls during startup", async () => {
