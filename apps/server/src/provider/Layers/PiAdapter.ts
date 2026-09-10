@@ -38,6 +38,7 @@ import {
   TurnId,
   type UserInputQuestion,
 } from "@forkara/contracts";
+import { stripTerminalControlSequences } from "@forkara/shared/text";
 import { Effect, FileSystem, Layer, Option, Queue, Stream } from "effect";
 
 import { takeForkaraHarnessPolicyForProviderSession } from "../../agentGateway/harnessPolicy.ts";
@@ -490,6 +491,10 @@ function toMessage(cause: unknown, fallback: string): string {
 function trimToUndefined(value: string | null | undefined): string | undefined {
   const trimmed = typeof value === "string" ? value.trim() : "";
   return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function trimPiDisplayText(value: string | undefined): string | undefined {
+  return value === undefined ? undefined : trimToUndefined(stripTerminalControlSequences(value));
 }
 
 function isPiThinkingLevel(value: string | null | undefined): value is ThinkingLevel {
@@ -1235,7 +1240,7 @@ function extensionDisplayName(extension: {
 }
 
 function makePiUserInputOption(label: string): UserInputQuestion["options"][number] {
-  const normalizedLabel = trimToUndefined(label) ?? "Option";
+  const normalizedLabel = trimPiDisplayText(label) ?? "Option";
   return { label: normalizedLabel, description: normalizedLabel };
 }
 
@@ -1244,7 +1249,7 @@ export function makePiUserInputOptions(
 ): ReadonlyArray<PiUserInputOptionMapping> {
   const labelCounts = new Map<string, number>();
   return labels.map((label, index) => {
-    const baseLabel = trimToUndefined(label) ?? `Option ${index + 1}`;
+    const baseLabel = trimPiDisplayText(label) ?? `Option ${index + 1}`;
     const count = (labelCounts.get(baseLabel) ?? 0) + 1;
     labelCounts.set(baseLabel, count);
     const displayLabel = count === 1 ? baseLabel : `${baseLabel} (${count})`;
@@ -1496,8 +1501,6 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
     // pending user-input flow; terminal/TUI-only APIs remain no-op by design.
     const makePiExtensionUIContext = (context: PiSessionContext): ExtensionUIContext => {
       const unsupportedWarnings = new Set<string>();
-      const statusTexts = new Map<string, string>();
-      let workingMessage: string | undefined;
       const warnUnsupported = (method: string) => {
         if (unsupportedWarnings.has(method)) return;
         unsupportedWarnings.add(method);
@@ -1515,21 +1518,6 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
           },
         } satisfies ProviderRuntimeEvent);
       };
-      const emitPluginProgress = (summary: string) => {
-        const normalized = trimToUndefined(summary);
-        if (!normalized) return;
-        offerRuntimeEvent({
-          ...makeEventBase(context),
-          type: "tool.progress",
-          payload: { toolName: "Pi plugin", summary: normalized },
-          raw: {
-            source: "pi.sdk.event",
-            method: "extension/ui-progress",
-            payload: { summary: normalized },
-          },
-        } satisfies ProviderRuntimeEvent);
-      };
-
       const uiContext: ExtensionUIContext = {
         async select(title, options, opts) {
           const questionId = "selection";
@@ -1539,8 +1527,8 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
             opts,
             question: {
               id: questionId,
-              header: trimToUndefined(title) ?? "Pi plugin",
-              question: trimToUndefined(title) ?? "Choose an option.",
+              header: trimPiDisplayText(title) ?? "Pi plugin",
+              question: trimPiDisplayText(title) ?? "Choose an option.",
               options: optionMappings.map((mapping) => mapping.option),
             },
             rawPayload: { title, options },
@@ -1555,9 +1543,9 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
             opts,
             question: {
               id: questionId,
-              header: trimToUndefined(title) ?? "Pi plugin",
+              header: trimPiDisplayText(title) ?? "Pi plugin",
               question:
-                trimToUndefined(message) ?? trimToUndefined(title) ?? "Confirm this action?",
+                trimPiDisplayText(message) ?? trimPiDisplayText(title) ?? "Confirm this action?",
               options: [makePiUserInputOption("Yes"), makePiUserInputOption("No")],
             },
             rawPayload: { title, message },
@@ -1571,54 +1559,38 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
             opts,
             question: {
               id: questionId,
-              header: trimToUndefined(title) ?? "Pi plugin",
+              header: trimPiDisplayText(title) ?? "Pi plugin",
               question:
-                trimToUndefined(placeholder) ?? trimToUndefined(title) ?? "Type a response.",
+                trimPiDisplayText(placeholder) ?? trimPiDisplayText(title) ?? "Type a response.",
               options: [],
             },
             rawPayload: { title, placeholder },
           });
           return firstPiUserInputAnswer(answers, questionId);
         },
-        notify(message, type) {
-          const normalized = trimToUndefined(message);
+        notify(message, type = "info") {
+          const normalized = trimPiDisplayText(message);
           if (!normalized) return;
-          if (type === "warning" || type === "error") {
-            offerRuntimeEvent({
-              ...makeEventBase(context),
-              type: "runtime.warning",
-              payload: { message: normalized, detail: { type: type ?? "info" } },
-              raw: {
-                source: "pi.sdk.event",
-                method: "extension/ui/notify",
-                payload: { message: normalized, type },
-              },
-            } satisfies ProviderRuntimeEvent);
-            return;
-          }
-          emitPluginProgress(normalized);
+          offerRuntimeEvent({
+            ...makeEventBase(context),
+            type: "runtime.warning",
+            payload: { message: normalized, detail: { type } },
+            raw: {
+              source: "pi.sdk.event",
+              method: "extension/ui/notify",
+              payload: { message: normalized, type },
+            },
+          } satisfies ProviderRuntimeEvent);
         },
         onTerminalInput() {
           warnUnsupported("onTerminalInput");
           return () => undefined;
         },
-        setStatus(key, text) {
-          const normalizedKey = trimToUndefined(key) ?? "status";
-          const normalizedText = trimToUndefined(text);
-          if (!normalizedText) {
-            statusTexts.delete(normalizedKey);
-            return;
-          }
-          if (statusTexts.get(normalizedKey) === normalizedText) return;
-          statusTexts.set(normalizedKey, normalizedText);
-          emitPluginProgress(`${normalizedKey}: ${normalizedText}`);
-        },
-        setWorkingMessage(message) {
-          const normalizedMessage = trimToUndefined(message);
-          if (!normalizedMessage || normalizedMessage === workingMessage) return;
-          workingMessage = normalizedMessage;
-          emitPluginProgress(normalizedMessage);
-        },
+        // Pi extensions use status and working-message callbacks for terminal
+        // chrome. Synara has its own working header; neither belongs in the
+        // transcript as a fake tool call.
+        setStatus() {},
+        setWorkingMessage() {},
         setWorkingVisible() {},
         setWorkingIndicator() {},
         setHiddenThinkingLabel() {},
@@ -1631,9 +1603,9 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
         setHeader() {
           warnUnsupported("setHeader");
         },
-        setTitle(title) {
-          if (title) emitPluginProgress(title);
-        },
+        // The browser owns document/thread chrome; do not turn terminal title
+        // changes into transcript rows.
+        setTitle() {},
         async custom() {
           warnUnsupported("custom");
           return undefined as never;
@@ -2412,7 +2384,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
             type: "runtime.warning",
             payload: {
               message:
-                "Pi extensions are loaded with Forkara's limited UI bridge. select/confirm/input/notify/status are supported; TUI-only widgets and editor hooks are ignored.",
+                "Pi extensions are loaded with Forkara's limited UI bridge. select/confirm/input and notifications are supported; terminal status, widgets, and editor hooks are ignored.",
               detail: {
                 extensionCount: loadedExtensions.length,
                 extensions: extensionNames,
