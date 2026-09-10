@@ -2893,14 +2893,15 @@ const make = Effect.gen(function* () {
   // open-turn and index page writes) from every streamed token. The cursor is
   // flushed before anything reads or moves it out of band (quarantine,
   // dead-lettering, the page-progress check) and when ingestion stops. A crash
-  // between processing and the flush replays at most one page; every replayed
-  // command is idempotent by command id and by the message text watermark.
+  // between processing and the flush leaves at most one page unacknowledged.
+  // In-process retries must flush the completed prefix before reading another
+  // page: command receipts deduplicate durable writes, not buffered text or
+  // other process-local aggregation state.
   let pendingAckedSequence: number | null = null;
 
   const flushRuntimeCursor = Effect.suspend(() => {
     const throughSequence = pendingAckedSequence;
     if (throughSequence === null) return Effect.void;
-    pendingAckedSequence = null;
     return runtimeEvents
       .advanceConsumerCursorThrough({
         consumerName: PROVIDER_RUNTIME_INGESTION_CONSUMER,
@@ -2910,7 +2911,11 @@ const make = Effect.gen(function* () {
       .pipe(
         Effect.flatMap((advanced) =>
           advanced
-            ? Effect.void
+            ? Effect.sync(() => {
+                // Keep a newer completed prefix if work advanced during the
+                // SQL call. A failed/uncertain commit retains this retry fence.
+                if (pendingAckedSequence === throughSequence) pendingAckedSequence = null;
+              })
             : Effect.die(
                 new Error(
                   `Provider runtime cursor could not advance through event ${throughSequence}`,
@@ -2952,6 +2957,9 @@ const make = Effect.gen(function* () {
     // assistant output — for at least a minute. Quarantine this deterministically
     // unreplayable row immediately, exactly as the poison gate eventually would,
     // and keep the accepted event available in the retained diagnostic tail.
+    // A failure while flushing the preceding rows must block this page too;
+    // otherwise a later successful row could acknowledge past the poison row.
+    runtimeJournalPageBlocked = true;
     yield* flushRuntimeCursor;
     const advanced = yield* runtimeEvents
       .advanceConsumerCursor({
@@ -2989,6 +2997,7 @@ const make = Effect.gen(function* () {
       });
       return;
     }
+    runtimeJournalPageBlocked = false;
     yield* Effect.logError(
       "provider runtime unreplayable command quarantined without blocking the journal",
       {
@@ -3086,9 +3095,13 @@ const make = Effect.gen(function* () {
   const drainRuntimeJournalThrough = (throughSequenceInclusive?: number) =>
     runtimeJournalDrainLock.withPermits(1)(
       Effect.gen(function* () {
+        // An interrupted drain may have left accepted work in the worker.
+        // Finish it before retrying its acknowledgement or reading the cursor.
+        yield* worker.drain;
         const replayFence = throughSequenceInclusive ?? (yield* runtimeEvents.getHighWaterSequence);
         let hadBacklog = false;
         while (true) {
+          yield* flushRuntimeCursor;
           const cursor = yield* runtimeEvents.getConsumerCursor(
             PROVIDER_RUNTIME_INGESTION_CONSUMER,
           );
