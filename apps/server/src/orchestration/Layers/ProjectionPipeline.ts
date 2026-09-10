@@ -16,6 +16,7 @@ import {
   setThreadMarkerDone,
   setThreadMarkerLabel,
 } from "@forkara/shared/threadMarkers";
+import { createStalePendingInteractionMatcher } from "@forkara/shared/pendingInteractions";
 import {
   isStalePendingRequestFailureDetail,
   resolveHumanMessageAt,
@@ -1744,9 +1745,7 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
               // while every actual response hit a dead provider.
               if (
                 existingRow.value.status === "confirmed" ||
-                !isStalePendingRequestFailureDetail(
-                  payloadNonEmptyString(activity.payload, "detail") ?? undefined,
-                )
+                !createStalePendingInteractionMatcher([activity])(existingRow.value)
               ) {
                 return;
               }

@@ -1,3 +1,6 @@
+import { ComposerExpiredUserInputNotice } from "./chat/ComposerExpiredUserInputNotice";
+import { usePendingUserInputDrafts } from "./chat/usePendingUserInputDrafts";
+import { expiredUserInputDrafts } from "../pendingUserInputRecovery";
 import {
   type AutomationDefinition,
   type AutomationSchedule,
@@ -1309,10 +1312,6 @@ export default function ChatView({
   const [respondingUserInputRequestKeys, setRespondingUserInputRequestKeys] = useState<string[]>(
     [],
   );
-  const [pendingUserInputAnswersByRequestId, setPendingUserInputAnswersByRequestId] = useState<
-    Record<string, Record<string, PendingUserInputDraftAnswer>>
-  >({});
-  const pendingUserInputAnswersByRequestIdRef = useRef(pendingUserInputAnswersByRequestId);
   const [pendingUserInputQuestionIndexByRequestId, setPendingUserInputQuestionIndexByRequestId] =
     useState<Record<string, number>>({});
   const [planSidebarOpen, setPlanSidebarOpen] = useState(false);
@@ -2119,6 +2118,16 @@ export default function ChatView({
       threadActivities,
       userInputResponseClaimReferenceAt,
     ],
+  );
+  const {
+    answers: pendingUserInputAnswersByRequestId,
+    answersRef: pendingUserInputAnswersByRequestIdRef,
+    setAnswers: setPendingUserInputAnswersByRequestId,
+    drafts: pendingUserInputDrafts,
+  } = usePendingUserInputDrafts(threadId, pendingUserInputs, activeThread?.pendingInteractions);
+  const expiredQuestionDrafts = useMemo(
+    () => expiredUserInputDrafts(pendingUserInputDrafts, threadActivities),
+    [pendingUserInputDrafts, threadActivities],
   );
   const activePendingUserInput = pendingUserInputs[0] ?? null;
   const activePendingUserInputKey = activePendingUserInput
@@ -6465,6 +6474,8 @@ export default function ChatView({
     [activeThreadId, runtimeMode, setComposerDraftRuntimeMode, setStoreThreadError],
   );
 
+  const userInputSubmissionsRef = useRef(new Set<string>());
+  const [userInputSubmissionVersion, setUserInputSubmissionVersion] = useState(0);
   const onRespondToUserInput = useCallback(
     async (
       requestId: ApprovalRequestId,
@@ -6474,6 +6485,10 @@ export default function ChatView({
       const api = readNativeApi();
       if (!api || !activeThreadId) return;
       const requestKey = pendingRequestInstanceKey(requestId, lifecycleGeneration);
+      const submissionKey = `${activeThreadId}:${requestKey}`;
+      if (userInputSubmissionsRef.current.has(submissionKey)) return;
+      userInputSubmissionsRef.current.add(submissionKey);
+      setUserInputSubmissionVersion((version) => version + 1);
       const dispatchAnswers = hasCompletePendingUserInputAnswers(answers)
         ? answers
         : omitNullPendingUserInputAnswers(answers);
@@ -6481,23 +6496,35 @@ export default function ChatView({
       setRespondingUserInputRequestKeys((existing) =>
         existing.includes(requestKey) ? existing : [...existing, requestKey],
       );
-      await api.orchestration
-        .dispatchCommand({
-          type: "thread.user-input.respond",
-          commandId: newCommandId(),
-          threadId: activeThreadId,
-          requestId,
-          answers: dispatchAnswers,
-          ...(lifecycleGeneration !== undefined ? { lifecycleGeneration } : {}),
-          createdAt: new Date().toISOString(),
+      await Promise.resolve()
+        .then(async () => {
+          await api.orchestration.dispatchCommand({
+            type: "thread.user-input.respond",
+            commandId: newCommandId(),
+            threadId: activeThreadId,
+            requestId,
+            answers: dispatchAnswers,
+            ...(lifecycleGeneration !== undefined ? { lifecycleGeneration } : {}),
+            createdAt: new Date().toISOString(),
+          });
+          clearThreadDetailResumeCursor(activeThreadId);
+          await api.orchestration.subscribeThread(buildThreadSubscribeInput(activeThreadId));
         })
         .catch((err: unknown) => {
           setStoreThreadError(
             activeThreadId,
-            err instanceof Error ? err.message : "Failed to submit user input.",
+            describeErrorMessage(
+              err,
+              "Could not submit or refresh the answer. Your answers are saved.",
+            ),
+          );
+        })
+        .finally(() => {
+          userInputSubmissionsRef.current.delete(submissionKey);
+          setRespondingUserInputRequestKeys((existing) =>
+            existing.filter((key) => key !== requestKey),
           );
         });
-      setRespondingUserInputRequestKeys((existing) => existing.filter((key) => key !== requestKey));
     },
     [activeThreadId, setStoreThreadError],
   );
@@ -8376,6 +8403,7 @@ export default function ChatView({
                 <div className="pb-2">
                   <ComposerPendingUserInputPanel
                     pendingUserInputs={pendingUserInputs}
+                    submissionVersion={userInputSubmissionVersion}
                     isResponding={activePendingIsResponding}
                     answers={activePendingDraftAnswers}
                     questionIndex={activePendingQuestionIndex}
@@ -8385,6 +8413,22 @@ export default function ChatView({
                     onCancel={onCancelActivePendingUserInput}
                   />
                 </div>
+              ) : null}
+              {expiredQuestionDrafts[0] &&
+              pendingUserInputs.length === 0 &&
+              !activePendingApproval ? (
+                <ComposerExpiredUserInputNotice
+                  threadId={threadId}
+                  requestKey={expiredQuestionDrafts[0][0]}
+                  draft={expiredQuestionDrafts[0][1]}
+                  onRestore={(nextPrompt) => {
+                    promptRef.current = nextPrompt;
+                    setComposerCursor(
+                      collapseExpandedComposerCursor(nextPrompt, nextPrompt.length),
+                    );
+                    scheduleComposerFocus();
+                  }}
+                />
               ) : null}
               {emptyLandingControls}
             </div>
