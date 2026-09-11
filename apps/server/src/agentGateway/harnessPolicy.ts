@@ -8,6 +8,7 @@ export const FORKARA_HARNESS_POLICY_MARKER = `[Forkara harness policy ${FORKARA_
 
 export interface ForkaraHarnessCapabilities {
   readonly gatewayControlAvailable: boolean;
+  readonly automationAuthoring?: "tool-descriptions";
 }
 
 /**

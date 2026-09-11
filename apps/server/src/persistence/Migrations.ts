@@ -115,6 +115,7 @@ import Migration0096 from "./Migrations/096_ProjectionThreadsGoalAchievements.ts
 import Migration0097 from "./Migrations/097_InvalidateProjectionThreadsCursor.ts";
 import Migration0098 from "./Migrations/098_MessageTextChunks.ts";
 import Migration0099 from "./Migrations/099_ProjectionThreadMessagesTurnBoundary.ts";
+import Migration0100 from "./Migrations/100_ClaudeTokenAccounting.ts";
 import Migration0101 from "./Migrations/101_AsyncUserInput.ts";
 
 /**
@@ -230,6 +231,8 @@ export const migrationEntries = [
   [97, "InvalidateProjectionThreadsCursor", Migration0097],
   [98, "MessageTextChunks", Migration0098],
   [99, "ProjectionThreadMessagesTurnBoundary", Migration0099],
+  // Keep this ID literal: scripts/check-migration-lineage.ts parses this list.
+  [100, "ClaudeTokenAccounting", Migration0100],
   [101, "AsyncUserInput", Migration0101],
 ] as const;
 
