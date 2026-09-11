@@ -1066,6 +1066,9 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
             ...(event.payload.dispatchOrigin !== undefined
               ? { dispatchOrigin: event.payload.dispatchOrigin }
               : {}),
+            ...(event.payload.startsNewTurn !== undefined
+              ? { startsNewTurn: event.payload.startsNewTurn }
+              : {}),
             isStreaming: event.payload.streaming,
             source: event.payload.source,
             sequence: Option.isSome(existingMessage)

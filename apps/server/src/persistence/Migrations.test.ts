@@ -300,11 +300,12 @@ managedAttachmentsLegacyLayer("managed attachment migration after private migrat
         [96, "ProjectionThreadsGoalAchievements"],
         [97, "InvalidateProjectionThreadsCursor"],
         [98, "MessageTextChunks"],
+        [99, "ProjectionThreadMessagesTurnBoundary"],
         [101, "AsyncUserInput"],
       ]);
 
       const tracker = yield* trackerRows(sql);
-      assert.deepStrictEqual(tracker.slice(-45), [
+      assert.deepStrictEqual(tracker.slice(-46), [
         { migration_id: 55, name: "ManagedAttachments" },
         { migration_id: 56, name: "CommandReceiptFingerprints" },
         { migration_id: 57, name: "ThreadScopedProjectionMessageIdentity" },
@@ -349,6 +350,7 @@ managedAttachmentsLegacyLayer("managed attachment migration after private migrat
         { migration_id: 96, name: "ProjectionThreadsGoalAchievements" },
         { migration_id: 97, name: "InvalidateProjectionThreadsCursor" },
         { migration_id: 98, name: "MessageTextChunks" },
+        { migration_id: 99, name: "ProjectionThreadMessagesTurnBoundary" },
         { migration_id: 101, name: "AsyncUserInput" },
       ]);
       const preserved = yield* sql<{ readonly count: number }>`
@@ -440,6 +442,7 @@ agentGatewayRetentionLegacyLayer(
           [96, "ProjectionThreadsGoalAchievements"],
           [97, "InvalidateProjectionThreadsCursor"],
         [98, "MessageTextChunks"],
+        [99, "ProjectionThreadMessagesTurnBoundary"],
         [101, "AsyncUserInput"],
         ]);
 
@@ -534,12 +537,13 @@ spacesMigrationCollisionLayer("Spaces migration after the private migration 70 c
         [96, "ProjectionThreadsGoalAchievements"],
         [97, "InvalidateProjectionThreadsCursor"],
         [98, "MessageTextChunks"],
+        [99, "ProjectionThreadMessagesTurnBoundary"],
         [101, "AsyncUserInput"],
       ]);
 
       const tracker = yield* trackerRows(sql);
       assert.deepStrictEqual(
-        tracker.slice(-29).map((row) => [row.migration_id, row.name]),
+        tracker.slice(-30).map((row) => [row.migration_id, row.name]),
         [
           [71, "ProjectionThreadsGatewayProvenance"],
           [72, "AgentGatewayOperationRetention"],
@@ -569,6 +573,7 @@ spacesMigrationCollisionLayer("Spaces migration after the private migration 70 c
           [96, "ProjectionThreadsGoalAchievements"],
           [97, "InvalidateProjectionThreadsCursor"],
         [98, "MessageTextChunks"],
+        [99, "ProjectionThreadMessagesTurnBoundary"],
         [101, "AsyncUserInput"],
         ],
       );
@@ -658,12 +663,13 @@ spacesMigrationCollisionLayer("Spaces migration after the private migration 70 c
         [96, "ProjectionThreadsGoalAchievements"],
         [97, "InvalidateProjectionThreadsCursor"],
         [98, "MessageTextChunks"],
+        [99, "ProjectionThreadMessagesTurnBoundary"],
         [101, "AsyncUserInput"],
       ]);
 
       const tracker = yield* trackerRows(sql);
       assert.deepStrictEqual(
-        tracker.slice(-25).map((row) => [row.migration_id, row.name]),
+        tracker.slice(-26).map((row) => [row.migration_id, row.name]),
         [
           [75, "ExternalMcpActiveCapacity"],
           [76, "ExternalMcpHardening"],
@@ -689,6 +695,7 @@ spacesMigrationCollisionLayer("Spaces migration after the private migration 70 c
           [96, "ProjectionThreadsGoalAchievements"],
           [97, "InvalidateProjectionThreadsCursor"],
         [98, "MessageTextChunks"],
+        [99, "ProjectionThreadMessagesTurnBoundary"],
         [101, "AsyncUserInput"],
         ],
       );
