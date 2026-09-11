@@ -19,6 +19,7 @@ const forkaraSkillPath = "/Users/me/.forkara/skills/reviewer/SKILL.md";
 const codexSkillPath = "/Users/me/.codex/skills/reviewer/SKILL.md";
 const claudeSkillPath = "/Users/me/.claude/skills/reviewer/SKILL.md";
 const cursorSkillPath = "/Users/me/.cursor/skills/reviewer/SKILL.md";
+const agentsSkillPath = "/Users/me/.agents/skills/reviewer/SKILL.md";
 const piSkillPath = "/Users/me/.pi/agent/skills/reviewer/SKILL.md";
 
 describe("shouldInlineSkillForProvider", () => {
@@ -27,6 +28,10 @@ describe("shouldInlineSkillForProvider", () => {
     // skill root registered at session start.
     expect(shouldInlineSkillForProvider("codex", forkaraSkillPath)).toBe(false);
     expect(shouldInlineSkillForProvider("codex", codexSkillPath)).toBe(false);
+    expect(shouldInlineSkillForProvider("codex", agentsSkillPath)).toBe(false);
+    expect(shouldInlineSkillForProvider("codex", "/repo/.agents/skills/reviewer/SKILL.md")).toBe(
+      false,
+    );
     expect(shouldInlineSkillForProvider("codex", claudeSkillPath)).toBe(true);
     expect(shouldInlineSkillForProvider("codex", cursorSkillPath)).toBe(true);
   });
@@ -103,12 +108,25 @@ describe("buildInlineSkillInstructions", () => {
     }
   });
 
-  it("does not inline forkara-rooted skills for codex (covered by the extra skill root)", async () => {
-    const text = await buildInlineSkillInstructions({
-      provider: "codex",
-      skills: [{ name: "reviewer", path: forkaraSkillPath }],
-      maxChars: 10_000,
-    });
-    expect(text).toBe("");
-  });
+  it.each([".forkara", ".agents"])(
+    "does not duplicate %s skill instructions loaded natively by Codex",
+    async (skillRoot) => {
+      const root = mkdtempSync(path.join(os.tmpdir(), "skill-native-"));
+      const skillDir = path.join(root, skillRoot, "skills", "reviewer");
+      try {
+        await mkdir(skillDir, { recursive: true });
+        const skillPath = path.join(skillDir, "SKILL.md");
+        await writeFile(skillPath, "# Reviewer\n\nAlways review carefully.");
+
+        const text = await buildInlineSkillInstructions({
+          provider: "codex",
+          skills: [{ name: "reviewer", path: skillPath }],
+          maxChars: 10_000,
+        });
+        expect(text).toBe("");
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    },
+  );
 });

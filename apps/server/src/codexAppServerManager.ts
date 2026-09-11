@@ -58,6 +58,7 @@ import {
 } from "./agentGateway/sessionLease.ts";
 import { CodexSessionStartError, isNonFatalCodexErrorMessage } from "./codexErrorClassification.ts";
 import { buildCodexProcessEnv } from "./codexProcessEnv.ts";
+import { resolveCodexServiceTier } from "./codexServiceTier.ts";
 import { assertCodexWorkingDirectoryExists } from "./codexWorkingDirectory.ts";
 import { executableIdentity, resolveExecutable } from "./executableLookup.ts";
 import {
@@ -1948,13 +1949,11 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
               context.account,
             )
           : undefined;
-      const useFastServiceTier =
-        input.modelSelection?.provider === "codex" &&
-        getModelSelectionBooleanOptionValue(input.modelSelection, "fastMode") === true;
+      const serviceTier = resolveCodexServiceTier(input.modelSelection);
       const forkParams = {
         threadId: sourceProviderThreadId,
         ...(normalizedModel ? { model: normalizedModel } : {}),
-        ...(useFastServiceTier ? { serviceTier: "fast" as const } : {}),
+        ...(serviceTier !== undefined ? { serviceTier } : {}),
         cwd: resolvedCwd,
         ...mapCodexRuntimeMode(input.runtimeMode),
       };

@@ -385,7 +385,10 @@ describe("getComposerProviderState", () => {
     });
   });
 
-  it("drops codex fast mode when runtime discovery does not advertise support", () => {
+  it.each([
+    { fastMode: true, expectedOptions: undefined },
+    { fastMode: false, expectedOptions: { fastMode: false } },
+  ])("normalizes unsupported Codex fastMode=$fastMode", ({ fastMode, expectedOptions }) => {
     const state = getComposerProviderState({
       provider: "codex",
       model: "gpt-5.4-mini",
@@ -398,7 +401,7 @@ describe("getComposerProviderState", () => {
       prompt: "",
       modelOptions: {
         codex: {
-          fastMode: true,
+          fastMode,
         },
       },
     });
@@ -406,11 +409,11 @@ describe("getComposerProviderState", () => {
     expect(state).toEqual({
       provider: "codex",
       promptEffort: "medium",
-      modelOptionsForDispatch: undefined,
+      modelOptionsForDispatch: expectedOptions,
     });
   });
 
-  it("drops explicit codex default/off overrides from dispatch while keeping the selected effort label", () => {
+  it("preserves explicit Codex Fast off for dispatch while keeping the selected effort label", () => {
     const state = getComposerProviderState({
       provider: "codex",
       model: "gpt-5.4",
@@ -426,7 +429,7 @@ describe("getComposerProviderState", () => {
     expect(state).toEqual({
       provider: "codex",
       promptEffort: "high",
-      modelOptionsForDispatch: undefined,
+      modelOptionsForDispatch: { fastMode: false },
     });
   });
 
