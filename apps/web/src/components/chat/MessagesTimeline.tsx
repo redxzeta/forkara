@@ -471,6 +471,8 @@ interface MessagesTimelineProps {
   /** Marks the transcript as a temporary chat so user bubbles render the dashed primary outline. */
   isTemporaryThread?: boolean;
   timelineEntries: ReturnType<typeof deriveTimelineEntries>;
+  /** Stable source messages, before plans/tools reshape the presentation rows. */
+  messageChangeSignal?: unknown;
   turnDiffSummaryByAssistantMessageId: Map<MessageId, TurnDiffSummary>;
   nowIso?: string;
   expandedWorkGroups?: Record<string, boolean>;
@@ -557,6 +559,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   forkSource: forkSourceProp,
   isTemporaryThread: isTemporaryThreadProp,
   timelineEntries,
+  messageChangeSignal: messageChangeSignalProp,
   turnDiffSummaryByAssistantMessageId,
   nowIso,
   expandedWorkGroups,
@@ -779,6 +782,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
     anchorScrollInFlightRef: tailAnchorScrollInFlightRef,
     onAnchorSlideFinished: handleTailAnchorSlideFinished,
     contentChangeSignal: timelineEntries,
+    messageChangeSignal: messageChangeSignalProp ?? timelineEntries,
     animateAnchorSlide: !followLiveOutput,
   });
 

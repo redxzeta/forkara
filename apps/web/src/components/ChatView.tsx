@@ -8938,6 +8938,7 @@ export default function ChatView({
                     forkSource={forkSource}
                     isTemporaryThread={isThreadTemporary}
                     timelineEntries={timelineEntries}
+                    messageChangeSignal={timelineMessages}
                     turnDiffSummaryByAssistantMessageId={turnDiffSummaryByAssistantMessageId}
                     onOpenTurnDiff={onOpenTurnDiff}
                     onOpenThread={onNavigateToThread}
