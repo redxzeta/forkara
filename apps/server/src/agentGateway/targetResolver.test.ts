@@ -1,5 +1,10 @@
 import { assert, describe, it } from "@effect/vitest";
-import type { ModelSelection, ProviderKind, ProviderModelDescriptor } from "@forkara/contracts";
+import {
+  DEFAULT_MODEL_BY_PROVIDER,
+  type ModelSelection,
+  type ProviderKind,
+  type ProviderModelDescriptor,
+} from "@forkara/contracts";
 import { Effect } from "effect";
 
 import type { ProviderDiscoveryServiceShape } from "../provider/Services/ProviderDiscoveryService.ts";
@@ -53,6 +58,62 @@ function makeVariantDescriptor(slug: string): ProviderModelDescriptor {
 }
 
 describe("agent gateway target resolver", () => {
+  it.effect(
+    "uses discovered Claude Auto capability instead of caller claims, including aliases",
+    () =>
+      Effect.gen(function* () {
+        for (const supported of [true, false, undefined]) {
+          const target = {
+            provider: "claudeAgent" as const,
+            model: "sonnet",
+            supportsAutoMode: supported !== true,
+            options: { autoCompactWindow: "200k" },
+          };
+          const result = yield* resolveAgentGatewayTarget({
+            target,
+            discovery: {
+              listModels: () =>
+                Effect.succeed({
+                  models: [
+                    {
+                      slug: "sonnet",
+                      name: "Sonnet",
+                      resolvedModel: "claude-sonnet-5",
+                      ...(supported !== undefined ? { supportsAutoMode: supported } : {}),
+                      optionDescriptors: [
+                        {
+                          id: "autoCompactWindow",
+                          label: "Context",
+                          type: "select",
+                          options: [{ id: "200k", label: "200k" }],
+                        },
+                      ],
+                    },
+                  ],
+                }),
+            } as unknown as ProviderDiscoveryServiceShape,
+          });
+          assert.deepEqual(result, {
+            provider: "claudeAgent",
+            model: "claude-sonnet-5",
+            options: target.options,
+            ...(supported !== undefined ? { supportsAutoMode: supported } : {}),
+          });
+        }
+        const fallback = yield* resolveAgentGatewayTarget({
+          target: {
+            provider: "claudeAgent",
+            model: DEFAULT_MODEL_BY_PROVIDER.claudeAgent,
+            supportsAutoMode: true,
+          },
+          discovery: {
+            listModels: () => Effect.succeed({ models: [] }),
+          } as unknown as ProviderDiscoveryServiceShape,
+        });
+        assert.notProperty(fallback, "supportsAutoMode");
+      }),
+  );
+
   it.effect("builds examples from the exact model restrictions and preserves option types", () =>
     Effect.gen(function* () {
       const codexCatalog = {

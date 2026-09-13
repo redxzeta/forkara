@@ -161,6 +161,14 @@ export function getDefaultAutoCompactWindow(caps: ModelCapabilities): string | n
   return caps.autoCompactWindowOptions?.find((option) => option.isDefault)?.value ?? null;
 }
 
+// Claude model ids may carry a context-window qualifier, e.g. `claude-sonnet-5[1m]`.
+const CLAUDE_CONTEXT_WINDOW_SUFFIX_PATTERN = /\[([^\]]+)\]$/u;
+
+export function getClaudeContextWindowSuffix(model: string | null | undefined): string | null {
+  if (typeof model !== "string") return null;
+  return CLAUDE_CONTEXT_WINDOW_SUFFIX_PATTERN.exec(model)?.[1]?.toLowerCase() ?? null;
+}
+
 export function resolveLabeledOptionValue(
   options: ReadonlyArray<{ value: string; isDefault?: boolean | undefined }> | undefined,
   rawValue: string | null | undefined,
