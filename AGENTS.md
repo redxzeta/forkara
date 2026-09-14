@@ -15,6 +15,13 @@ Forkara is a minimal web GUI for using coding agents like Codex and Claude.
 
 This repository is a VERY EARLY WIP. Proposing sweeping changes that improve long-term maintainability is encouraged.
 
+## Local Code Intelligence (Infigraph)
+
+- When the Infigraph MCP is available, use it early for architecture discovery, code search, caller tracing, and impact analysis.
+- Every Git worktree has its own index. Run `infigraph index` from the current worktree when its index is missing or stale; do not copy indexes between worktrees.
+- Treat graph results as navigation aids and verify important findings against the source, especially affected tests and blast-radius conclusions.
+- `.infigraph/` is local developer state. Never commit it or add Infigraph to application dependencies, CI, deployment, or production runtime.
+
 ## Core Priorities
 
 1. Performance first.
