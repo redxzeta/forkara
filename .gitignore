@@ -19,6 +19,7 @@ release/
 /apps/server/.forkara-*/
 /.forkara/
 /.forkara-*/
+/.infigraph/
 /.forkara/contributor/
 .idea/
 apps/web/.playwright
