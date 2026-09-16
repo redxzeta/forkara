@@ -2054,8 +2054,12 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         };
       });
 
-    const updateResumeCursor = (context: ClaudeSessionContext): Effect.Effect<void> =>
+    const updateResumeCursor = (
+      context: ClaudeSessionContext,
+      updatedAt?: string,
+    ): Effect.Effect<void> =>
       Effect.gen(function* () {
+        const timestamp = updatedAt ?? (yield* nowIso);
         const threadId = context.session.threadId;
         if (!threadId) return;
 
@@ -2075,7 +2079,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         context.session = {
           ...context.session,
           resumeCursor,
-          updatedAt: yield* nowIso,
+          updatedAt: timestamp,
         };
       });
 
@@ -3003,6 +3007,22 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         }
 
         const stamp = yield* makeEventStamp();
+        // Terminal consumers can immediately dispatch another turn. Settle the
+        // live session and cursor first, with no mutation after publication.
+        if (context.interruptRequestedTurnId === turnState.turnId) {
+          context.interruptRequestedTurnId = undefined;
+        }
+        context.lastInteractionMode = turnState.interactionMode;
+        context.turnState = undefined;
+        context.session = {
+          ...context.session,
+          status: "ready",
+          activeTurnId: undefined,
+          updatedAt: stamp.createdAt,
+          ...(status === "failed" && errorMessage ? { lastError: errorMessage } : {}),
+        };
+        yield* updateResumeCursor(context, stamp.createdAt);
+
         yield* offerRuntimeEvent(context, {
           type: "turn.completed",
           eventId: stamp.eventId,
@@ -3024,21 +3044,6 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           },
           providerRefs: nativeProviderRefs(context),
         });
-
-        const updatedAt = yield* nowIso;
-        if (context.interruptRequestedTurnId === turnState.turnId) {
-          context.interruptRequestedTurnId = undefined;
-        }
-        context.lastInteractionMode = turnState.interactionMode;
-        context.turnState = undefined;
-        context.session = {
-          ...context.session,
-          status: "ready",
-          activeTurnId: undefined,
-          updatedAt,
-          ...(status === "failed" && errorMessage ? { lastError: errorMessage } : {}),
-        };
-        yield* updateResumeCursor(context);
       });
 
     // A subagent run gets its own scoped context sharing the parent session/query:
