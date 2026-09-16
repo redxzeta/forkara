@@ -210,6 +210,13 @@ interface OpenCodeSessionContext extends OpenCodeMessageState<Part> {
   readonly sessionScope: Scope.Closeable;
 }
 
+function serverPasswordForOpenCodeClient(
+  server: OpenCodeServerConnection,
+  configuredServerPassword: string | undefined,
+): string | undefined {
+  return server.external ? configuredServerPassword : server.serverPassword;
+}
+
 function releaseOpenCodeGatewayLease(context: OpenCodeSessionContext): void {
   context.gatewaySessionLease?.release();
   delete context.gatewaySessionLease;
@@ -3578,11 +3585,15 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                         : {}),
                       ...(poolIsolationKey ? { poolIsolationKey } : {}),
                     });
+                    const clientServerPassword = serverPasswordForOpenCodeClient(
+                      server,
+                      serverPassword,
+                    );
                     const client = openCodeRuntime.createOpenCodeSdkClient({
                       baseUrl: server.url,
                       directory,
                       cliSpec: adapterConfig.cliSpec,
-                      ...(server.external && serverPassword ? { serverPassword } : {}),
+                      ...(clientServerPassword ? { serverPassword: clientServerPassword } : {}),
                     });
                     let gatewayControlAvailable = false;
                     if (agentGatewayConnection) {
@@ -4293,6 +4304,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
               baseUrl: server.url,
               directory,
               cliSpec: adapterConfig.cliSpec,
+              ...(server.serverPassword ? { serverPassword: server.serverPassword } : {}),
             });
             const session = yield* runOpenCodeSdk("session.get", () =>
               client.session.get({
@@ -4427,11 +4439,15 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                     ...(serverUrl ? { serverUrl } : {}),
                   })
                   .pipe(Effect.mapError(toAdapterRequestError));
+                const clientServerPassword = serverPasswordForOpenCodeClient(
+                  server,
+                  serverPassword,
+                );
                 return openCodeRuntime.createOpenCodeSdkClient({
                   baseUrl: server.url,
                   directory: sourceDirectory,
                   cliSpec: adapterConfig.cliSpec,
-                  ...(server.external && serverPassword ? { serverPassword } : {}),
+                  ...(clientServerPassword ? { serverPassword: clientServerPassword } : {}),
                 });
               }),
             );
@@ -4522,11 +4538,12 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                     : {}),
                 })
                 .pipe(Effect.mapError(toAdapterRequestError));
+              const clientServerPassword = serverPasswordForOpenCodeClient(server, serverPassword);
               const client = openCodeRuntime.createOpenCodeSdkClient({
                 baseUrl: server.url,
                 directory: input.cwd?.trim() || serverConfig.cwd,
                 cliSpec: adapterConfig.cliSpec,
-                ...(server.external && serverPassword ? { serverPassword } : {}),
+                ...(clientServerPassword ? { serverPassword: clientServerPassword } : {}),
               });
               return yield* fn({ client });
             }),
