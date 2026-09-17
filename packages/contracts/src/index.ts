@@ -34,6 +34,7 @@ export * from "./pullRequests";
 export * from "./xPost";
 export * from "./resetDepartment";
 export * from "./orchestration";
+export * from "./asyncUserInput";
 export * from "./editor";
 export * from "./environment";
 export * from "./project";

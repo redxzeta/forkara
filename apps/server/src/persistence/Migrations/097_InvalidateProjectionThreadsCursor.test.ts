@@ -29,6 +29,7 @@ import {
 import { runMigrations } from "../Migrations.ts";
 import * as NodeSqliteClient from "../NodeSqliteClient.ts";
 import messageTextChunkSchema from "./098_MessageTextChunks.ts";
+import asyncUserInputSchema from "./101_AsyncUserInput.ts";
 
 const testLayer = OrchestrationProjectionPipelineLive.pipe(
   Layer.provideMerge(OrchestrationEventStoreLive),
@@ -65,6 +66,7 @@ it.layer(Layer.fresh(testLayer))("097_InvalidateProjectionThreadsCursor", (it) =
         // Current projector readers require the additive chunk schema. Install it
         // without changing the migration-97 cursor/tracker state under test.
         yield* messageTextChunkSchema;
+        yield* asyncUserInputSchema;
 
         const threadId = ThreadId.makeUnsafe("thread-097");
         const projectId = ProjectId.makeUnsafe("project-097");
