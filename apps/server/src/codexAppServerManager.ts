@@ -973,7 +973,6 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
   private readonly skillsCache = new Map<string, ProviderListSkillsResult>();
   private readonly pluginsCache = new Map<string, ProviderListPluginsResult>();
   private readonly pluginDetailCache = new Map<string, ProviderReadPluginResult>();
-  private readonly modelCache = new Map<string, ProviderListModelsResult>();
 
   private runPromise: (effect: Effect.Effect<unknown, never>) => Promise<unknown>;
   private readonly forkaraSkillsDir: string | undefined;
@@ -1128,7 +1127,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
 
       await this.writeMessage(context, { method: "initialized" });
       await this.registerForkaraSkillsRoot(context);
-      // Model discovery is lazy and cached by listModels(). Keeping model/list
+      // Model discovery is lazy and cached by ProviderDiscoveryService. Keeping model/list
       // out of this serial cold-start path avoids an otherwise unused request
       // with its own 20-second deadline.
       try {
@@ -2502,15 +2501,6 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
   }
 
   async listModels(threadId?: string): Promise<ProviderListModelsResult> {
-    const cacheKey = threadId?.trim() || "__default__";
-    const cached = getRecentCacheEntry(this.modelCache, cacheKey);
-    if (cached) {
-      return {
-        ...cached,
-        cached: true,
-      };
-    }
-
     const context = await this.resolveContextForDiscovery(threadId);
     const response = await this.sendRequest<Record<string, unknown>>(context, "model/list", {
       cursor: null,
@@ -2518,13 +2508,11 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       includeHidden: false,
     });
     const models = parseCodexModelListResponse(response);
-    const result: ProviderListModelsResult = {
+    return {
       models,
       source: "codex-app-server",
       cached: false,
     };
-    setRecentCacheEntry(this.modelCache, cacheKey, result);
-    return result;
   }
 
   async transcribeVoice(

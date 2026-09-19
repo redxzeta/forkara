@@ -77,6 +77,12 @@ Providers expose different selection models:
 Forkara normalizes these choices into the composer where possible without pretending that every
 provider has identical capabilities.
 
+For Codex, successful model discovery determines the built-in choices, including when the returned
+catalog is empty. Models absent from that catalog are not re-added from Forkara's static defaults.
+Custom models remain available. Until discovery succeeds, Forkara uses its static fallback; a
+failed refresh keeps the last successful catalog, and the shared discovery cache refreshes it in
+the background after its fresh window.
+
 Favorite models can be surfaced above larger catalogs, and supported provider executables can be
 pointed at custom binary locations.
 
