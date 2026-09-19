@@ -89,6 +89,7 @@ const makeProjectionThreadRepository = Effect.gen(function* () {
           goal_paused_at,
           goal_achievements_json,
           latest_user_message_at,
+          latest_human_message_at,
           pending_approval_count,
           pending_user_input_count,
           has_actionable_proposed_plan,
@@ -136,6 +137,7 @@ const makeProjectionThreadRepository = Effect.gen(function* () {
           ${row.goalPausedAt ?? null},
           ${row.goalAchievements == null ? null : JSON.stringify(row.goalAchievements)},
           ${row.latestUserMessageAt},
+          ${row.latestHumanMessageAt ?? null},
           ${row.pendingApprovalCount},
           ${row.pendingUserInputCount},
           ${row.hasActionableProposedPlan},
@@ -183,6 +185,10 @@ const makeProjectionThreadRepository = Effect.gen(function* () {
           goal_paused_at = excluded.goal_paused_at,
           goal_achievements_json = excluded.goal_achievements_json,
           latest_user_message_at = excluded.latest_user_message_at,
+          latest_human_message_at = CASE
+            WHEN ${row.latestHumanMessageAt === undefined ? 1 : 0} = 1 THEN projection_threads.latest_human_message_at
+            ELSE excluded.latest_human_message_at
+          END,
           pending_approval_count = excluded.pending_approval_count,
           pending_user_input_count = excluded.pending_user_input_count,
           has_actionable_proposed_plan = excluded.has_actionable_proposed_plan,
@@ -237,6 +243,7 @@ const makeProjectionThreadRepository = Effect.gen(function* () {
           goal_paused_at AS "goalPausedAt",
           goal_achievements_json AS "goalAchievements",
           latest_user_message_at AS "latestUserMessageAt",
+          latest_human_message_at AS "latestHumanMessageAt",
           pending_approval_count AS "pendingApprovalCount",
           pending_user_input_count AS "pendingUserInputCount",
           has_actionable_proposed_plan AS "hasActionableProposedPlan",
@@ -293,6 +300,7 @@ const makeProjectionThreadRepository = Effect.gen(function* () {
           goal_paused_at AS "goalPausedAt",
           goal_achievements_json AS "goalAchievements",
           latest_user_message_at AS "latestUserMessageAt",
+          latest_human_message_at AS "latestHumanMessageAt",
           pending_approval_count AS "pendingApprovalCount",
           pending_user_input_count AS "pendingUserInputCount",
           has_actionable_proposed_plan AS "hasActionableProposedPlan",

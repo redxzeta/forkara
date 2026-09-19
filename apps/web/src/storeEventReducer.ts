@@ -25,6 +25,7 @@ import {
   setThreadMarkerDone,
   setThreadMarkerLabel,
 } from "@forkara/shared/threadMarkers";
+import { deriveThreadSummaryMetadata, resolveHumanMessageAt } from "@forkara/shared/threadSummary";
 
 import { isSessionRunningTurn } from "./session-logic";
 import {
@@ -650,6 +651,8 @@ function mergeStreamingMessage(
   const nextCompletedAt = incomingMessage.streaming
     ? existingMessage.completedAt
     : (incomingMessage.completedAt ?? existingMessage.completedAt);
+  const nextUpdatedAt =
+    incomingMessage.updatedAt ?? existingMessage.updatedAt ?? incomingMessage.createdAt;
   const nextTurnId =
     incomingMessage.turnId !== undefined ? incomingMessage.turnId : existingMessage.turnId;
   const nextDispatchMode =
@@ -674,6 +677,7 @@ function mergeStreamingMessage(
     providerReferenceArraysEqual(existingMessage.skills, nextSkills) &&
     providerReferenceArraysEqual(existingMessage.mentions, nextMentions) &&
     existingMessage.completedAt === nextCompletedAt &&
+    existingMessage.updatedAt === nextUpdatedAt &&
     existingMessage.turnId === nextTurnId &&
     existingMessage.dispatchMode === nextDispatchMode &&
     existingMessage.dispatchOrigin === nextDispatchOrigin &&
@@ -686,6 +690,7 @@ function mergeStreamingMessage(
   return {
     ...existingMessage,
     text: nextText,
+    updatedAt: nextUpdatedAt,
     ...(nextAsyncUserInput ? { asyncUserInput: nextAsyncUserInput } : {}),
     streaming: incomingMessage.streaming,
     ...(nextAttachments ? { attachments: nextAttachments } : {}),
@@ -779,12 +784,18 @@ function applyThreadMessageSentEvent(thread: Thread, event: ThreadMessageSentEve
     });
   }
 
+  const humanMessageAt = resolveHumanMessageAt(incomingMessage);
+  const latestHumanMessageAt =
+    humanMessageAt !== null && humanMessageAt > (thread.latestHumanMessageAt ?? "")
+      ? humanMessageAt
+      : thread.latestHumanMessageAt;
   const updatedAt =
     thread.updatedAt && thread.updatedAt > payload.updatedAt ? thread.updatedAt : payload.updatedAt;
   if (
     messages === thread.messages &&
     turnDiffSummaries === thread.turnDiffSummaries &&
     latestTurn === thread.latestTurn &&
+    latestHumanMessageAt === thread.latestHumanMessageAt &&
     updatedAt === thread.updatedAt
   ) {
     return thread;
@@ -795,6 +806,7 @@ function applyThreadMessageSentEvent(thread: Thread, event: ThreadMessageSentEve
     messages,
     turnDiffSummaries,
     latestTurn,
+    ...(latestHumanMessageAt !== undefined ? { latestHumanMessageAt } : {}),
     updatedAt,
   };
 }
@@ -1586,6 +1598,8 @@ function applyOrchestrationEvent(
             proposedPlans,
             activities,
             pendingSourceProposedPlan: undefined,
+            latestHumanMessageAt: deriveThreadSummaryMetadata({ ...thread, messages })
+              .latestHumanMessageAt,
             latestTurn:
               latestCheckpoint === null
                 ? null
@@ -1655,6 +1669,10 @@ function applyOrchestrationEvent(
             proposedPlans,
             activities,
             pendingSourceProposedPlan: undefined,
+            latestHumanMessageAt: deriveThreadSummaryMetadata({
+              ...thread,
+              messages: rollback.messages,
+            }).latestHumanMessageAt,
             latestTurn:
               latestCheckpoint === null
                 ? null

@@ -496,6 +496,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           sidechatSourceThreadId: null,
           lastKnownPr: null,
           latestUserMessageAt: "2026-02-24T00:00:03.500Z",
+          latestHumanMessageAt: null,
           // A present empty pending-interaction projection is authoritative;
           // historical activity rows alone must not resurrect stale prompts.
           hasPendingApprovals: false,
@@ -1040,6 +1041,8 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
         )
       `;
 
+      const humanAt = "2026-02-24T00:00:00.000Z";
+      yield* sql`UPDATE projection_threads SET latest_human_message_at = ${humanAt} WHERE thread_id = ${threadId}`;
       for (let index = 0; index < messageCount; index += 1) {
         const createdAt = new Date(Date.UTC(2026, 1, 24, 0, 0, index)).toISOString();
         yield* sql`
@@ -1057,7 +1060,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
             ${`message-${index}`},
             'thread-export-message-cap',
             NULL,
-            'assistant',
+            ${index === 0 ? "user" : "assistant"},
             ${`message ${index}`},
             0,
             ${createdAt},
@@ -1096,6 +1099,9 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
       assert.isTrue(Option.isSome(exportDetail));
       const cappedMessages = Option.isSome(cappedDetail) ? cappedDetail.value.messages : [];
       const exportMessages = Option.isSome(exportDetail) ? exportDetail.value.messages : [];
+      assert.equal(Option.getOrThrow(cappedDetail).latestHumanMessageAt, humanAt);
+      assert.equal(Option.getOrThrow(exportDetail).latestHumanMessageAt, humanAt);
+      assert.equal(bulk.threads[0]?.latestHumanMessageAt, humanAt);
       assert.equal(cappedMessages.length, 2_000);
       assert.equal(cappedMessages[0]?.text, "message 5");
       assert.equal(cappedMessages.at(-1)?.text, "message 2004");
@@ -1912,6 +1918,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
             assistantMessageId: null,
           },
           latestUserMessageAt: "2026-03-03T00:00:02.500Z",
+          latestHumanMessageAt: null,
           hasPendingApprovals: true,
           hasPendingUserInput: true,
           hasActionableProposedPlan: true,
