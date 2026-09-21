@@ -60,7 +60,9 @@ describePosix("desktop parent loss subprocess integration", () => {
   it.each(["close", "crash", "stubborn"] as const)(
     "releases database ownership after %s without admitting a concurrent owner",
     async (mode) => {
-      const directory = await fsPromises.mkdtemp(path.join(os.tmpdir(), "forkara-parent-lifetime-"));
+      const directory = await fsPromises.mkdtemp(
+        path.join(os.tmpdir(), "forkara-parent-lifetime-"),
+      );
       const dbPath = path.join(directory, "state.sqlite");
       const statePath = path.join(directory, "ready.json");
       const owner = spawn(

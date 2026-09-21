@@ -95,7 +95,7 @@ export function useComposerDiscovery({
           ? providerOptionsForDispatch?.opencode?.serverUrl
           : selectedProvider === "kilo"
             ? providerOptionsForDispatch?.kilo?.serverUrl
-          : null) ?? null,
+            : null) ?? null,
       experimentalWebSockets:
         selectedProvider === "opencode"
           ? providerOptionsForDispatch?.opencode?.experimentalWebSockets

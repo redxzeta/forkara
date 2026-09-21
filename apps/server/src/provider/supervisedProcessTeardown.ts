@@ -41,10 +41,13 @@ export interface EffectProcessExitHandle {
 export interface SupervisedProcessTeardownResult {
   readonly escalated: boolean;
   readonly signalErrors: ReadonlyArray<Error>;
+  /** True only when the descendant snapshot was captured while the owned root still ran. */
+  readonly capturedBeforeRootExit?: boolean;
 }
 
 export interface SupervisedProcessTeardownDependencies {
   readonly processTreeKiller: ProcessTreeKiller;
+  readonly isRootRunning: (pid: number) => boolean;
   readonly now: () => number;
   readonly sleep: (milliseconds: number) => Promise<void>;
 }
@@ -81,6 +84,14 @@ export class ProviderProcessExitUnprovenError extends Error {
 
 const defaultDependencies: SupervisedProcessTeardownDependencies = {
   processTreeKiller: defaultProcessTreeKiller,
+  isRootRunning: (pid) => {
+    try {
+      process.kill(pid, 0);
+      return true;
+    } catch (error) {
+      return (error as NodeJS.ErrnoException).code === "EPERM";
+    }
+  },
   now: Date.now,
   sleep: (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)),
 };
@@ -142,7 +153,6 @@ export async function teardownProviderProcessTree(
   }
 
   const deps = { ...defaultDependencies, ...dependencies };
-  const tree = deps.processTreeKiller.capture(input.rootPid);
   const signalErrors: Error[] = [];
   let rootExited = false;
   void input.rootExited.then(
@@ -153,6 +163,11 @@ export async function teardownProviderProcessTree(
       // A rejected watcher is not evidence that the owned process exited.
     },
   );
+  // Flush an already-settled exit watcher before capturing descendants. Recovery
+  // may only trust this snapshot if the exact root was still alive after capture.
+  await Promise.resolve();
+  const tree = deps.processTreeKiller.capture(input.rootPid);
+  const capturedBeforeRootExit = !rootExited && deps.isRootRunning(input.rootPid);
 
   const signal = (killSignal: TerminalKillSignal, includeRootTree: boolean): void => {
     deps.processTreeKiller.signal({
@@ -211,7 +226,7 @@ export async function teardownProviderProcessTree(
     positiveDuration(input.termGraceMs, DEFAULT_TERM_GRACE_MS),
   );
   if (graceful.proven) {
-    return { escalated: false, signalErrors };
+    return { escalated: false, signalErrors, capturedBeforeRootExit };
   }
 
   // A root can exit while descendants ignore TERM and become reparented. Preserve the captured
@@ -219,7 +234,7 @@ export async function teardownProviderProcessTree(
   signal("SIGKILL", !rootExited);
   const forced = await waitForExitProof(positiveDuration(input.forceExitMs, DEFAULT_FORCE_EXIT_MS));
   if (forced.proven) {
-    return { escalated: true, signalErrors };
+    return { escalated: true, signalErrors, capturedBeforeRootExit };
   }
 
   throw new ProviderProcessExitUnprovenError({

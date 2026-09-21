@@ -445,11 +445,11 @@ agentGatewayRetentionLegacyLayer(
           [95, "ProjectionThreadsGoalTiming"],
           [96, "ProjectionThreadsGoalAchievements"],
           [97, "InvalidateProjectionThreadsCursor"],
-        [98, "MessageTextChunks"],
-        [99, "ProjectionThreadMessagesTurnBoundary"],
-        [100, "ClaudeTokenAccounting"],
-        [101, "AsyncUserInput"],
-        [102, "ProjectionThreadsHumanMessage"],
+          [98, "MessageTextChunks"],
+          [99, "ProjectionThreadMessagesTurnBoundary"],
+          [100, "ClaudeTokenAccounting"],
+          [101, "AsyncUserInput"],
+          [102, "ProjectionThreadsHumanMessage"],
         ]);
 
         const columns = yield* sql<{ readonly name: string }>`
@@ -580,11 +580,11 @@ spacesMigrationCollisionLayer("Spaces migration after the private migration 70 c
           [95, "ProjectionThreadsGoalTiming"],
           [96, "ProjectionThreadsGoalAchievements"],
           [97, "InvalidateProjectionThreadsCursor"],
-        [98, "MessageTextChunks"],
-        [99, "ProjectionThreadMessagesTurnBoundary"],
-        [100, "ClaudeTokenAccounting"],
-        [101, "AsyncUserInput"],
-        [102, "ProjectionThreadsHumanMessage"],
+          [98, "MessageTextChunks"],
+          [99, "ProjectionThreadMessagesTurnBoundary"],
+          [100, "ClaudeTokenAccounting"],
+          [101, "AsyncUserInput"],
+          [102, "ProjectionThreadsHumanMessage"],
         ],
       );
 
@@ -706,11 +706,11 @@ spacesMigrationCollisionLayer("Spaces migration after the private migration 70 c
           [95, "ProjectionThreadsGoalTiming"],
           [96, "ProjectionThreadsGoalAchievements"],
           [97, "InvalidateProjectionThreadsCursor"],
-        [98, "MessageTextChunks"],
-        [99, "ProjectionThreadMessagesTurnBoundary"],
-        [100, "ClaudeTokenAccounting"],
-        [101, "AsyncUserInput"],
-        [102, "ProjectionThreadsHumanMessage"],
+          [98, "MessageTextChunks"],
+          [99, "ProjectionThreadMessagesTurnBoundary"],
+          [100, "ClaudeTokenAccounting"],
+          [101, "AsyncUserInput"],
+          [102, "ProjectionThreadsHumanMessage"],
         ],
       );
       const preservedSpaces = yield* sql<{ readonly spaceId: string }>`

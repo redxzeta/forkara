@@ -51,10 +51,15 @@ describe("teardownProviderProcessTree", () => {
         { rootPid: 101, rootExited, termGraceMs: 10, forceExitMs: 10, pollMs: 5 },
         {
           processTreeKiller,
+          isRootRunning: () => true,
           ...clock,
         },
       ),
-    ).resolves.toEqual({ escalated: true, signalErrors: [] });
+    ).resolves.toEqual({
+      escalated: true,
+      signalErrors: [],
+      capturedBeforeRootExit: true,
+    });
     expect(signals).toEqual([
       { signal: "SIGTERM", includeRootTree: true },
       { signal: "SIGKILL", includeRootTree: true },
@@ -91,10 +96,15 @@ describe("teardownProviderProcessTree", () => {
         { rootPid: 201, rootExited, termGraceMs: 10, forceExitMs: 10, pollMs: 5 },
         {
           processTreeKiller,
+          isRootRunning: () => true,
           ...clock,
         },
       ),
-    ).resolves.toEqual({ escalated: true, signalErrors: [] });
+    ).resolves.toEqual({
+      escalated: true,
+      signalErrors: [],
+      capturedBeforeRootExit: true,
+    });
     expect(signals.at(-1)).toEqual({ signal: "SIGKILL", includeRootTree: false });
   });
 
@@ -132,6 +142,30 @@ describe("teardownProviderProcessTree", () => {
       { signal: "SIGTERM", includeRootTree: true },
       { signal: "SIGKILL", includeRootTree: false },
     ]);
+  });
+
+  it("does not claim a tree capture preceded an already-settled root exit", async () => {
+    const tree: CapturedProcessTree = { descendants: [], captureComplete: true };
+    let rootProbeCalls = 0;
+
+    await expect(
+      teardownProviderProcessTree(
+        { rootPid: 451, rootExited: Promise.resolve(), termGraceMs: 5, forceExitMs: 5 },
+        {
+          processTreeKiller: {
+            capture: () => tree,
+            inspect: () => ({ verified: true, survivors: [] }),
+            signal: () => undefined,
+          },
+          isRootRunning: () => {
+            rootProbeCalls += 1;
+            return true;
+          },
+          ...deterministicClock(),
+        },
+      ),
+    ).resolves.toMatchObject({ capturedBeforeRootExit: false });
+    expect(rootProbeCalls).toBe(0);
   });
 
   it("still fails closed on an incomplete snapshot when the root never proves exit", async () => {

@@ -13,7 +13,10 @@ const program = withDatabaseLifecycleLock(
   Effect.sync(() => {
     fs.writeFileSync(
       statePath,
-      JSON.stringify({ pid: process.pid, marker: process.env.FORKARA_DESKTOP_PARENT_STDIN ?? null }),
+      JSON.stringify({
+        pid: process.pid,
+        marker: process.env.FORKARA_DESKTOP_PARENT_STDIN ?? null,
+      }),
     );
   }).pipe(
     Effect.andThen(Effect.never),

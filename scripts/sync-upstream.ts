@@ -52,7 +52,11 @@ function runGit(args: string[], allowFailure = false): { output: string; status:
 }
 
 function normalizeRemoteUrl(raw: string): string {
-  const cleaned = raw.trim().replace(/\s+/g, "").replace(/\.git$/, "").replace(/\/$/, "");
+  const cleaned = raw
+    .trim()
+    .replace(/\s+/g, "")
+    .replace(/\.git$/, "")
+    .replace(/\/$/, "");
   const sshMatch = cleaned.match(/^git@([^:]+):(.+)$/);
   return (sshMatch ? `https://${sshMatch[1]}/${sshMatch[2]}` : cleaned).toLowerCase();
 }
@@ -109,13 +113,8 @@ function main(): void {
   const commitLines =
     evaluatedHead === upstreamHead
       ? []
-      : runGit([
-          "log",
-          "--reverse",
-          "--format=%H%x09%s",
-          `${evaluatedHead}..${upstreamHead}`,
-        ]).output
-          .split("\n")
+      : runGit(["log", "--reverse", "--format=%H%x09%s", `${evaluatedHead}..${upstreamHead}`])
+          .output.split("\n")
           .filter(Boolean);
   const count = commitLines.length;
   appendEnvironmentFile(

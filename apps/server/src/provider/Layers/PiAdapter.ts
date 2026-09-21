@@ -2992,10 +2992,7 @@ const makePiAdapter = (options?: PiAdapterLiveOptions) =>
       );
 
     const stopAll: PiAdapterShape["stopAll"] = () =>
-      Effect.forEach(Array.from(sessions.keys()), (threadId) => stopSession(threadId), {
-        concurrency: "unbounded",
-        discard: true,
-      }).pipe(Effect.asVoid);
+      settleConcurrentTeardowns(sessions.keys(), stopSession);
 
     const listModels: NonNullable<PiAdapterShape["listModels"]> = (input) =>
       Effect.tryPromise({

@@ -1,6 +1,13 @@
 import type { SDKResultMessage } from "@anthropic-ai/claude-agent-sdk";
 
-export type ClaudeResultUsageBaseline = Pick<SDKResultMessage, "modelUsage" | "total_cost_usd">;
+type ClaudeSdkModelUsage = NonNullable<SDKResultMessage["modelUsage"]>[string] & {
+  /** Present in newer Claude runtimes before it appeared in every SDK declaration. */
+  readonly thinkingTokens?: number;
+};
+
+export type ClaudeResultUsageBaseline = Pick<SDKResultMessage, "total_cost_usd"> & {
+  readonly modelUsage?: Readonly<Record<string, ClaudeSdkModelUsage>>;
+};
 
 const delta = (current: number, before: number | undefined) =>
   before !== undefined && current >= before ? current - before : current;

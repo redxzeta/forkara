@@ -1,20 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import * as OfficialAcp from "@agentclientprotocol/sdk";
-import {
-  Deferred,
-  Duration,
-  Effect,
-  Exit,
-  Fiber,
-  Layer,
-  Queue,
-  Scope,
-  Sink,
-  Stream,
-} from "effect";
+import { Deferred, Effect, Exit, Fiber, Layer, Queue, Scope, Sink, Stream } from "effect";
 import { ChildProcessSpawner } from "effect/unstable/process";
-import { TestClock } from "effect/testing";
 import type * as Acp from "@agentclientprotocol/sdk";
 
 import {
@@ -22,10 +10,7 @@ import {
   assistantItemId,
   awaitAcpChildExit,
   decodeSetSessionConfigOptionResponse,
-  isAcpAuthRequiredError,
-  isAcpStartupTimeoutError,
   makeAcpIncomingFrameGuard,
-  makeStartupInteractionRegistry,
   runAcpFreshSessionSetup,
   sessionConfigOptionsFromSetup,
   teardownAcpChildProcess,

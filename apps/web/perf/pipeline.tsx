@@ -354,8 +354,7 @@ async function runStream(options: StreamRunOptions = {}): Promise<RunReport> {
     batchCount:
       options.batchCount === undefined ? null : Math.max(1, Math.floor(options.batchCount)),
   };
-  const expectedBatches =
-    resolved.batchCount ?? Math.ceil(resolved.durationMs / resolved.batchMs);
+  const expectedBatches = resolved.batchCount ?? Math.ceil(resolved.durationMs / resolved.batchMs);
   const corpus = buildStreamCorpus(expectedBatches * resolved.chunkChars + resolved.chunkChars);
 
   streamRunIndex += 1;

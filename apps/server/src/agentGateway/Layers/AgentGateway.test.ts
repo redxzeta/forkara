@@ -381,6 +381,7 @@ function makeHarnessLayer(
     readonly providerRuntimeEvents?: ReadonlyArray<PersistedProviderRuntimeEvent>;
     readonly operationalDiagnostics?: ReadonlyArray<OperationalDiagnostic>;
     readonly providerDeliveryBlockers?: ReadonlyArray<ProviderBlockingDeliveryEvidence>;
+    readonly listModels?: (typeof ProviderDiscoveryService)["Service"]["listModels"];
     readonly automationRuns?: ReadonlyArray<{
       readonly id: string;
       readonly automationId: AutomationDefinition["id"];
@@ -889,53 +890,53 @@ function makeHarnessLayer(
     listModels:
       options.listModels ??
       (({ provider }: { provider: string }) => {
-      const modelsByProvider: Record<string, ReadonlyArray<Record<string, unknown>>> = {
-        codex: [
-          { slug: "gpt-5.5", name: "GPT-5.5" },
-          {
-            slug: "gpt-5.6-sol",
-            name: "GPT-5.6 Sol",
-            supportedReasoningEfforts: [
-              { value: "low", label: "Low" },
-              { value: "medium", label: "Medium" },
-              { value: "high", label: "High" },
-              { value: "xhigh", label: "Extra high" },
-              { value: "max", label: "Max" },
-              { value: "ultra", label: "Ultra" },
-            ],
-          },
-          {
-            slug: "gpt-5.6-terra",
-            name: "GPT-5.6 Terra",
-            supportedReasoningEfforts: [
-              { value: "low", label: "Low" },
-              { value: "high", label: "High" },
-            ],
-          },
-        ],
-        claudeAgent: [
-          {
-            slug: "claude-sonnet-5",
-            name: "Claude Sonnet 5",
-          },
-        ],
-        cursor: [{ slug: "auto", name: "Auto" }],
-        antigravity: [
-          {
-            slug: "Gemini 3.5 Flash",
-            name: "Gemini 3.5 Flash",
-            supportedReasoningEfforts: [
-              { value: "low", label: "Low" },
-              { value: "high", label: "High" },
-            ],
-          },
-        ],
-        grok: [{ slug: DEFAULT_MODEL_BY_PROVIDER.grok, name: "Grok 4.6" }],
-        droid: [{ slug: "claude-opus-4-8", name: "Claude Opus 4.8" }],
-        kilo: [{ slug: "kilo/kilo-auto/free", name: "Kilo Auto" }],
-        opencode: [{ slug: "openai/gpt-5", name: "OpenAI GPT-5" }],
-        pi: [{ slug: "test-pi", name: "Test Pi" }],
-      };
+        const modelsByProvider: Record<string, ReadonlyArray<Record<string, unknown>>> = {
+          codex: [
+            { slug: "gpt-5.5", name: "GPT-5.5" },
+            {
+              slug: "gpt-5.6-sol",
+              name: "GPT-5.6 Sol",
+              supportedReasoningEfforts: [
+                { value: "low", label: "Low" },
+                { value: "medium", label: "Medium" },
+                { value: "high", label: "High" },
+                { value: "xhigh", label: "Extra high" },
+                { value: "max", label: "Max" },
+                { value: "ultra", label: "Ultra" },
+              ],
+            },
+            {
+              slug: "gpt-5.6-terra",
+              name: "GPT-5.6 Terra",
+              supportedReasoningEfforts: [
+                { value: "low", label: "Low" },
+                { value: "high", label: "High" },
+              ],
+            },
+          ],
+          claudeAgent: [
+            {
+              slug: "claude-sonnet-5",
+              name: "Claude Sonnet 5",
+            },
+          ],
+          cursor: [{ slug: "auto", name: "Auto" }],
+          antigravity: [
+            {
+              slug: "Gemini 3.5 Flash",
+              name: "Gemini 3.5 Flash",
+              supportedReasoningEfforts: [
+                { value: "low", label: "Low" },
+                { value: "high", label: "High" },
+              ],
+            },
+          ],
+          grok: [{ slug: DEFAULT_MODEL_BY_PROVIDER.grok, name: "Grok 4.6" }],
+          droid: [{ slug: "claude-opus-4-8", name: "Claude Opus 4.8" }],
+          kilo: [{ slug: "kilo/kilo-auto/free", name: "Kilo Auto" }],
+          opencode: [{ slug: "openai/gpt-5", name: "OpenAI GPT-5" }],
+          pi: [{ slug: "test-pi", name: "Test Pi" }],
+        };
         return Effect.succeed({ models: modelsByProvider[provider] ?? [], source: "test" });
       }),
   } as unknown as (typeof ProviderDiscoveryService)["Service"]);
