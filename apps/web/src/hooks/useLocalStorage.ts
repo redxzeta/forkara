@@ -154,7 +154,9 @@ export function useLocalStorage<T, E>(
     };
 
     const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === key) {
+      // `Storage.clear()` reports `key === null`; every subscriber must
+      // re-read in that case because any stored key may have disappeared.
+      if (event.key === null || event.key === key) {
         syncFromStorage();
       }
     };

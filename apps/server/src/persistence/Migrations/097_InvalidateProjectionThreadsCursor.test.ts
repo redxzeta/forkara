@@ -31,6 +31,7 @@ import * as NodeSqliteClient from "../NodeSqliteClient.ts";
 import messageTextChunkSchema from "./098_MessageTextChunks.ts";
 import messageTurnBoundarySchema from "./099_ProjectionThreadMessagesTurnBoundary.ts";
 import asyncUserInputSchema from "./101_AsyncUserInput.ts";
+import projectionThreadsHumanMessageSchema from "./102_ProjectionThreadsHumanMessage.ts";
 
 const testLayer = OrchestrationProjectionPipelineLive.pipe(
   Layer.provideMerge(OrchestrationEventStoreLive),
@@ -69,6 +70,7 @@ it.layer(Layer.fresh(testLayer))("097_InvalidateProjectionThreadsCursor", (it) =
         yield* messageTextChunkSchema;
         yield* messageTurnBoundarySchema;
         yield* asyncUserInputSchema;
+        yield* projectionThreadsHumanMessageSchema;
 
         const threadId = ThreadId.makeUnsafe("thread-097");
         const projectId = ProjectId.makeUnsafe("project-097");

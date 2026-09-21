@@ -20,7 +20,9 @@ it.layer(NodeSqliteClient.layerMemory())("asynchronous question migration", (it)
         )
       `;
 
-      assert.deepStrictEqual(yield* runMigrations(), [[101, "AsyncUserInput"]]);
+      assert.deepStrictEqual(yield* runMigrations({ toMigrationInclusive: 101 }), [
+        [101, "AsyncUserInput"],
+      ]);
       yield* migration;
 
       assert.deepStrictEqual(
