@@ -18,7 +18,6 @@ import {
 } from "../../composerDraftStore";
 import { type PastedTextDraft } from "../../lib/composerPastedText";
 import { type FileCommentDraft } from "../../lib/fileComments";
-import { type PullRequestContextDraft } from "../../lib/pullRequestContext";
 import {
   removeInlineTerminalContextPlaceholder,
   type TerminalContextDraft,
@@ -44,10 +43,10 @@ export function useChatComposerDraft({ threadId }: ChatComposerDraftInput) {
   const composerFileComments = composerDraft.fileComments;
   const composerTerminalContexts = composerDraft.terminalContexts;
   const composerPastedTexts = composerDraft.pastedTexts;
-  const composerPullRequestContexts = composerDraft.pullRequestContexts;
   const composerSkills = composerDraft.skills;
   const composerMentions = composerDraft.mentions;
   const queuedComposerTurns = composerDraft.queuedTurns;
+  const makeNoMistakeLevel = composerDraft.makeNoMistakeLevel ?? 0;
   const restoredSourceProposedPlan = composerDraft.restoredSourceProposedPlan;
   const composerSendState = useMemo(
     () =>
@@ -60,7 +59,6 @@ export function useChatComposerDraft({ threadId }: ChatComposerDraftInput) {
         fileCommentCount: composerFileComments.length,
         terminalContexts: composerTerminalContexts,
         pastedTexts: composerPastedTexts,
-        pullRequestContexts: composerPullRequestContexts,
       }),
     [
       composerAssistantSelections.length,
@@ -70,7 +68,6 @@ export function useChatComposerDraft({ threadId }: ChatComposerDraftInput) {
       composerImages.length,
       composerTerminalContexts,
       composerPastedTexts,
-      composerPullRequestContexts,
       prompt,
     ],
   );
@@ -125,20 +122,20 @@ export function useChatComposerDraft({ threadId }: ChatComposerDraftInput) {
   );
   const addComposerDraftPastedTexts = useComposerDraftStore((store) => store.addPastedTexts);
   const removeComposerDraftPastedText = useComposerDraftStore((store) => store.removePastedText);
-  const addComposerDraftPullRequestContext = useComposerDraftStore(
-    (store) => store.addPullRequestContext,
-  );
-  const removeComposerDraftPullRequestContext = useComposerDraftStore(
-    (store) => store.removePullRequestContext,
-  );
   const setComposerDraftTerminalContexts = useComposerDraftStore(
     (store) => store.setTerminalContexts,
   );
+  const setComposerDraftSkills = useComposerDraftStore((store) => store.setSkills);
+  const setComposerDraftMentions = useComposerDraftStore((store) => store.setMentions);
   const setComposerDraftRestoredSourceProposedPlan = useComposerDraftStore(
     (store) => store.setRestoredSourceProposedPlan,
   );
   const clearComposerDraftContent = useComposerDraftStore((store) => store.clearComposerContent);
+  const setComposerDraftMakeNoMistakeLevel = useComposerDraftStore(
+    (store) => store.setMakeNoMistakeLevel,
+  );
   const setDraftThreadContext = useComposerDraftStore((store) => store.setDraftThreadContext);
+  const moveDraftThreadToProject = useComposerDraftStore((store) => store.moveDraftThreadToProject);
   const getDraftThreadByProjectId = useComposerDraftStore(
     (store) => store.getDraftThreadByProjectId,
   );
@@ -159,9 +156,6 @@ export function useChatComposerDraft({ threadId }: ChatComposerDraftInput) {
   const composerTerminalContextsRef = useRef<TerminalContextDraft[]>(composerTerminalContexts);
   const composerFileCommentsRef = useRef<FileCommentDraft[]>(composerFileComments);
   const composerPastedTextsRef = useRef<PastedTextDraft[]>(composerPastedTexts);
-  const composerPullRequestContextsRef = useRef<PullRequestContextDraft[]>(
-    composerPullRequestContexts,
-  );
 
   const [composerCursor, setComposerCursor] = useState(() =>
     collapseExpandedComposerCursor(prompt, prompt.length),
@@ -335,33 +329,6 @@ export function useChatComposerDraft({ threadId }: ChatComposerDraftInput) {
     },
     [discardPromptHistoryNavigationForComposerMutation, removeComposerDraftPastedText, threadId],
   );
-  const addComposerPullRequestContextsToDraft = useCallback(
-    (contexts: ReadonlyArray<PullRequestContextDraft>) => {
-      if (contexts.length === 0) {
-        return;
-      }
-      discardPromptHistoryNavigationForComposerMutation();
-      for (const context of contexts) {
-        addComposerDraftPullRequestContext(threadId, context);
-      }
-    },
-    [
-      addComposerDraftPullRequestContext,
-      discardPromptHistoryNavigationForComposerMutation,
-      threadId,
-    ],
-  );
-  const removeComposerPullRequestContextFromDraft = useCallback(
-    (contextId: string) => {
-      discardPromptHistoryNavigationForComposerMutation();
-      removeComposerDraftPullRequestContext(threadId, contextId);
-    },
-    [
-      discardPromptHistoryNavigationForComposerMutation,
-      removeComposerDraftPullRequestContext,
-      threadId,
-    ],
-  );
   const removeComposerBrowserAnnotationFromDraft = useCallback(
     (annotationId: string) => {
       discardPromptHistoryNavigationForComposerMutation();
@@ -432,10 +399,6 @@ export function useChatComposerDraft({ threadId }: ChatComposerDraftInput) {
   }, [composerPastedTexts]);
 
   useEffect(() => {
-    composerPullRequestContextsRef.current = composerPullRequestContexts;
-  }, [composerPullRequestContexts]);
-
-  useEffect(() => {
     promptRef.current = prompt;
     if (
       promptHistoryNavigationRef.current !== null &&
@@ -467,10 +430,10 @@ export function useChatComposerDraft({ threadId }: ChatComposerDraftInput) {
     composerFileComments,
     composerTerminalContexts,
     composerPastedTexts,
-    composerPullRequestContexts,
     composerSkills,
     composerMentions,
     queuedComposerTurns,
+    makeNoMistakeLevel,
     composerSendState,
     nonPersistedComposerImageIds,
     durablyPersistedComposerImageIds,
@@ -489,8 +452,12 @@ export function useChatComposerDraft({ threadId }: ChatComposerDraftInput) {
     insertComposerDraftTerminalContext,
     addComposerDraftPastedTexts,
     setComposerDraftTerminalContexts,
+    setComposerDraftSkills,
+    setComposerDraftMentions,
     clearComposerDraftContent,
+    setComposerDraftMakeNoMistakeLevel,
     setDraftThreadContext,
+    moveDraftThreadToProject,
     getDraftThreadByProjectId,
     getDraftThread,
     setProjectDraftThreadId,
@@ -501,7 +468,6 @@ export function useChatComposerDraft({ threadId }: ChatComposerDraftInput) {
     composerTerminalContextsRef,
     composerFileCommentsRef,
     composerPastedTextsRef,
-    composerPullRequestContextsRef,
     composerCursor,
     setComposerCursor,
     composerTrigger,
@@ -528,8 +494,6 @@ export function useChatComposerDraft({ threadId }: ChatComposerDraftInput) {
     clearComposerFileCommentsFromDraft,
     removeComposerTerminalContextFromDraft,
     removeComposerPastedTextFromDraft,
-    addComposerPullRequestContextsToDraft,
-    removeComposerPullRequestContextFromDraft,
     removeComposerBrowserAnnotationFromDraft,
     showComposerPastedTextInField,
   };

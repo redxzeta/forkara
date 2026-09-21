@@ -8302,10 +8302,8 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const warningMessages = runtimeEvents.flatMap((event) =>
         event.type === "runtime.warning" ? [event.payload.message] : [],
       );
-      // Emitted once per session even though two responses crossed the bar.
-      assert.equal(warningMessages.length, 1);
-      assert.ok(warningMessages[0]?.includes("uncached prompt tokens"));
-      assert.ok(warningMessages[0]?.includes("resume"));
+      // Cache creation is accounted separately from uncached prompt ingestion.
+      assert.deepEqual(warningMessages, []);
     }).pipe(
       Effect.provideService(Random.Random, makeDeterministicRandomService()),
       Effect.provide(harness.layer),

@@ -7,10 +7,6 @@ import { formatAssistantSelectionQueuePreview } from "../../lib/assistantSelecti
 import { formatBrowserAnnotationLabel } from "../../lib/browserAnnotations";
 import { pastedTextTitle, type PastedTextDraft } from "../../lib/composerPastedText";
 import { formatFileCommentLabel, type FileCommentDraft } from "../../lib/fileComments";
-import {
-  formatPullRequestContextTitleSeed,
-  type PullRequestContextDraft,
-} from "../../lib/pullRequestContext";
 import { formatTerminalContextLabel, type TerminalContextDraft } from "../../lib/terminalContext";
 
 export function buildQueuedComposerPreviewText(input: {
@@ -22,7 +18,6 @@ export function buildQueuedComposerPreviewText(input: {
   terminalContexts: ReadonlyArray<TerminalContextDraft>;
   fileComments: ReadonlyArray<FileCommentDraft>;
   pastedTexts: ReadonlyArray<PastedTextDraft>;
-  pullRequestContexts: ReadonlyArray<PullRequestContextDraft>;
 }): string {
   if (input.trimmedPrompt.length > 0) {
     return input.trimmedPrompt;
@@ -53,10 +48,6 @@ export function buildQueuedComposerPreviewText(input: {
   const pastedTitle = formatPastedTextTitleSeed(input.pastedTexts);
   if (pastedTitle) {
     return pastedTitle;
-  }
-  const pullRequestTitle = formatPullRequestContextTitleSeed(input.pullRequestContexts);
-  if (pullRequestTitle) {
-    return pullRequestTitle;
   }
   return "Queued follow-up";
 }

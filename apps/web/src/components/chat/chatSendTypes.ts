@@ -171,9 +171,6 @@ export interface ChatTurnSubmissionInput {
   composerFileComments: ReturnType<typeof useChatComposerDraft>["composerFileComments"];
   composerTerminalContexts: ReturnType<typeof useChatComposerDraft>["composerTerminalContexts"];
   composerPastedTexts: ReturnType<typeof useChatComposerDraft>["composerPastedTexts"];
-  composerPullRequestContexts: ReturnType<
-    typeof useChatComposerDraft
-  >["composerPullRequestContexts"];
   restoredQueuedSourceProposedPlanRef: ReturnType<
     typeof useChatComposerDraft
   >["restoredQueuedSourceProposedPlanRef"];
@@ -210,9 +207,6 @@ export interface ChatTurnSubmissionInput {
     typeof useChatComposerDraft
   >["composerTerminalContextsRef"];
   composerPastedTextsRef: ReturnType<typeof useChatComposerDraft>["composerPastedTextsRef"];
-  composerPullRequestContextsRef: ReturnType<
-    typeof useChatComposerDraft
-  >["composerPullRequestContextsRef"];
   setPrompt: ReturnType<typeof useChatComposerDraft>["setPrompt"];
   addComposerImagesToDraft: ReturnType<typeof useChatComposerDraft>["addComposerImagesToDraft"];
   addComposerFilesToDraft: ReturnType<typeof useChatComposerDraft>["addComposerFilesToDraft"];
@@ -231,9 +225,6 @@ export interface ChatTurnSubmissionInput {
   addComposerPastedTextsToDraft: ReturnType<
     typeof useChatComposerDraft
   >["addComposerPastedTextsToDraft"];
-  addComposerPullRequestContextsToDraft: ReturnType<
-    typeof useChatComposerDraft
-  >["addComposerPullRequestContextsToDraft"];
   selectedComposerSkillsRef: ReturnType<typeof useComposerReferences>["selectedComposerSkillsRef"];
   selectedComposerMentionsRef: ReturnType<
     typeof useComposerReferences

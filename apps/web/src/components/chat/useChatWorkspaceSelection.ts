@@ -2,7 +2,6 @@ import {
   type NativeApi,
   type OrchestrationShellSnapshot,
   type ProjectId,
-  type ProviderKind,
   ThreadId,
 } from "@forkara/contracts";
 import { workspaceRootsEqual } from "@forkara/shared/threadWorkspace";
@@ -17,7 +16,6 @@ import {
   PROJECT_CREATE_SYNC_ERROR,
   createOrRecoverProjectFromPath,
 } from "../../lib/projectCreation";
-import { useProjectEnvironmentStore } from "../../projectEnvironmentStore";
 import { useStore } from "../../store";
 import type { Project, Thread } from "../../types";
 import { useWorkspacePathsStore } from "../../workspacePathsStore";
@@ -72,7 +70,6 @@ interface ChatWorkspaceSelectionInput {
   hasNativeUserMessages: boolean;
   composerEditorRef: RefObject<ComposerPromptEditorHandle | null>;
   scheduleComposerFocus: () => void;
-  defaultProvider: ProviderKind;
 }
 
 export function useChatWorkspaceSelection({
@@ -87,7 +84,6 @@ export function useChatWorkspaceSelection({
   hasNativeUserMessages,
   composerEditorRef,
   scheduleComposerFocus,
-  defaultProvider,
 }: ChatWorkspaceSelectionInput) {
   const syncServerShellSnapshot = useStore((store) => store.syncServerShellSnapshot);
   const setStoreThreadWorkspace = useStore((store) => store.setThreadWorkspace);
@@ -100,9 +96,6 @@ export function useChatWorkspaceSelection({
   const chatWorkspaceRoot = useWorkspacePathsStore((state) => state.chatWorkspaceRoot);
   const onEnvModeChange = useCallback(
     (mode: DraftThreadEnvMode) => {
-      if (activeProject) {
-        useProjectEnvironmentStore.getState().setProjectEnvMode(activeProject.id, mode);
-      }
       const nextBranch =
         mode === "worktree"
           ? (activeThread?.branch ?? draftThread?.branch ?? activeRootBranch ?? null)
@@ -369,7 +362,6 @@ export function useChatWorkspaceSelection({
         api,
         workspaceRoot,
         createIfMissing: false,
-        defaultProvider: defaultProvider,
         loadSnapshot: () => api.orchestration.getShellSnapshot().catch(() => null),
       });
       if (creationResult.snapshot) {
@@ -387,7 +379,6 @@ export function useChatWorkspaceSelection({
       handleSelectProjectForEmptyDraft,
       isLocalDraftThread,
       moveEmptyDraftToLocalProject,
-      defaultProvider,
       syncServerShellSnapshot,
     ],
   );

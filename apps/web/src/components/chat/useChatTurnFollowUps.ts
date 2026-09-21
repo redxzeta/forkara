@@ -423,7 +423,6 @@ export function useChatTurnFollowUps({
       terminalContexts: [],
       fileComments: [],
       pastedTexts: [],
-      pullRequestContexts: [],
       skills: [],
       mentions: [],
       selectedProvider,

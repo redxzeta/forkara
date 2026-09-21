@@ -2198,22 +2198,31 @@ function compareTimelineEntries(left: TimelineEntry, right: TimelineEntry): numb
   return left.createdAt.localeCompare(right.createdAt);
 }
 
-function areTimelineEntriesOrdered(entries: ReadonlyArray<TimelineEntry>): boolean {
+type TimelineComparator = (left: TimelineEntry, right: TimelineEntry) => number;
+
+function areTimelineEntriesOrdered(
+  entries: ReadonlyArray<TimelineEntry>,
+  compare: TimelineComparator = compareTimelineEntries,
+): boolean {
   for (let index = 1; index < entries.length; index += 1) {
-    if (compareTimelineEntries(entries[index - 1]!, entries[index]!) > 0) {
+    if (compare(entries[index - 1]!, entries[index]!) > 0) {
       return false;
     }
   }
   return true;
 }
 
-function sortedTimelineEntries(entries: TimelineEntry[]): TimelineEntry[] {
-  return areTimelineEntriesOrdered(entries) ? entries : entries.toSorted(compareTimelineEntries);
+function sortedTimelineEntries(
+  entries: TimelineEntry[],
+  compare: TimelineComparator = compareTimelineEntries,
+): TimelineEntry[] {
+  return areTimelineEntriesOrdered(entries, compare) ? entries : entries.toSorted(compare);
 }
 
 function mergeTimelineEntries(
   left: ReadonlyArray<TimelineEntry>,
   right: ReadonlyArray<TimelineEntry>,
+  compare: TimelineComparator = compareTimelineEntries,
 ): TimelineEntry[] {
   if (left.length === 0) {
     return [...right];
@@ -2228,7 +2237,7 @@ function mergeTimelineEntries(
   while (leftIndex < left.length && rightIndex < right.length) {
     const leftEntry = left[leftIndex]!;
     const rightEntry = right[rightIndex]!;
-    if (compareTimelineEntries(leftEntry, rightEntry) <= 0) {
+    if (compare(leftEntry, rightEntry) <= 0) {
       merged.push(leftEntry);
       leftIndex += 1;
     } else {

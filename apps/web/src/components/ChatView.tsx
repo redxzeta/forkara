@@ -661,6 +661,8 @@ import {
   waitForRecoverableProjectForDuplicateCreate,
 } from "../lib/projectCreateRecovery";
 import { ChatComposerFooter } from "./chat/ChatComposerFooter";
+import { waitForSetupScriptTerminalActivity } from "./chat/projectScriptRuntime";
+import { composerPromptStillMatchesRestoredQueuedDraft } from "./chat/queuedComposerPreview";
 import { useChatAutomationCreation } from "./chat/useChatAutomationCreation";
 import { useChatComposerCommands } from "./chat/useChatComposerCommands";
 import { useChatComposerDraft } from "./chat/useChatComposerDraft";
@@ -674,7 +676,6 @@ import { useChatProviderStatus } from "./chat/useChatProviderStatus";
 import { useChatRuntimeModes } from "./chat/useChatRuntimeModes";
 import { useChatTimelineMessages } from "./chat/useChatTimelineMessages";
 import { useChatTranscriptScroll } from "./chat/useChatTranscriptScroll";
-import { useChatTurnFollowUps } from "./chat/useChatTurnFollowUps";
 import { useChatWorkLog } from "./chat/useChatWorkLog";
 import { useChatWorkspaceSelection } from "./chat/useChatWorkspaceSelection";
 import { useComposerDiscovery } from "./chat/useComposerDiscovery";
@@ -1113,127 +1114,83 @@ export default function ChatView({
   );
   const isEditorRail = presentationMode === "editor";
   const isInactiveSplitPane = surfaceMode === "split" && !isFocusedPane;
-  const composerDraft = useComposerThreadDraft(threadId);
-  const prompt = composerDraft.prompt;
-  const composerPromptHistorySavedDraft = composerDraft.promptHistorySavedDraft;
-  const composerPromptHistorySavedDraftImages = composerPromptHistorySavedDraft?.images ?? null;
-  const composerImages = composerDraft.images;
-  const composerFiles = composerDraft.files;
-  const composerAssistantSelections = composerDraft.assistantSelections;
-  const composerBrowserAnnotations = composerDraft.browserAnnotations;
-  const composerFileComments = composerDraft.fileComments;
-  const composerTerminalContexts = composerDraft.terminalContexts;
-  const composerPastedTexts = composerDraft.pastedTexts;
-  const composerSkills = composerDraft.skills;
-  const composerMentions = composerDraft.mentions;
-  const queuedComposerTurns = composerDraft.queuedTurns;
-  const makeNoMistakeLevel = composerDraft.makeNoMistakeLevel ?? 0;
-  const restoredSourceProposedPlan = composerDraft.restoredSourceProposedPlan;
-  const composerSendState = useMemo(
-    () =>
-      deriveComposerSendState({
-        prompt,
-        imageCount: composerImages.length,
-        fileCount: composerFiles.length,
-        assistantSelectionCount: composerAssistantSelections.length,
-        browserAnnotationCount: composerBrowserAnnotations.length,
-        fileCommentCount: composerFileComments.length,
-        terminalContexts: composerTerminalContexts,
-        pastedTexts: composerPastedTexts,
-      }),
-    [
-      composerAssistantSelections.length,
-      composerBrowserAnnotations.length,
-      composerFileComments.length,
-      composerFiles.length,
-      composerImages.length,
-      composerTerminalContexts,
-      composerPastedTexts,
-      prompt,
-    ],
-  );
-  const nonPersistedComposerImageIds = composerDraft.nonPersistedImageIds;
-  const durablyPersistedComposerImageIds = composerDraft.persistedAttachments;
-  const setComposerDraftPrompt = useComposerDraftStore((store) => store.setPrompt);
-  const setComposerDraftPromptHistorySavedDraft = useComposerDraftStore(
-    (store) => store.setPromptHistorySavedDraft,
-  );
-  const restoreComposerDraftPromptHistorySavedDraft = useComposerDraftStore(
-    (store) => store.restorePromptHistorySavedDraft,
-  );
-  const setComposerDraftModelSelection = useComposerDraftStore((store) => store.setModelSelection);
-  const setComposerDraftProviderModelOptions = useComposerDraftStore(
-    (store) => store.setProviderModelOptions,
-  );
-  const setComposerDraftRuntimeMode = useComposerDraftStore((store) => store.setRuntimeMode);
-  const setComposerDraftInteractionMode = useComposerDraftStore(
-    (store) => store.setInteractionMode,
-  );
-  const enqueueQueuedComposerTurn = useComposerDraftStore((store) => store.enqueueQueuedTurn);
-  const insertQueuedComposerTurn = useComposerDraftStore((store) => store.insertQueuedTurn);
-  const removeQueuedComposerTurnFromDraft = useComposerDraftStore(
-    (store) => store.removeQueuedTurn,
-  );
-  const addComposerDraftImages = useComposerDraftStore((store) => store.addImages);
-  const removeComposerDraftImage = useComposerDraftStore((store) => store.removeImage);
-  const addComposerDraftFiles = useComposerDraftStore((store) => store.addFiles);
-  const removeComposerDraftFile = useComposerDraftStore((store) => store.removeFile);
-  const addComposerDraftAssistantSelection = useComposerDraftStore(
-    (store) => store.addAssistantSelection,
-  );
-  const addComposerDraftBrowserAnnotations = useComposerDraftStore(
-    (store) => store.addBrowserAnnotations,
-  );
-  const removeComposerDraftBrowserAnnotation = useComposerDraftStore(
-    (store) => store.removeBrowserAnnotation,
-  );
-  const clearComposerDraftAssistantSelections = useComposerDraftStore(
-    (store) => store.clearAssistantSelections,
-  );
-  const addComposerDraftFileComment = useComposerDraftStore((store) => store.addFileComment);
-  const clearComposerDraftFileComments = useComposerDraftStore((store) => store.clearFileComments);
-  const insertComposerDraftTerminalContext = useComposerDraftStore(
-    (store) => store.insertTerminalContext,
-  );
-  const addComposerDraftTerminalContexts = useComposerDraftStore(
-    (store) => store.addTerminalContexts,
-  );
-  const removeComposerDraftTerminalContext = useComposerDraftStore(
-    (store) => store.removeTerminalContext,
-  );
-  const addComposerDraftPastedTexts = useComposerDraftStore((store) => store.addPastedTexts);
-  const removeComposerDraftPastedText = useComposerDraftStore((store) => store.removePastedText);
-  const setComposerDraftTerminalContexts = useComposerDraftStore(
-    (store) => store.setTerminalContexts,
-  );
-  const setComposerDraftSkills = useComposerDraftStore((store) => store.setSkills);
-  const setComposerDraftMentions = useComposerDraftStore((store) => store.setMentions);
-  const clearComposerDraftPersistedAttachments = useComposerDraftStore(
-    (store) => store.clearPersistedAttachments,
-  );
-  const syncComposerDraftPersistedAttachments = useComposerDraftStore(
-    (store) => store.syncPersistedAttachments,
-  );
-  const syncComposerDraftPromptHistorySavedDraftPersistedAttachments = useComposerDraftStore(
-    (store) => store.syncPromptHistorySavedDraftPersistedAttachments,
-  );
-  const setComposerDraftRestoredSourceProposedPlan = useComposerDraftStore(
-    (store) => store.setRestoredSourceProposedPlan,
-  );
-  const clearComposerDraftContent = useComposerDraftStore((store) => store.clearComposerContent);
-  const setComposerDraftMakeNoMistakeLevel = useComposerDraftStore(
-    (store) => store.setMakeNoMistakeLevel,
-  );
-  const setDraftThreadContext = useComposerDraftStore((store) => store.setDraftThreadContext);
-  const moveDraftThreadToProject = useComposerDraftStore((store) => store.moveDraftThreadToProject);
-  const getDraftThreadByProjectId = useComposerDraftStore(
-    (store) => store.getDraftThreadByProjectId,
-  );
-  const getDraftThread = useComposerDraftStore((store) => store.getDraftThread);
-  const setProjectDraftThreadId = useComposerDraftStore((store) => store.setProjectDraftThreadId);
-  const clearProjectDraftThreadId = useComposerDraftStore(
-    (store) => store.clearProjectDraftThreadId,
-  );
+  const {
+    composerDraft,
+    prompt,
+    composerImages,
+    composerFiles,
+    composerAssistantSelections,
+    composerBrowserAnnotations,
+    composerFileComments,
+    composerTerminalContexts,
+    composerPastedTexts,
+    composerSkills,
+    composerMentions,
+    queuedComposerTurns,
+    makeNoMistakeLevel,
+    composerSendState,
+    nonPersistedComposerImageIds,
+    durablyPersistedComposerImageIds,
+    setComposerDraftPrompt,
+    setComposerDraftPromptHistorySavedDraft,
+    restoreComposerDraftPromptHistorySavedDraft,
+    setComposerDraftModelSelection,
+    setComposerDraftProviderModelOptions,
+    setComposerDraftRuntimeMode,
+    setComposerDraftInteractionMode,
+    enqueueQueuedComposerTurn,
+    insertQueuedComposerTurn,
+    removeQueuedComposerTurnFromDraft,
+    removeComposerDraftFile,
+    addComposerDraftBrowserAnnotations,
+    insertComposerDraftTerminalContext,
+    addComposerDraftPastedTexts,
+    setComposerDraftTerminalContexts,
+    setComposerDraftSkills,
+    setComposerDraftMentions,
+    clearComposerDraftContent,
+    setComposerDraftMakeNoMistakeLevel,
+    setDraftThreadContext,
+    moveDraftThreadToProject,
+    getDraftThreadByProjectId,
+    getDraftThread,
+    setProjectDraftThreadId,
+    clearProjectDraftThreadId,
+    promptRef,
+    composerAssistantSelectionsRef,
+    composerBrowserAnnotationsRef,
+    composerTerminalContextsRef,
+    composerFileCommentsRef,
+    composerPastedTextsRef,
+    composerCursor,
+    setComposerCursor,
+    composerTrigger,
+    setComposerTrigger,
+    composerEditorRef,
+    promptHistoryNavigationRef,
+    applyingPromptHistoryNavigationRef,
+    expectedPromptHistoryPromptRef,
+    promptHistoryAppliedPromptRef,
+    composerImagesRef,
+    composerFilesRef,
+    restoredQueuedSourceProposedPlanRef,
+    setRestoredQueuedSourceProposedPlan,
+    setPrompt,
+    discardPromptHistoryNavigationForComposerMutation,
+    addComposerImagesToDraft,
+    addComposerFilesToDraft,
+    addComposerAssistantSelectionToDraft,
+    addComposerTerminalContextsToDraft,
+    addComposerPastedTextsToDraft,
+    addComposerFileCommentToDraft,
+    removeComposerImageFromDraft,
+    clearComposerAssistantSelectionsFromDraft,
+    clearComposerFileCommentsFromDraft,
+    removeComposerTerminalContextFromDraft,
+    removeComposerPastedTextFromDraft,
+    removeComposerBrowserAnnotationFromDraft,
+    showComposerPastedTextInField,
+  } = useChatComposerDraft({ threadId });
   const draftThread = useComposerDraftStore(
     (store) => store.draftThreadsByThreadId[threadId] ?? null,
   );
@@ -1289,31 +1246,14 @@ export default function ChatView({
   const fallbackDraftProject = useStore(
     useMemo(() => createProjectSelector(fallbackDraftProjectId), [fallbackDraftProjectId]),
   );
-  const promptRef = useRef(prompt);
   const [isDragOverComposer, setIsDragOverComposer] = useState(false);
   const [expandedImage, setExpandedImage] = useState<ExpandedImagePreview | null>(null);
-  const composerAssistantSelectionsRef = useRef<ComposerAssistantSelectionAttachment[]>(
-    composerAssistantSelections,
-  );
-  const composerBrowserAnnotationsRef = useRef<BrowserAnnotationDraft[]>(
-    composerBrowserAnnotations,
-  );
-  const composerTerminalContextsRef = useRef<TerminalContextDraft[]>(composerTerminalContexts);
-  const composerFileCommentsRef = useRef<FileCommentDraft[]>(composerFileComments);
-  const composerPastedTextsRef = useRef<PastedTextDraft[]>(composerPastedTexts);
   const [localDraftErrorsByThreadId, setLocalDraftErrorsByThreadId] = useState<
     Record<ThreadId, string | null>
   >({});
 
   const [isRevertingCheckpoint, setIsRevertingCheckpoint] = useState(false);
   const [pendingFileUndo, setPendingFileUndo] = useState<PendingFileUndo | null>(null);
-  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
-  const [respondingRequestKeys, setRespondingRequestKeys] = useState<string[]>([]);
-  const [respondingUserInputRequestKeys, setRespondingUserInputRequestKeys] = useState<string[]>(
-    [],
-  );
-  const [pendingUserInputQuestionIndexByRequestId, setPendingUserInputQuestionIndexByRequestId] =
-    useState<Record<string, number>>({});
   const [planSidebarOpen, setPlanSidebarOpen] = useState(false);
   const [activeTaskListCompact, setActiveTaskListCompact] = useState(false);
   const [subagentStripCompact, setSubagentStripCompact] = useState(false);
@@ -1405,6 +1345,12 @@ export default function ChatView({
   const composerSelectLockRef = useRef(false);
   const composerMenuOpenRef = useRef(false);
   const composerMenuItemsRef = useRef<ComposerCommandItem[]>([]);
+  const queuedComposerTurnsRef = useRef<QueuedComposerTurn[]>([]);
+  const autoDispatchingQueuedTurnRef = useRef(false);
+  const [queuedSteerGate, setQueuedSteerGate] = useState<QueuedSteerGate | null>(() =>
+    getQueuedComposerSteerGate(threadId),
+  );
+  const [queuedAutoDispatchTick, setQueuedAutoDispatchTick] = useState(0);
 
   const activeComposerMenuItemRef = useRef<ComposerCommandItem | null>(null);
   const localDirectoryMenuRef = useRef<ComposerLocalDirectoryMenuHandle | null>(null);
@@ -1414,169 +1360,6 @@ export default function ChatView({
   const dragDepthRef = useRef(0);
   const terminalOpenByThreadRef = useRef<Record<string, boolean>>({});
   const activatedThreadIdRef = useRef<ThreadId | null>(null);
-
-  useEffect(() => {
-    restoredQueuedSourceProposedPlanRef.current = restoredSourceProposedPlan ?? null;
-  }, [restoredSourceProposedPlan]);
-
-  const setPrompt = useCallback(
-    (nextPrompt: string) => {
-      setComposerDraftPrompt(threadId, nextPrompt);
-    },
-    [setComposerDraftPrompt, threadId],
-  );
-  const discardPromptHistoryNavigationForComposerMutation = useCallback(() => {
-    if (promptHistoryNavigationRef.current === null) {
-      return;
-    }
-    // Attachment edits mean the recalled prompt is now the user's draft; do not restore the old one.
-    promptHistoryNavigationRef.current = null;
-    applyingPromptHistoryNavigationRef.current = false;
-    expectedPromptHistoryPromptRef.current = null;
-    promptHistoryAppliedPromptRef.current = null;
-    setComposerDraftPromptHistorySavedDraft(threadId, null);
-  }, [setComposerDraftPromptHistorySavedDraft, threadId]);
-  const addComposerImagesToDraft = useCallback(
-    (images: ComposerImageAttachment[]) => {
-      discardPromptHistoryNavigationForComposerMutation();
-      return addComposerDraftImages(threadId, images);
-    },
-    [addComposerDraftImages, discardPromptHistoryNavigationForComposerMutation, threadId],
-  );
-  const addComposerFilesToDraft = useCallback(
-    (files: ComposerFileAttachment[]) => {
-      discardPromptHistoryNavigationForComposerMutation();
-      return addComposerDraftFiles(threadId, files);
-    },
-    [addComposerDraftFiles, discardPromptHistoryNavigationForComposerMutation, threadId],
-  );
-  const addComposerAssistantSelectionToDraft = useCallback(
-    (selection: ComposerAssistantSelectionAttachment) => {
-      discardPromptHistoryNavigationForComposerMutation();
-      return addComposerDraftAssistantSelection(threadId, selection);
-    },
-    [
-      addComposerDraftAssistantSelection,
-      discardPromptHistoryNavigationForComposerMutation,
-      threadId,
-    ],
-  );
-  const addComposerTerminalContextsToDraft = useCallback(
-    (contexts: TerminalContextDraft[]) => {
-      discardPromptHistoryNavigationForComposerMutation();
-      addComposerDraftTerminalContexts(threadId, contexts);
-    },
-    [addComposerDraftTerminalContexts, discardPromptHistoryNavigationForComposerMutation, threadId],
-  );
-  const addComposerPastedTextsToDraft = useCallback(
-    (pastedTexts: PastedTextDraft[]) => {
-      discardPromptHistoryNavigationForComposerMutation();
-      addComposerDraftPastedTexts(threadId, pastedTexts);
-    },
-    [addComposerDraftPastedTexts, discardPromptHistoryNavigationForComposerMutation, threadId],
-  );
-  const addComposerFileCommentToDraft = useCallback(
-    (comment: FileCommentDraft) => {
-      discardPromptHistoryNavigationForComposerMutation();
-      addComposerDraftFileComment(threadId, comment);
-    },
-    [addComposerDraftFileComment, discardPromptHistoryNavigationForComposerMutation, threadId],
-  );
-  const removeComposerImageFromDraft = useCallback(
-    (imageId: string) => {
-      discardPromptHistoryNavigationForComposerMutation();
-      removeComposerDraftImage(threadId, imageId);
-    },
-    [discardPromptHistoryNavigationForComposerMutation, removeComposerDraftImage, threadId],
-  );
-  const clearComposerAssistantSelectionsFromDraft = useCallback(() => {
-    discardPromptHistoryNavigationForComposerMutation();
-    clearComposerDraftAssistantSelections(threadId);
-  }, [
-    clearComposerDraftAssistantSelections,
-    discardPromptHistoryNavigationForComposerMutation,
-    threadId,
-  ]);
-  const clearComposerFileCommentsFromDraft = useCallback(() => {
-    discardPromptHistoryNavigationForComposerMutation();
-    clearComposerDraftFileComments(threadId);
-  }, [clearComposerDraftFileComments, discardPromptHistoryNavigationForComposerMutation, threadId]);
-  const removeComposerTerminalContextFromDraft = useCallback(
-    (contextId: string) => {
-      discardPromptHistoryNavigationForComposerMutation();
-      const contextIndex = composerTerminalContexts.findIndex(
-        (context) => context.id === contextId,
-      );
-      if (contextIndex < 0) {
-        return;
-      }
-      const nextPrompt = removeInlineTerminalContextPlaceholder(promptRef.current, contextIndex);
-      promptRef.current = nextPrompt.prompt;
-      setPrompt(nextPrompt.prompt);
-      removeComposerDraftTerminalContext(threadId, contextId);
-      setComposerCursor(nextPrompt.cursor);
-      setComposerTrigger(
-        detectComposerTrigger(
-          nextPrompt.prompt,
-          expandCollapsedComposerCursor(nextPrompt.prompt, nextPrompt.cursor),
-        ),
-      );
-    },
-    [
-      composerTerminalContexts,
-      discardPromptHistoryNavigationForComposerMutation,
-      removeComposerDraftTerminalContext,
-      setPrompt,
-      threadId,
-    ],
-  );
-  const removeComposerPastedTextFromDraft = useCallback(
-    (pastedTextId: string) => {
-      discardPromptHistoryNavigationForComposerMutation();
-      removeComposerDraftPastedText(threadId, pastedTextId);
-    },
-    [discardPromptHistoryNavigationForComposerMutation, removeComposerDraftPastedText, threadId],
-  );
-  const removeComposerBrowserAnnotationFromDraft = useCallback(
-    (annotationId: string) => {
-      discardPromptHistoryNavigationForComposerMutation();
-      removeComposerDraftBrowserAnnotation(threadId, annotationId);
-    },
-    [
-      discardPromptHistoryNavigationForComposerMutation,
-      removeComposerDraftBrowserAnnotation,
-      threadId,
-    ],
-  );
-  // "Show in text field": drop the full pasted text back into the editor (appended
-  // to the current prompt) and discard the card so it can be edited as normal text.
-  const showComposerPastedTextInField = useCallback(
-    (pastedTextId: string) => {
-      const pasted = composerPastedTexts.find((entry) => entry.id === pastedTextId);
-      if (!pasted) {
-        return;
-      }
-      discardPromptHistoryNavigationForComposerMutation();
-      const current = promptRef.current;
-      const separator = current.length > 0 && !current.endsWith("\n") ? "\n" : "";
-      const nextPrompt = `${current}${separator}${pasted.text}`;
-      promptRef.current = nextPrompt;
-      setPrompt(nextPrompt);
-      removeComposerDraftPastedText(threadId, pastedTextId);
-      setComposerCursor(collapseExpandedComposerCursor(nextPrompt, nextPrompt.length));
-      setComposerTrigger(detectComposerTrigger(nextPrompt, nextPrompt.length));
-      window.requestAnimationFrame(() => {
-        composerEditorRef.current?.focusAtEnd();
-      });
-    },
-    [
-      composerPastedTexts,
-      discardPromptHistoryNavigationForComposerMutation,
-      removeComposerDraftPastedText,
-      setPrompt,
-      threadId,
-    ],
-  );
 
   const localDraftError = serverThread ? null : (localDraftErrorsByThreadId[threadId] ?? null);
   const localDraftThread = useMemo(
@@ -2021,6 +1804,20 @@ export default function ChatView({
     isModelPickerOpen,
     resolvedThreadWorktreePath,
   });
+  const {
+    selectedComposerSkills,
+    selectedComposerMentions,
+    selectedComposerSkillsRef,
+    selectedComposerMentionsRef,
+    updateSelectedComposerSkills,
+    updateSelectedComposerMentions,
+  } = useComposerReferences({
+    threadId,
+    selectedProvider,
+    prompt,
+    composerSkills,
+    composerMentions,
+  });
   const featureFlags = useFeatureFlags();
   const showDebugTaskBanner = import.meta.env.DEV && featureFlags["show-debug-task-banner"];
   const serverSettingsQuery = useQuery(serverSettingsQueryOptions());
@@ -2062,116 +1859,39 @@ export default function ChatView({
     }, 0);
     return () => window.clearTimeout(settle);
   }, [agentActivityTimelineState.detailById, openAgentActivityId]);
-  const pendingApprovals = useMemo(
-    () =>
-      derivePendingApprovals(threadActivities, activeThread?.pendingInteractions, {
-        authoritativeHasPending: activeThread?.hasPendingApprovals,
-        latestTurnId: activeThread?.latestTurn?.turnId,
-      }),
-    [
-      activeThread?.hasPendingApprovals,
-      activeThread?.latestTurn?.turnId,
-      activeThread?.pendingInteractions,
-      threadActivities,
-    ],
-  );
-  const nextUserInputResponseReclaimAt = useMemo(() => {
-    let earliest: string | null = null;
-    for (const interaction of activeThread?.pendingInteractions ?? []) {
-      if (interaction.interactionKind !== "userInput" || interaction.status !== "responding") {
-        continue;
-      }
-      if (interaction.responseRequestedAt === null) {
-        return new Date(0).toISOString();
-      }
-      const reclaimAt = respondingInteractionReclaimAt(interaction.responseRequestedAt);
-      if (earliest === null || reclaimAt < earliest) {
-        earliest = reclaimAt;
-      }
-    }
-    return earliest;
-  }, [activeThread?.pendingInteractions]);
-  const [userInputResponseClaimReferenceAt, setUserInputResponseClaimReferenceAt] = useState(() =>
-    new Date().toISOString(),
-  );
-  useEffect(() => {
-    if (nextUserInputResponseReclaimAt === null) {
-      return;
-    }
-    const delayMs = Math.max(0, Date.parse(nextUserInputResponseReclaimAt) - Date.now());
-    const timeoutId = window.setTimeout(() => {
-      setUserInputResponseClaimReferenceAt(new Date().toISOString());
-    }, delayMs);
-    return () => window.clearTimeout(timeoutId);
-  }, [nextUserInputResponseReclaimAt]);
-  const pendingUserInputs = useMemo(
-    () =>
-      derivePendingUserInputs(threadActivities, activeThread?.pendingInteractions, {
-        authoritativeHasPending: activeThread?.hasPendingUserInput,
-        latestTurnId: activeThread?.latestTurn?.turnId,
-        responseClaimReferenceAt: userInputResponseClaimReferenceAt,
-      }),
-    [
-      activeThread?.hasPendingUserInput,
-      activeThread?.latestTurn?.turnId,
-      activeThread?.pendingInteractions,
-      threadActivities,
-      userInputResponseClaimReferenceAt,
-    ],
-  );
   const {
-    answers: pendingUserInputAnswersByRequestId,
-    answersRef: pendingUserInputAnswersByRequestIdRef,
-    setAnswers: setPendingUserInputAnswersByRequestId,
-    drafts: pendingUserInputDrafts,
-  } = usePendingUserInputDrafts(threadId, pendingUserInputs, activeThread?.pendingInteractions);
-  const expiredQuestionDrafts = useMemo(
-    () => expiredUserInputDrafts(pendingUserInputDrafts, threadActivities),
-    [pendingUserInputDrafts, threadActivities],
-  );
-  const activePendingUserInput = pendingUserInputs[0] ?? null;
-  const activePendingUserInputKey = activePendingUserInput
-    ? pendingRequestInstanceKey(
-        activePendingUserInput.requestId,
-        activePendingUserInput.lifecycleGeneration,
-      )
-    : null;
-  const activePendingDraftAnswers = useMemo(
-    () =>
-      activePendingUserInputKey
-        ? (pendingUserInputAnswersByRequestId[activePendingUserInputKey] ??
-          EMPTY_PENDING_USER_INPUT_ANSWERS)
-        : EMPTY_PENDING_USER_INPUT_ANSWERS,
-    [activePendingUserInputKey, pendingUserInputAnswersByRequestId],
-  );
-  const activePendingQuestionIndex = activePendingUserInputKey
-    ? (pendingUserInputQuestionIndexByRequestId[activePendingUserInputKey] ?? 0)
-    : 0;
-  const activePendingProgress = useMemo(
-    () =>
-      activePendingUserInput
-        ? derivePendingUserInputProgress(
-            activePendingUserInput.questions,
-            activePendingDraftAnswers,
-            activePendingQuestionIndex,
-          )
-        : null,
-    [activePendingDraftAnswers, activePendingQuestionIndex, activePendingUserInput],
-  );
-  // Read once here for the same reason as `activeLatestTurnId`: an `activePendingProgress?.x`
-  // read inside a memo body makes React Compiler infer `activePendingProgress` as the
-  // dependency, which no longer matches the hand-written property-path dep.
-  const activePendingQuestion = activePendingProgress?.activeQuestion ?? null;
-  const activePendingResolvedAnswers = useMemo(
-    () =>
-      activePendingUserInput
-        ? buildPendingUserInputAnswers(activePendingUserInput.questions, activePendingDraftAnswers)
-        : null,
-    [activePendingDraftAnswers, activePendingUserInput],
-  );
-  const activePendingIsResponding = activePendingUserInputKey
-    ? respondingUserInputRequestKeys.includes(activePendingUserInputKey)
-    : false;
+    respondingRequestKeys,
+    pendingApprovals,
+    pendingUserInputs,
+    pendingUserInputAnswersByRequestIdRef,
+    setPendingUserInputAnswersByRequestId,
+    expiredQuestionDrafts,
+    activePendingUserInput,
+    activePendingUserInputKey,
+    activePendingDraftAnswers,
+    activePendingQuestionIndex,
+    activePendingProgress,
+    activePendingQuestion,
+    activePendingResolvedAnswers,
+    activePendingIsResponding,
+    activePendingApproval,
+    onRespondToApproval,
+    userInputSubmissionVersion,
+    onCancelActivePendingUserInput,
+    onToggleActivePendingUserInputOption,
+    onChangeActivePendingUserInputCustomAnswer,
+    onAdvanceActivePendingUserInput,
+    onPreviousActivePendingUserInputQuestion,
+  } = useChatPendingInteractions({
+    threadId,
+    activeThread,
+    runtimeMode,
+    promptRef,
+    setPrompt,
+    setComposerCursor,
+    setComposerTrigger,
+    setComposerHighlightedItemId,
+  });
   const activeProposedPlan = useMemo(() => {
     if (!latestTurnSettled) {
       return null;
@@ -3676,29 +3396,31 @@ export default function ChatView({
     activeTaskList?.turnId,
     sidebarProposedPlan?.turnId,
   ]);
-  useLayoutEffect(() => {
-    const shouldFollowPendingTurn =
-      activeThread?.id !== undefined && autoFollowThreadIdRef.current === activeThread.id;
-    if (isUserScrollDetachedRef.current || (!isAtEndRef.current && !shouldFollowPendingTurn)) {
-      return;
-    }
-    // Re-apply the bottom stick only for real transcript messages; tool/work
-    // rows can arrive quickly and should not churn scroll/layout work.
-    const frameId = window.requestAnimationFrame(() => {
-      // The tail-anchor slide owns the scroll after a send; a re-snap here
-      // would hard-jump past the smooth slide mid-flight. Once the anchor
-      // settles the spacer keeps the end position exact, so nothing is missed.
-      if (tailAnchorScrollInFlightRef.current || isUserScrollDetachedRef.current) {
-        return;
-      }
-      const shouldAnimate = animateNextAutoFollowScrollRef.current;
-      animateNextAutoFollowScrollRef.current = false;
-      scrollToEnd(shouldAnimate);
-    });
-    return () => {
-      window.cancelAnimationFrame(frameId);
-    };
-  }, [activeThread?.id, scrollToEnd, transcriptAutoFollowSignal]);
+  const {
+    showScrollToBottom,
+    isUserScrollDetached,
+    tailAnchorScrollInFlightRef,
+    armTranscriptAutoFollow,
+    onTranscriptNavigate,
+    onIsAtEndChange,
+    onScrollToBottom,
+    onMessagesClickCaptureBase,
+    onMessagesPointerDownBase,
+    onMessagesPointerUpBase,
+    onMessagesPointerCancelBase,
+    onMessagesScrollBase,
+    onMessagesTouchEndBase,
+    onMessagesTouchMoveBase,
+    onMessagesTouchStartBase,
+    onMessagesWheelBase,
+  } = useChatTranscriptScroll({
+    activeThreadId,
+    legendListRef,
+    timelineEntries,
+    hasStreamingAssistantText,
+    composerTranscriptInsetPx,
+    isInactiveSplitPane,
+  });
   const {
     pendingTranscriptSelectionAction,
     commitTranscriptAssistantSelection,
@@ -3963,34 +3685,6 @@ export default function ChatView({
   }, [activeThread?.id, focusComposer, isInactiveSplitPane, terminalState.terminalOpen]);
 
   useEffect(() => {
-    composerImagesRef.current = composerImages;
-  }, [composerImages]);
-
-  useEffect(() => {
-    composerFilesRef.current = composerFiles;
-  }, [composerFiles]);
-
-  useEffect(() => {
-    composerAssistantSelectionsRef.current = composerAssistantSelections;
-  }, [composerAssistantSelections]);
-
-  useEffect(() => {
-    composerBrowserAnnotationsRef.current = composerBrowserAnnotations;
-  }, [composerBrowserAnnotations]);
-
-  useEffect(() => {
-    composerTerminalContextsRef.current = composerTerminalContexts;
-  }, [composerTerminalContexts]);
-
-  useEffect(() => {
-    composerFileCommentsRef.current = composerFileComments;
-  }, [composerFileComments]);
-
-  useEffect(() => {
-    composerPastedTextsRef.current = composerPastedTexts;
-  }, [composerPastedTexts]);
-
-  useEffect(() => {
     queuedComposerTurnsRef.current = queuedComposerTurns;
   }, [queuedComposerTurns]);
 
@@ -4006,104 +3700,8 @@ export default function ChatView({
     };
   }, [threadId]);
 
-  useEffect(() => {
-    if (!activeThread?.id) return;
-    if (activeThread.messages.length === 0) {
-      return;
-    }
-    // No optimistic messages → nothing to reconcile; skip the full-transcript id Set
-    // this effect would otherwise rebuild on every streaming flush.
-    if (optimisticUserMessages.length === 0) {
-      return;
-    }
-    const serverIds = new Set(activeThread.messages.map((message) => message.id));
-    const removedMessages = optimisticUserMessages.filter((message) => serverIds.has(message.id));
-    if (removedMessages.length === 0) {
-      return;
-    }
-    const timer = window.setTimeout(() => {
-      setOptimisticUserMessages((existing) =>
-        existing.filter((message) => !serverIds.has(message.id)),
-      );
-    }, 0);
-    for (const removedMessage of removedMessages) {
-      const previewUrls = collectUserMessageBlobPreviewUrls(removedMessage);
-      if (previewUrls.length > 0) {
-        handoffAttachmentPreviews(removedMessage.id, previewUrls);
-        continue;
-      }
-      revokeUserMessagePreviewUrls(removedMessage);
-    }
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [activeThread?.id, activeThread?.messages, handoffAttachmentPreviews, optimisticUserMessages]);
-
-  useEffect(() => {
-    promptRef.current = prompt;
-    if (
-      promptHistoryNavigationRef.current !== null &&
-      prompt !== promptHistoryAppliedPromptRef.current
-    ) {
-      // Another writer (queued-turn restore, automation restore, insertion)
-      // replaced the prompt while a history browse was active. The new prompt
-      // is authoritative: end the browse and drop the saved pre-browse draft
-      // so it cannot clobber this prompt later.
-      promptHistoryNavigationRef.current = null;
-      expectedPromptHistoryPromptRef.current = null;
-      setComposerDraftPromptHistorySavedDraft(threadId, null);
-    }
-    setComposerCursor((existing) => clampCollapsedComposerCursor(prompt, existing));
-  }, [prompt, setComposerDraftPromptHistorySavedDraft, threadId]);
-
-  useLayoutEffect(() => {
-    updateSelectedComposerSkills(composerSkills);
-    updateSelectedComposerMentions(composerMentions);
-  }, [
-    composerMentions,
-    composerSkills,
-    threadId,
-    updateSelectedComposerMentions,
-    updateSelectedComposerSkills,
-  ]);
-
-  useEffect(() => {
-    updateSelectedComposerSkills((existing) => {
-      const nextSkills = filterPromptSkillReferences(prompt, existing, selectedProvider);
-      return providerSkillReferencesEqual(existing, nextSkills) ? existing : nextSkills;
-    });
-  }, [prompt, selectedProvider, updateSelectedComposerSkills]);
-
-  useEffect(() => {
-    updateSelectedComposerMentions((existing) => {
-      const nextMentions = filterPromptProviderMentionReferences(prompt, existing);
-      return providerMentionReferencesEqual(existing, nextMentions) ? existing : nextMentions;
-    });
-  }, [prompt, updateSelectedComposerMentions]);
-
-  // Provider references are provider-specific; keep draft restores from looking like manual switches.
-  useEffect(() => {
-    const previous = previousSelectedProviderRef.current;
-    previousSelectedProviderRef.current = {
-      threadId,
-      provider: selectedProvider,
-    };
-    if (!previous || previous.threadId !== threadId || previous.provider === selectedProvider) {
-      return;
-    }
-    updateSelectedComposerSkills([]);
-    updateSelectedComposerMentions([]);
-  }, [selectedProvider, threadId, updateSelectedComposerMentions, updateSelectedComposerSkills]);
-
   useLayoutEffect(() => {
     // ChatView stays mounted across thread switches, so clear thread-local overlays before paint.
-    setOptimisticUserMessages((existing) => {
-      if (existing.length === 0) return existing;
-      for (const message of existing) {
-        revokeUserMessagePreviewUrls(message);
-      }
-      return [];
-    });
     setExpandedImage(null);
   }, [threadId]);
 
@@ -4910,6 +4508,7 @@ export default function ChatView({
       addComposerTerminalContextsToDraft,
       addComposerPastedTextsToDraft,
       clearComposerDraftContent,
+      promptRef,
       scheduleComposerFocus,
       setDraftThreadContext,
       setRestoredQueuedSourceProposedPlan,
@@ -4918,6 +4517,8 @@ export default function ChatView({
       setComposerDraftMakeNoMistakeLevel,
       setComposerDraftPrompt,
       setComposerDraftRuntimeMode,
+      setComposerCursor,
+      setComposerTrigger,
       updateSelectedComposerMentions,
       updateSelectedComposerSkills,
     ],
@@ -6408,290 +6009,6 @@ export default function ChatView({
     return turnStartSucceeded;
   };
 
-  const onRespondToApproval = useCallback(
-    async (
-      requestId: ApprovalRequestId,
-      decision: ProviderApprovalDecision,
-      lifecycleGeneration?: string,
-      requestKind?: ProviderRequestKind,
-    ) => {
-      const api = readNativeApi();
-      if (!api || !activeThreadId) return;
-      const requestKey = pendingRequestInstanceKey(requestId, lifecycleGeneration);
-
-      setRespondingRequestKeys((existing) =>
-        existing.includes(requestKey) ? existing : [...existing, requestKey],
-      );
-      // Persist supervised "always allow" client-side so the next turn (after an
-      // idle-stop or runtime restart) uses full access. Auto remains the durable
-      // thread policy; its server-side override applies only to the live session.
-      const durableRuntimeMode = resolveRuntimeModeAfterApprovalDecision(
-        runtimeMode,
-        decision,
-        requestKind,
-      );
-      if (durableRuntimeMode) {
-        setComposerDraftRuntimeMode(activeThreadId, durableRuntimeMode);
-      }
-      await api.orchestration
-        .dispatchCommand({
-          type: "thread.approval.respond",
-          commandId: newCommandId(),
-          threadId: activeThreadId,
-          requestId,
-          decision,
-          ...(lifecycleGeneration !== undefined ? { lifecycleGeneration } : {}),
-          createdAt: new Date().toISOString(),
-        })
-        .catch(async (err: unknown) => {
-          if (
-            collectErrorMessages(err).some((message) =>
-              message.includes(APPROVAL_ALREADY_ANSWERED_INVARIANT_MARKER),
-            )
-          ) {
-            // The authoritative response won the race. Force a full detail
-            // snapshot so a stale local card cannot immediately submit again.
-            clearThreadDetailResumeCursor(activeThreadId);
-            await api.orchestration
-              .subscribeThread(buildThreadSubscribeInput(activeThreadId))
-              .catch(() => {
-                setStoreThreadError(
-                  activeThreadId,
-                  "Approval was already recorded, but the conversation could not be refreshed.",
-                );
-              });
-            return;
-          }
-          setStoreThreadError(
-            activeThreadId,
-            describeErrorMessage(err, "Failed to submit approval decision."),
-          );
-          setRespondingRequestKeys((existing) => existing.filter((key) => key !== requestKey));
-          throw err;
-        });
-      setRespondingRequestKeys((existing) => existing.filter((key) => key !== requestKey));
-    },
-    [activeThreadId, runtimeMode, setComposerDraftRuntimeMode, setStoreThreadError],
-  );
-
-  const userInputSubmissionsRef = useRef(new Set<string>());
-  const [userInputSubmissionVersion, setUserInputSubmissionVersion] = useState(0);
-  const onRespondToUserInput = useCallback(
-    async (
-      requestId: ApprovalRequestId,
-      answers: ProviderUserInputAnswers,
-      lifecycleGeneration?: string,
-    ) => {
-      const api = readNativeApi();
-      if (!api || !activeThreadId) return;
-      const requestKey = pendingRequestInstanceKey(requestId, lifecycleGeneration);
-      const submissionKey = `${activeThreadId}:${requestKey}`;
-      if (userInputSubmissionsRef.current.has(submissionKey)) return;
-      userInputSubmissionsRef.current.add(submissionKey);
-      setUserInputSubmissionVersion((version) => version + 1);
-      const dispatchAnswers = hasCompletePendingUserInputAnswers(answers)
-        ? answers
-        : omitNullPendingUserInputAnswers(answers);
-
-      setRespondingUserInputRequestKeys((existing) =>
-        existing.includes(requestKey) ? existing : [...existing, requestKey],
-      );
-      await Promise.resolve()
-        .then(async () => {
-          await api.orchestration.dispatchCommand({
-            type: "thread.user-input.respond",
-            commandId: newCommandId(),
-            threadId: activeThreadId,
-            requestId,
-            answers: dispatchAnswers,
-            ...(lifecycleGeneration !== undefined ? { lifecycleGeneration } : {}),
-            createdAt: new Date().toISOString(),
-          });
-          clearThreadDetailResumeCursor(activeThreadId);
-          await api.orchestration.subscribeThread(buildThreadSubscribeInput(activeThreadId));
-        })
-        .catch((err: unknown) => {
-          setStoreThreadError(
-            activeThreadId,
-            describeErrorMessage(
-              err,
-              "Could not submit or refresh the answer. Your answers are saved.",
-            ),
-          );
-        })
-        .finally(() => {
-          userInputSubmissionsRef.current.delete(submissionKey);
-          setRespondingUserInputRequestKeys((existing) =>
-            existing.filter((key) => key !== requestKey),
-          );
-        });
-    },
-    [activeThreadId, setStoreThreadError],
-  );
-
-  const onCancelActivePendingUserInput = useCallback(() => {
-    if (!activePendingUserInput || activePendingIsResponding) {
-      return;
-    }
-    promptRef.current = "";
-    setPrompt("");
-    setComposerCursor(0);
-    setComposerTrigger(null);
-    void onRespondToUserInput(
-      activePendingUserInput.requestId,
-      {},
-      activePendingUserInput.lifecycleGeneration,
-    );
-  }, [activePendingIsResponding, activePendingUserInput, onRespondToUserInput, setPrompt]);
-
-  const setActivePendingUserInputQuestionIndex = useCallback(
-    (nextQuestionIndex: number) => {
-      if (!activePendingUserInputKey) {
-        return;
-      }
-      setPendingUserInputQuestionIndexByRequestId((existing) => ({
-        ...existing,
-        [activePendingUserInputKey]: nextQuestionIndex,
-      }));
-    },
-    [activePendingUserInputKey],
-  );
-
-  const onToggleActivePendingUserInputOption = useCallback(
-    (questionId: string, optionLabel: string) => {
-      if (!activePendingUserInput || !activePendingUserInputKey) {
-        return null;
-      }
-      const question = activePendingUserInput.questions.find((entry) => entry.id === questionId);
-      if (!question) {
-        return null;
-      }
-      const nextDraftAnswer = togglePendingUserInputOptionSelection(
-        question,
-        pendingUserInputAnswersByRequestIdRef.current[activePendingUserInputKey]?.[questionId],
-        optionLabel,
-      );
-      const nextRequestAnswers = {
-        ...pendingUserInputAnswersByRequestIdRef.current[activePendingUserInputKey],
-        [questionId]: nextDraftAnswer,
-      };
-      pendingUserInputAnswersByRequestIdRef.current = {
-        ...pendingUserInputAnswersByRequestIdRef.current,
-        [activePendingUserInputKey]: nextRequestAnswers,
-      };
-      setPendingUserInputAnswersByRequestId((existing) => ({
-        ...existing,
-        [activePendingUserInputKey]: nextRequestAnswers,
-      }));
-      promptRef.current = "";
-      setComposerCursor(0);
-      setComposerTrigger(null);
-      return nextDraftAnswer;
-    },
-    [activePendingUserInput, activePendingUserInputKey],
-  );
-
-  const onChangeActivePendingUserInputCustomAnswer = useCallback(
-    (
-      questionId: string,
-      value: string,
-      nextCursor: number,
-      expandedCursor: number,
-      cursorAdjacentToMention: boolean,
-    ) => {
-      if (!activePendingUserInputKey) {
-        return;
-      }
-      promptRef.current = value;
-      const nextDraftAnswer = setPendingUserInputCustomAnswer(
-        pendingUserInputAnswersByRequestIdRef.current[activePendingUserInputKey]?.[questionId],
-        value,
-      );
-      const nextRequestAnswers = {
-        ...pendingUserInputAnswersByRequestIdRef.current[activePendingUserInputKey],
-        [questionId]: nextDraftAnswer,
-      };
-      pendingUserInputAnswersByRequestIdRef.current = {
-        ...pendingUserInputAnswersByRequestIdRef.current,
-        [activePendingUserInputKey]: nextRequestAnswers,
-      };
-      setPendingUserInputAnswersByRequestId((existing) => ({
-        ...existing,
-        [activePendingUserInputKey]: nextRequestAnswers,
-      }));
-      setComposerCursor(nextCursor);
-      setComposerTrigger(
-        cursorAdjacentToMention ? null : detectComposerTrigger(value, expandedCursor),
-      );
-    },
-    [activePendingUserInputKey],
-  );
-
-  const onAdvanceActivePendingUserInput = useCallback(
-    (answerOverrides?: Record<string, PendingUserInputDraftAnswer>): boolean => {
-      if (!activePendingUserInput || !activePendingUserInputKey || !activePendingProgress) {
-        return false;
-      }
-      const pendingDraftAnswers =
-        answerOverrides && Object.keys(answerOverrides).length > 0
-          ? {
-              ...pendingUserInputAnswersByRequestIdRef.current[activePendingUserInputKey],
-              ...answerOverrides,
-            }
-          : (pendingUserInputAnswersByRequestIdRef.current[activePendingUserInputKey] ??
-            activePendingDraftAnswers);
-      if (answerOverrides && Object.keys(answerOverrides).length > 0) {
-        pendingUserInputAnswersByRequestIdRef.current = {
-          ...pendingUserInputAnswersByRequestIdRef.current,
-          [activePendingUserInputKey]: pendingDraftAnswers,
-        };
-        setPendingUserInputAnswersByRequestId((existing) => ({
-          ...existing,
-          [activePendingUserInputKey]: pendingDraftAnswers,
-        }));
-      }
-      const resolvedAnswers = buildPendingUserInputAnswers(
-        activePendingUserInput.questions,
-        pendingDraftAnswers,
-      );
-      if (activePendingProgress.isLastQuestion) {
-        if (resolvedAnswers) {
-          void onRespondToUserInput(
-            activePendingUserInput.requestId,
-            resolvedAnswers,
-            activePendingUserInput.lifecycleGeneration,
-          );
-          return true;
-        }
-        return false;
-      }
-      const activeQuestionId = activePendingProgress.activeQuestion?.id ?? null;
-      const hasActiveOverride = activeQuestionId
-        ? answerOverrides?.[activeQuestionId] !== undefined
-        : false;
-      if (!activePendingProgress.canAdvance && !hasActiveOverride) {
-        return false;
-      }
-      setActivePendingUserInputQuestionIndex(activePendingProgress.questionIndex + 1);
-      return true;
-    },
-    [
-      activePendingDraftAnswers,
-      activePendingProgress,
-      activePendingUserInput,
-      activePendingUserInputKey,
-      onRespondToUserInput,
-      setActivePendingUserInputQuestionIndex,
-    ],
-  );
-
-  const onPreviousActivePendingUserInputQuestion = useCallback(() => {
-    if (!activePendingProgress) {
-      return;
-    }
-    setActivePendingUserInputQuestionIndex(Math.max(activePendingProgress.questionIndex - 1, 0));
-  }, [activePendingProgress, setActivePendingUserInputQuestionIndex]);
-
   async function onSubmitPlanFollowUp({
     text,
     interactionMode: nextInteractionMode,
@@ -7557,7 +6874,6 @@ export default function ChatView({
     hasNativeUserMessages,
     composerEditorRef,
     scheduleComposerFocus,
-    defaultProvider: settings.defaultProvider,
   });
 
   const {
