@@ -27,13 +27,13 @@ import { OrchestrationProjectionPipelineLive } from "./ProjectionPipeline.ts";
 import { OrchestrationProjectionSnapshotQueryLive } from "./ProjectionSnapshotQuery.ts";
 
 // Opt-in only. Each invocation uses a fresh process and a disposable database.
-it.skipIf(!process.env.SYNARA_STREAMING_BENCHMARK_OUTPUT)(
+it.skipIf(!process.env.FORKARA_STREAMING_BENCHMARK_OUTPUT)(
   "measures the production streaming engine",
   async () => {
-    const output = process.env.SYNARA_STREAMING_BENCHMARK_OUTPUT!;
-    const messageBytes = Number(process.env.SYNARA_STREAMING_BENCHMARK_BYTES ?? 200_000);
+    const output = process.env.FORKARA_STREAMING_BENCHMARK_OUTPUT!;
+    const messageBytes = Number(process.env.FORKARA_STREAMING_BENCHMARK_BYTES ?? 200_000);
     const chunkBytes = 40;
-    const threadCount = Number(process.env.SYNARA_STREAMING_BENCHMARK_THREADS ?? 1);
+    const threadCount = Number(process.env.FORKARA_STREAMING_BENCHMARK_THREADS ?? 1);
     const dir = await mkdtemp(join(tmpdir(), "forkara-streaming-benchmark-"));
     const dbPath = join(dir, "state.sqlite");
     const runtime = ManagedRuntime.make(
@@ -149,10 +149,15 @@ it.skipIf(!process.env.SYNARA_STREAMING_BENCHMARK_OUTPUT)(
         "src/persistence/Migrations.ts",
         "src/orchestration/Layers/OrchestrationEngine.ts",
         "src/persistence/messageTextChunks.ts",
-      ])
-        hashes[path] = createHash("sha256")
-          .update(await readFile(path))
-          .digest("hex");
+      ]) {
+        try {
+          hashes[path] = createHash("sha256")
+            .update(await readFile(path))
+            .digest("hex");
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+        }
+      }
       await writeFile(
         output,
         JSON.stringify(

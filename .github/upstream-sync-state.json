@@ -2,5 +2,7 @@
   "base": "built-from-scratch",
   "upstreamRef": "upstream/main",
   "upstreamHead": "a8a7a5eae3a77de21988088f67e97eccf73eaaad",
-  "syncedAt": "2026-08-30T01:13:06.965Z"
+  "syncedAt": "2026-08-30T01:13:06.965Z",
+  "evaluatedUpstreamHead": "b58f27381e7ddd59678c9961500e8e43d3cc19ab",
+  "evaluatedAt": "2026-09-21T15:39:12Z"
 }

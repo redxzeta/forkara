@@ -5685,7 +5685,7 @@ it.layer(
   );
 });
 
-it.layer(makeProjectionPipelinePrefixedTestLayer("synara-projection-pipeline-deferred-"))(
+it.layer(makeProjectionPipelinePrefixedTestLayer("forkara-projection-pipeline-deferred-"))(
   "OrchestrationProjectionPipeline deferred cursor",
   (it) => {
     it.effect(
@@ -5776,7 +5776,7 @@ it.layer(makeProjectionPipelinePrefixedTestLayer("synara-projection-pipeline-def
   },
 );
 
-it.layer(Layer.fresh(makeProjectionPipelinePrefixedTestLayer("synara-human-recency-test-")))(
+it.layer(Layer.fresh(makeProjectionPipelinePrefixedTestLayer("forkara-human-recency-test-")))(
   "human message recency",
   (it) => {
     it.effect(

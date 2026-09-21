@@ -45,7 +45,7 @@ async function runPrintTurn(input: {
   stop?: boolean;
   interrupt?: boolean;
 }) {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), "synara-antigravity-output-"));
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "forkara-antigravity-output-"));
   let child: ChildProcess;
   let eventFile: string;
   const transcriptFile = path.join(root, "transcript.jsonl");

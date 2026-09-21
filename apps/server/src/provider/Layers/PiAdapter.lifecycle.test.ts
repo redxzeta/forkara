@@ -145,7 +145,7 @@ async function withAdapter(
   credentials?: AgentGatewayCredentialsShape,
 ) {
   vi.stubEnv("PI_OFFLINE", "1");
-  const cwd = mkdtempSync(path.join(tmpdir(), "synara-pi-lifecycle-"));
+  const cwd = mkdtempSync(path.join(tmpdir(), "forkara-pi-lifecycle-"));
   dirs.push(cwd);
   writeFileSync(
     path.join(cwd, "auth.json"),
@@ -165,7 +165,7 @@ async function withAdapter(
       result: {
         tools: [
           {
-            name: "synara_list_threads",
+            name: "forkara_list_threads",
             description: "List threads",
             inputSchema: { type: "object", properties: {} },
           },

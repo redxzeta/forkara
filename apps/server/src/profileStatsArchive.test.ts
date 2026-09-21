@@ -463,7 +463,7 @@ describe("ProfileStatsArchive", () => {
         // are excluded from Claude result accounting.
         yield* sql`
           UPDATE projection_threads
-          SET parent_thread_id = 'thread-keep', creation_source = 'synara_mcp'
+          SET parent_thread_id = 'thread-keep', creation_source = 'forkara_mcp'
           WHERE thread_id = 'thread-purge'
         `;
         yield* sql`

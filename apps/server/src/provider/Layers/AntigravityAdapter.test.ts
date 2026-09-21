@@ -1383,7 +1383,7 @@ describe("Antigravity turn settle on cancel (#465)", () => {
   ])(
     "honors terminal errors and successful stop teardown (error=$error, turns=$turns)",
     async ({ error, turns, stopCleanup }) => {
-      const root = await fs.mkdtemp(path.join(os.tmpdir(), "synara-antigravity-json-usage-"));
+      const root = await fs.mkdtemp(path.join(os.tmpdir(), "forkara-antigravity-json-usage-"));
       const children: ChildProcess[] = [];
       try {
         await Effect.runPromise(
@@ -2253,7 +2253,7 @@ describe("Antigravity background task helpers (#752)", () => {
       readonly taskStarts: { taskType: string | undefined; source: unknown }[];
     }) => Effect.Effect<void>,
   ) => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), `synara-antigravity-${label}-`));
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), `forkara-antigravity-${label}-`));
     const transcriptFile = path.join(root, "transcript.jsonl");
     await fs.writeFile(transcriptFile, "");
     let eventFile: string | undefined;
@@ -3094,7 +3094,7 @@ describe("Antigravity background task helpers (#752)", () => {
   );
 
   it("ignores the old stop hook after a transcript read outlives its turn", async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), "synara-audit1170-stale-stop-"));
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "forkara-audit1170-stale-stop-"));
     const transcriptFile = path.join(root, "transcript.jsonl");
     await fs.writeFile(transcriptFile, "");
     const children: ChildProcess[] = [];
