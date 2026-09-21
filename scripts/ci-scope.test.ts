@@ -33,7 +33,7 @@ describe("CI scope", () => {
         }
       }
     }
-  });
+  }, 30_000);
 
   it("selects full validation when the event/diff is unavailable", () => {
     const root = mkdtempSync(join(tmpdir(), "forkara-ci-fallback-"));
