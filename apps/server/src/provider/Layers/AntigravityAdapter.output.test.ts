@@ -6,7 +6,7 @@ import path from "node:path";
 import { PassThrough } from "node:stream";
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { ThreadId } from "@synara/contracts";
+import { ThreadId } from "@forkara/contracts";
 import { Effect, Fiber, Layer, Stream } from "effect";
 import { describe, expect, it } from "vitest";
 
@@ -54,7 +54,7 @@ async function runPrintTurn(input: {
     _args: readonly string[],
     options: { env?: NodeJS.ProcessEnv },
   ) => {
-    eventFile = options.env!.SYNARA_ANTIGRAVITY_EVENTS!;
+    eventFile = options.env!.FORKARA_ANTIGRAVITY_EVENTS!;
     child = Object.assign(new EventEmitter(), {
       stdout: new PassThrough(),
       stderr: new PassThrough(),

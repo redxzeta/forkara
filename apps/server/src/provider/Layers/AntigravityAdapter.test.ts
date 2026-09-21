@@ -1351,7 +1351,7 @@ describe("Antigravity turn settle on cancel (#465)", () => {
       Object.assign(child, {
         stdout,
         stderr,
-        eventFile: _options.env?.SYNARA_ANTIGRAVITY_EVENTS,
+        eventFile: _options.env?.FORKARA_ANTIGRAVITY_EVENTS,
         killed: false,
         exitCode: null as number | null,
         signalCode: null as NodeJS.Signals | null,
@@ -2266,7 +2266,7 @@ describe("Antigravity background task helpers (#752)", () => {
       _args: readonly string[],
       options: { readonly env?: NodeJS.ProcessEnv },
     ) => {
-      eventFile = options.env?.SYNARA_ANTIGRAVITY_EVENTS;
+      eventFile = options.env?.FORKARA_ANTIGRAVITY_EVENTS;
       const spawned = new EventEmitter() as ChildProcess;
       Object.assign(spawned, {
         stdout: new PassThrough(),
@@ -3114,7 +3114,7 @@ describe("Antigravity background task helpers (#752)", () => {
       _args: readonly string[],
       options: { readonly env?: NodeJS.ProcessEnv },
     ) => {
-      eventFile = options.env?.SYNARA_ANTIGRAVITY_EVENTS;
+      eventFile = options.env?.FORKARA_ANTIGRAVITY_EVENTS;
       const child = new EventEmitter() as ChildProcess;
       Object.assign(child, {
         stdout: new PassThrough(),
