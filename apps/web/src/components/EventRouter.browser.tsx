@@ -426,6 +426,10 @@ async function mountApp(options?: {
   const router = getRouter(
     createMemoryHistory({ initialEntries: [options?.initialEntry ?? `/${routeThreadId}`] }),
   );
+  // Load the code-split route graph before starting the hydration timeout. A
+  // cold browser cache can spend most of that budget compiling the desktop
+  // route without giving EventRouter a chance to subscribe.
+  await router.load();
   const screen = await render(<RouterProvider router={router} />, { container: host });
 
   try {
