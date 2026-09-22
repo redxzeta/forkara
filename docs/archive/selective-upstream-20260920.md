@@ -3,6 +3,11 @@
 Target: `redxzeta/forkara:built-from-scratch`, based on
 `d2f9a24e93e3ea561c97c9d7fa724f713773ba1d`.
 
+History note: PR #198 was inadvertently squash-merged as `00b7d2a46254d14d29cd85c1b6428882703d0169`.
+That squash commit and the reviewed integration head `26418b27297e57d057b226c4d644bd4925a8becb`
+have identical trees. The follow-up history-repair PR is rooted at the reviewed integration head so a
+regular merge restores the curated commit ancestry without changing the shipped product tree.
+
 Source snapshot: Synara `b58f27381e7ddd59678c9961500e8e43d3cc19ab`, exactly 220 commits
 after the previously evaluated snapshot `8599826d75d9932e69c301f2441f585da8f211e2`.
 The snapshot was evaluated on September 21, 2026. A projected direct merge had 324 conflicts, so
