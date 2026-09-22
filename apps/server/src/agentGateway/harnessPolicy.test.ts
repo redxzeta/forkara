@@ -1,4 +1,5 @@
 import { assert, describe, it } from "@effect/vitest";
+import { AUTOMATION_AUTHORING_GUIDANCE } from "./automationAuthoringGuidance.ts";
 
 import {
   renderForkaraHarnessPolicy,

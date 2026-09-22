@@ -1,59 +1,47 @@
 ---
-title: Upstream sync playbook
+title: Upstream audit and selective sync playbook
 ---
 
 ## Goal
 
-Make upstream refreshes repeatable and reduce conflict resolution drift.
+Identify upstream commits that Forkara has not evaluated without merging product code automatically.
+Forkara's provider roster, migrations, performance guardrails, identity, and product direction require
+curated ports rather than broad merges.
 
-## One-command refresh (recommended)
+## Audit
 
 ```sh
-bun scripts/sync-upstream.ts
+bun run sync:upstream
 ```
 
-This creates a new sync branch from `built-from-scratch`, merges `upstream/main`,
-and applies fork-specific follow-up fixes that repeatedly repeat in manual synces.
+The command fetches `upstream/main`, reads `.github/upstream-sync-state.json`, and reports commits
+after `evaluatedUpstreamHead`. It is read-only with respect to tracked files and never creates a
+branch, merge, commit, push, or pull request.
 
-## Script options
+Options:
 
 ```sh
-bun scripts/sync-upstream.ts \
+bun run sync:upstream \
   --base built-from-scratch \
   --upstream main \
-  --remote upstream \
-  --branch sync/upstream-main-sync-<YYYYMMDD>
+  --remote upstream
 ```
 
-- `--remote`: name of the upstream remote (defaults to `upstream`)
-- `--upstream`: upstream branch to merge (defaults to `main`)
-- `--base`: local target branch to sync from (defaults to `built-from-scratch`)
-- `--branch`: explicit sync branch name (defaults to `sync/upstream-main-<date>` )
-- `--skip-fixes`: compatibility flag; downstream normalization still runs for safety-critical edits
+The scheduled `Upstream Audit` workflow runs the same report and publishes it in the workflow
+summary. Its token has read-only repository permissions.
 
-## Default workflow
+## Curated sync
 
-1. Keep your local work tree clean.
-2. Ensure `upstream` points at `https://github.com/Emanuele-web04/synara.git`.
-3. Run `bun scripts/sync-upstream.ts`.
-4. If merge conflicts occur, resolve manually:
-   1. Fix conflicts and continue with normal `git merge --continue`.
-   2. Re-run `bun scripts/sync-upstream.ts --branch <your-branch>` to apply
-      the standard fix checks, reuse the existing sync branch, and finalize the branch
-      from the persisted imported-upstream state.
-5. Push the sync branch and open/update the PR.
-6. Run branch-level CI only once on the final branch.
+1. Start an isolated worktree and branch from the exact `origin/built-from-scratch` head.
+2. Pin the upstream SHA under evaluation and enumerate its commits after `evaluatedUpstreamHead`.
+3. Assess each candidate against Forkara's architecture, provider roster, migrations, identity,
+   performance priorities, and explicit exclusions.
+4. Port selected behavior with Forkara-specific adaptations. Do not merge `upstream/main`.
+5. Record accepted SHAs, adaptations, measurements, dependencies, and exclusions in a dated ledger.
+6. Advance only `evaluatedUpstreamHead` and `evaluatedAt`. Keep `upstreamHead` and `syncedAt` as the
+   last full-sync watermark until an explicitly authorized full sync occurs.
+7. Open a normal reviewed PR against `redxzeta/forkara:built-from-scratch` and satisfy its full
+   merge-ready gate.
 
-## Why this helps scalability
-
-- Converts manual work into a deterministic sequence.
-- Applies high-signal follow-up fixes automatically (for known fork-policy-sensitive files).
-- Keeps each refresh isolated to a dedicated `sync/*` branch.
-- Reduces variance across engineers and review cycles.
-
-## Optional automation
-
-- Manual flow still runs from the command line:
-  - `bun run sync:upstream`
-- The `Upstream Sync` workflow (`.github/workflows/upstream-sync.yml`) can be triggered manually or on cron.
-  - On cron, it creates a timestamped `sync/upstream-main-auto-*` branch and opens a PR to `built-from-scratch` when changes are produced.
+Commits that land upstream after the pinned SHA belong to the next audit. Automation must not
+silently expand an in-flight selective-sync PR.

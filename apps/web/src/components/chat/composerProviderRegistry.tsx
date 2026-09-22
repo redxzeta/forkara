@@ -141,7 +141,9 @@ function getProviderStateFromCapabilities(
       const fastModeEnabled = caps.supportsFastMode && providerOptions?.fastMode === true;
       const nextOptions = {
         ...(reasoningEffort ? { reasoningEffort } : {}),
-        ...(fastModeEnabled ? { fastMode: true } : {}),
+        ...(fastModeEnabled || providerOptions?.fastMode === false
+          ? { fastMode: fastModeEnabled }
+          : {}),
       };
       normalizedOptions = Object.keys(nextOptions).length > 0 ? nextOptions : undefined;
       break;

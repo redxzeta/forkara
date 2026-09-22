@@ -104,6 +104,8 @@ import { ServerConfig } from "../../config.ts";
 import { buildFileAttachmentsPromptBlock } from "../attachmentProjection.ts";
 import { loadClaudeAgentSdk } from "../claudeAgentSdk.ts";
 import { buildClaudeProcessEnv } from "../claudeProcessEnv.ts";
+import { ClaudeRequestUsage } from "../claudeRequestUsage.ts";
+import { claudeTurnResultUsage, type ClaudeResultUsageBaseline } from "../claudeResultUsage.ts";
 import {
   CLAUDE_CONTEXT_WINDOW_MAX_TOKENS,
   decideClaudeContextUsageWarnings,
@@ -189,6 +191,7 @@ interface ClaudeResumeState {
   readonly turnCount?: number;
   readonly trackedTasks?: ReadonlyArray<ClaudeTrackedTask>;
   readonly processedTokenTotal?: number;
+  readonly tokenAccountingVersion?: 1;
 }
 
 interface ClaudeTurnState {
@@ -308,6 +311,7 @@ interface ClaudeSubagentRun {
 type ClaudeTokenUsageState = "current" | "skip-compaction-call" | "awaiting-fresh-assistant";
 
 interface ClaudeSessionContext {
+  resultUsageBaseline?: ClaudeResultUsageBaseline;
   readonly gatewaySessionLease?: AgentGatewaySessionLease;
   session: ProviderSession;
   readonly lifecycleGeneration?: string;
@@ -363,12 +367,18 @@ interface ClaudeSessionContext {
   contextUsageControlEnabled: boolean;
   lastKnownTokenUsage: ThreadTokenUsageSnapshot | undefined;
   tokenUsageState: ClaudeTokenUsageState;
+  compactionMessageId: string | undefined;
   // Assistant snapshots report one API call at a time. Keep their processed-token
   // accounting separately from the current context size so compaction can clear
-  // the meter without resetting the cumulative counter used by profile stats.
+  // the meter without resetting the cumulative processed estimate.
   processedTokenTotal: number;
   processedTokenTurnBaseline: number;
+  // Native results normally delimit SDK turns. A synthetic UI turn can close
+  // before its result, so every logical completion must advance this baseline.
+  processedTokenResultBaseline: number;
   processedTokenBaselineKnown: boolean;
+  readonly requestUsage: ClaudeRequestUsage;
+  lastResultUuid: string | undefined;
   lastAssistantUuid: string | undefined;
   lastThreadStartedId: string | undefined;
   // Original API model id the runtime rerouted away from (safeguard refusal
@@ -881,6 +891,7 @@ function readClaudeResumeState(resumeCursor: unknown): ClaudeResumeState | undef
     turnCount?: unknown;
     trackedTasks?: unknown;
     processedTokenTotal?: unknown;
+    tokenAccountingVersion?: unknown;
   };
 
   const threadIdCandidate = typeof cursor.threadId === "string" ? cursor.threadId : undefined;
@@ -914,7 +925,9 @@ function readClaudeResumeState(resumeCursor: unknown): ClaudeResumeState | undef
       ? { turnCount: turnCountValue }
       : {}),
     ...(trackedTasks.length > 0 ? { trackedTasks } : {}),
-    ...(processedTokenTotal !== undefined ? { processedTokenTotal } : {}),
+    ...(processedTokenTotal !== undefined && cursor.tokenAccountingVersion === 1
+      ? { processedTokenTotal, tokenAccountingVersion: 1 as const }
+      : {}),
   };
 }
 
@@ -1929,7 +1942,13 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
       threadId: ThreadId,
       owner: ClaudeProcessOwner,
     ) {
-      yield* teardownClaudeProcess(threadId, owner);
+      yield* teardownClaudeProcess(threadId, owner).pipe(
+        Effect.tapError(() =>
+          Effect.sync(() => {
+            if (owner.process) failedStartupProcessOwners.set(threadId, owner);
+          }),
+        ),
+      );
       if (failedStartupProcessOwners.get(threadId) === owner) {
         failedStartupProcessOwners.delete(threadId);
       }
@@ -2035,8 +2054,12 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         };
       });
 
-    const updateResumeCursor = (context: ClaudeSessionContext): Effect.Effect<void> =>
+    const updateResumeCursor = (
+      context: ClaudeSessionContext,
+      updatedAt?: string,
+    ): Effect.Effect<void> =>
       Effect.gen(function* () {
+        const timestamp = updatedAt ?? (yield* nowIso);
         const threadId = context.session.threadId;
         if (!threadId) return;
 
@@ -2049,14 +2072,14 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
             ? { trackedTasks: Array.from(context.trackedTasks.values()) }
             : {}),
           ...(context.processedTokenBaselineKnown
-            ? { processedTokenTotal: context.processedTokenTotal }
+            ? { processedTokenTotal: context.processedTokenTotal, tokenAccountingVersion: 1 }
             : {}),
         };
 
         context.session = {
           ...context.session,
           resumeCursor,
-          updatedAt: yield* nowIso,
+          updatedAt: timestamp,
         };
       });
 
@@ -2283,6 +2306,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         yield* updateResumeCursor(context);
 
         if (context.lastThreadStartedId !== nextThreadId) {
+          delete context.resultUsageBaseline;
           context.lastThreadStartedId = nextThreadId;
           const stamp = yield* makeEventStamp();
           yield* offerRuntimeEvent(context, {
@@ -2719,6 +2743,11 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           });
         }
 
+        const turnResultUsage = result
+          ? claudeTurnResultUsage(result, context.resultUsageBaseline)
+          : undefined;
+        if (result) context.resultUsageBaseline = result;
+
         const liveContextUsage = yield* readClaudeContextUsage(context);
         const resultContextWindow = maxClaudeContextWindowFromModelUsage(result?.modelUsage);
         const liveRawContextWindow = positiveFiniteNumber(liveContextUsage?.rawMaxTokens);
@@ -2736,23 +2765,27 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           context.lastKnownAutoCompactThreshold = liveAutoCompactThreshold;
         }
 
-        // The SDK result.usage contains *accumulated* totals across all API calls
-        // (input_tokens, cache_read_input_tokens, etc. summed over every request).
-        // This does NOT represent the current context window size.
-        // Instead, use the last known context-window-accurate usage from task_progress
-        // events and treat the accumulated total as totalProcessedTokens.
+        // result.usage settles this turn's main loop, not the context size or
+        // subagents. Successful results may correct provisional block output down.
         const accumulatedSnapshot = normalizeClaudeTokenUsage(
           result?.usage,
           claudeEffectiveContextBudget(context),
         );
+        const reportedZeroUsage =
+          result?.usage?.input_tokens === 0 &&
+          result.usage.output_tokens === 0 &&
+          (result.usage.cache_creation_input_tokens ?? 0) === 0 &&
+          (result.usage.cache_read_input_tokens ?? 0) === 0;
         const resultProcessedTokens =
-          accumulatedSnapshot?.totalProcessedTokens ?? accumulatedSnapshot?.usedTokens;
+          accumulatedSnapshot?.totalProcessedTokens ??
+          accumulatedSnapshot?.usedTokens ??
+          (reportedZeroUsage ? 0 : undefined);
         if (resultProcessedTokens !== undefined) {
-          const resultBaseline = context.turnState ? context.processedTokenTurnBaseline : 0;
-          context.processedTokenTotal = Math.max(
-            context.processedTokenTotal,
-            resultBaseline + resultProcessedTokens,
-          );
+          const reconciledTotal = context.processedTokenResultBaseline + resultProcessedTokens;
+          context.processedTokenTotal =
+            status === "completed"
+              ? reconciledTotal
+              : Math.max(context.processedTokenTotal, reconciledTotal);
         }
         const totalProcessedTokens =
           context.processedTokenTotal > 0 ? context.processedTokenTotal : resultProcessedTokens;
@@ -2776,7 +2809,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           context.processedTokenBaselineKnown && totalProcessedTokens !== undefined
             ? { usedTokens: 0, totalProcessedTokens }
             : undefined;
-        const usageSnapshot: ThreadTokenUsageSnapshot | undefined =
+        const mergedUsageSnapshot: ThreadTokenUsageSnapshot | undefined =
           context.tokenUsageState !== "current"
             ? accountingOnlyUsage
             : !context.processedTokenBaselineKnown
@@ -2788,7 +2821,28 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
                     maxTokens,
                   )
                 : accountedAccumulatedSnapshot;
-        context.processedTokenTurnBaseline = context.processedTokenTotal;
+        // The context merge preserves context size; accounting has its own final
+        // value and must not inherit the merge's monotonic provisional maximum.
+        const usageSnapshot = mergedUsageSnapshot
+          ? {
+              ...withoutProcessedTokenTotal(mergedUsageSnapshot),
+              tokenAccountingVersion: 1 as const,
+              ...(context.processedTokenBaselineKnown && totalProcessedTokens !== undefined
+                ? { totalProcessedTokens }
+                : {}),
+            }
+          : undefined;
+        const mainLoopTokens = Math.max(
+          0,
+          context.processedTokenTotal -
+            (result ? context.processedTokenResultBaseline : context.processedTokenTurnBaseline),
+        );
+        // A synthetic/background UI turn may be auto-closed before the SDK emits
+        // a result. Its per-request usage is still final for this logical turn;
+        // carry it into the next result baseline and quarantine late snapshots so
+        // a later result cannot replace the cumulative total below these tokens.
+        context.processedTokenResultBaseline = context.processedTokenTotal;
+        context.requestUsage.settleTurn();
 
         // A safeguard reroute only applies to the turn that just finished.
         // Restore the user-selected model so subsequent turns do not silently
@@ -2849,9 +2903,11 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
               state: status,
               ...(result?.stop_reason !== undefined ? { stopReason: result.stop_reason } : {}),
               ...(result?.usage ? { usage: result.usage } : {}),
-              ...(result?.modelUsage ? { modelUsage: result.modelUsage } : {}),
+              ...(turnResultUsage ? { modelUsage: turnResultUsage.modelUsage } : {}),
+              tokenAccountingVersion: 1,
+              mainLoopTokens,
               ...(typeof result?.total_cost_usd === "number"
-                ? { totalCostUsd: result.total_cost_usd }
+                ? { totalCostUsd: turnResultUsage?.totalCostUsd ?? result.total_cost_usd }
                 : {}),
               ...(errorMessage ? { errorMessage } : {}),
             },
@@ -2951,6 +3007,22 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         }
 
         const stamp = yield* makeEventStamp();
+        // Terminal consumers can immediately dispatch another turn. Settle the
+        // live session and cursor first, with no mutation after publication.
+        if (context.interruptRequestedTurnId === turnState.turnId) {
+          context.interruptRequestedTurnId = undefined;
+        }
+        context.lastInteractionMode = turnState.interactionMode;
+        context.turnState = undefined;
+        context.session = {
+          ...context.session,
+          status: "ready",
+          activeTurnId: undefined,
+          updatedAt: stamp.createdAt,
+          ...(status === "failed" && errorMessage ? { lastError: errorMessage } : {}),
+        };
+        yield* updateResumeCursor(context, stamp.createdAt);
+
         yield* offerRuntimeEvent(context, {
           type: "turn.completed",
           eventId: stamp.eventId,
@@ -2962,29 +3034,16 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
             state: status,
             ...(result?.stop_reason !== undefined ? { stopReason: result.stop_reason } : {}),
             ...(result?.usage ? { usage: result.usage } : {}),
-            ...(result?.modelUsage ? { modelUsage: result.modelUsage } : {}),
+            ...(turnResultUsage ? { modelUsage: turnResultUsage.modelUsage } : {}),
+            tokenAccountingVersion: 1,
+            mainLoopTokens,
             ...(typeof result?.total_cost_usd === "number"
-              ? { totalCostUsd: result.total_cost_usd }
+              ? { totalCostUsd: turnResultUsage?.totalCostUsd ?? result.total_cost_usd }
               : {}),
             ...(errorMessage ? { errorMessage } : {}),
           },
           providerRefs: nativeProviderRefs(context),
         });
-
-        const updatedAt = yield* nowIso;
-        if (context.interruptRequestedTurnId === turnState.turnId) {
-          context.interruptRequestedTurnId = undefined;
-        }
-        context.lastInteractionMode = turnState.interactionMode;
-        context.turnState = undefined;
-        context.session = {
-          ...context.session,
-          status: "ready",
-          activeTurnId: undefined,
-          updatedAt,
-          ...(status === "failed" && errorMessage ? { lastError: errorMessage } : {}),
-        };
-        yield* updateResumeCursor(context);
       });
 
     // A subagent run gets its own scoped context sharing the parent session/query:
@@ -3043,9 +3102,13 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           contextUsageControlEnabled: false,
           lastKnownTokenUsage: undefined,
           tokenUsageState: "current",
+          compactionMessageId: undefined,
           processedTokenTotal: 0,
           processedTokenTurnBaseline: 0,
+          processedTokenResultBaseline: 0,
           processedTokenBaselineKnown: true,
+          requestUsage: new ClaudeRequestUsage(),
+          lastResultUuid: undefined,
           lastAssistantUuid: undefined,
           lastThreadStartedId: undefined,
           rerouteOriginalApiModelId: undefined,
@@ -3715,25 +3778,30 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         // this reflects the actual prompt + output size for this single API call.
         const perCallUsage = (message.message as { usage?: unknown } | undefined)?.usage;
         if (perCallUsage) {
+          const messageId = message.message.id ?? message.request_id ?? message.uuid;
           const normalizedPerCallUsage = normalizeClaudeTokenUsage(
             perCallUsage as Record<string, unknown>,
             claudeEffectiveContextBudget(context),
           );
           if (normalizedPerCallUsage) {
-            context.processedTokenTotal +=
-              normalizedPerCallUsage.totalProcessedTokens ?? normalizedPerCallUsage.usedTokens;
+            context.processedTokenTotal += context.requestUsage.add(
+              messageId,
+              normalizedPerCallUsage.totalProcessedTokens ?? normalizedPerCallUsage.usedTokens,
+            );
           }
           if (context.tokenUsageState === "skip-compaction-call") {
+            context.compactionMessageId = messageId;
             context.tokenUsageState = "awaiting-fresh-assistant";
-          } else {
+          } else if (context.compactionMessageId !== messageId) {
             yield* maybeEmitContextUsageWarning(context, perCallUsage as Record<string, unknown>);
             if (normalizedPerCallUsage) {
-              const currentUsage = context.processedTokenBaselineKnown
-                ? {
-                    ...normalizedPerCallUsage,
-                    totalProcessedTokens: context.processedTokenTotal,
-                  }
-                : normalizedPerCallUsage;
+              const currentUsage = {
+                ...withoutProcessedTokenTotal(normalizedPerCallUsage),
+                tokenAccountingVersion: 1 as const,
+                ...(context.processedTokenBaselineKnown
+                  ? { totalProcessedTokens: context.processedTokenTotal }
+                  : {}),
+              };
               context.lastKnownTokenUsage = currentUsage;
               context.tokenUsageState = "current";
               const usageStamp = yield* makeEventStamp();
@@ -3770,6 +3838,8 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         if (message.type !== "result") {
           return;
         }
+        if (message.uuid && context.lastResultUuid === message.uuid) return;
+        context.lastResultUuid = message.uuid;
 
         const assistantError = context.turnState?.assistantError;
         let status: ProviderRuntimeTurnStatus;
@@ -4562,6 +4632,14 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           case "assistant":
             yield* handleAssistantMessage(context, message);
             return;
+          case "conversation_reset":
+            // The query survives /clear even when its cumulative counters restart.
+            delete context.resultUsageBaseline;
+            context.requestUsage.reset();
+            context.compactionMessageId = undefined;
+            context.processedTokenTurnBaseline = context.processedTokenTotal;
+            context.processedTokenResultBaseline = context.processedTokenTotal;
+            return;
           case "result":
             yield* handleResultMessage(context, message);
             return;
@@ -4846,6 +4924,17 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           callbackOptions: Parameters<CanUseTool>[2],
         ) =>
           Effect.gen(function* () {
+            if (
+              callbackOptions.signal.aborted ||
+              context.stopped ||
+              (callbackOptions.agentID !== undefined &&
+                context.terminalTaskIds.has(callbackOptions.agentID))
+            ) {
+              return {
+                behavior: "deny",
+                message: "User cancelled tool execution.",
+              } satisfies PermissionResult;
+            }
             const requestId = ApprovalRequestId.makeUnsafe(yield* Random.nextUUIDv4);
             const interactionTurnId =
               context.turnState?.turnId ??
@@ -4882,8 +4971,11 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
               settlementStarted: false,
             };
 
-            // Emit user-input.requested so the UI can present the questions.
+            // Stamp before registering ownership so terminal settlement cannot
+            // publish a resolution before its request while the clock yields.
             const requestedStamp = yield* makeEventStamp();
+            pendingUserInputs.set(requestId, pendingInput);
+            // Emit user-input.requested so the UI can present the questions.
             yield* offerRuntimeEvent(context, {
               type: "user-input.requested",
               eventId: requestedStamp.eventId,
@@ -4905,7 +4997,6 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
               },
             });
 
-            pendingUserInputs.set(requestId, pendingInput);
             if (
               callbackOptions.agentID !== undefined &&
               context.terminalTaskIds.has(callbackOptions.agentID)
@@ -4926,6 +5017,8 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
               );
             };
             callbackOptions.signal.addEventListener("abort", onAbort, { once: true });
+            // Abort may have happened during event publication, before registration.
+            if (callbackOptions.signal.aborted) onAbort();
 
             // Block until the user provides answers.
             const result = yield* Deferred.await(resultDeferred).pipe(
@@ -5319,7 +5412,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         }).pipe(
           Effect.tapError(() =>
             Effect.all([
-              teardownClaudeProcess(threadId, processOwner).pipe(
+              teardownFailedStartupProcess(threadId, processOwner).pipe(
                 Effect.catch((error) =>
                   Effect.sync(() => {
                     if (processOwner.process) {
@@ -5409,7 +5502,10 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
               turnCount: resumeState?.turnCount ?? 0,
               ...(trackedTasks.size > 0 ? { trackedTasks: Array.from(trackedTasks.values()) } : {}),
               ...(processedTokenBaselineKnown
-                ? { processedTokenTotal: resumeState?.processedTokenTotal ?? 0 }
+                ? {
+                    processedTokenTotal: resumeState?.processedTokenTotal ?? 0,
+                    tokenAccountingVersion: 1,
+                  }
                 : {}),
             },
             createdAt: startedAt,
@@ -5457,9 +5553,13 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
             contextUsageControlEnabled: true,
             lastKnownTokenUsage: undefined,
             tokenUsageState: "current",
+            compactionMessageId: undefined,
             processedTokenTotal: resumeState?.processedTokenTotal ?? 0,
             processedTokenTurnBaseline: resumeState?.processedTokenTotal ?? 0,
+            processedTokenResultBaseline: resumeState?.processedTokenTotal ?? 0,
             processedTokenBaselineKnown,
+            requestUsage: new ClaudeRequestUsage(),
+            lastResultUuid: undefined,
             lastAssistantUuid: resumeState?.resumeSessionAt,
             lastThreadStartedId: undefined,
             rerouteOriginalApiModelId: undefined,
@@ -5579,7 +5679,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
                     cause: Cause.pretty(closeExit.cause),
                   });
                 }
-                yield* teardownClaudeProcess(threadId, processOwner);
+                yield* teardownFailedStartupProcess(threadId, processOwner);
               });
             }).pipe(Effect.ignore),
           ),
@@ -6098,6 +6198,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           resume: forked.sessionId,
           turnCount: Math.max(liveSource?.turns.length ?? 0, sourceState?.turnCount ?? 0),
           processedTokenTotal: 0,
+          tokenAccountingVersion: 1,
         };
         return { threadId: input.threadId, resumeCursor };
       });
@@ -6167,6 +6268,8 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
       withSessionLifecycleLock(
         threadId,
         Effect.gen(function* () {
+          const failedOwner = failedStartupProcessOwners.get(threadId);
+          if (failedOwner) yield* teardownFailedStartupProcess(threadId, failedOwner);
           const context = sessions.get(threadId);
           if (!context) {
             return;

@@ -14,6 +14,7 @@ import {
   type TurnId,
 } from "@forkara/contracts";
 import { resolveThreadBranchRegressionGuard } from "@forkara/shared/git";
+import { mergeAsyncUserInput } from "@forkara/shared/asyncUserInput";
 import { normalizeModelSlug } from "@forkara/shared/model";
 import { deriveThreadSummaryMetadata } from "@forkara/shared/threadSummary";
 
@@ -183,6 +184,7 @@ export function threadShellsEqual(left: ThreadShell | undefined, right: ThreadSh
     (left.goalPausedAt ?? null) === (right.goalPausedAt ?? null) &&
     deepEqualJson(left.goalAchievements ?? null, right.goalAchievements ?? null) &&
     left.latestUserMessageAt === right.latestUserMessageAt &&
+    left.latestHumanMessageAt === right.latestHumanMessageAt &&
     left.hasPendingApprovals === right.hasPendingApprovals &&
     left.hasPendingUserInput === right.hasPendingUserInput &&
     left.hasActionableProposedPlan === right.hasActionableProposedPlan &&
@@ -531,14 +533,18 @@ export function normalizeChatMessage(
   const previousSkills = previous?.skills ?? [];
   const previousMentions = previous?.mentions ?? [];
   const completedAt = incoming.streaming ? undefined : incoming.updatedAt;
+  const asyncUserInput = mergeAsyncUserInput(previous?.asyncUserInput, incoming.asyncUserInput);
   if (
     previous &&
     previous.role === incoming.role &&
     previous.text === incoming.text &&
+    previous.asyncUserInput === asyncUserInput &&
     previous.dispatchMode === incoming.dispatchMode &&
     previous.dispatchOrigin === incoming.dispatchOrigin &&
+    previous.startsNewTurn === incoming.startsNewTurn &&
     previous.turnId === incoming.turnId &&
     previous.createdAt === incoming.createdAt &&
+    previous.updatedAt === incoming.updatedAt &&
     previous.streaming === incoming.streaming &&
     previous.source === incoming.source &&
     previous.completedAt === completedAt &&
@@ -554,13 +560,16 @@ export function normalizeChatMessage(
     id: incoming.id,
     role: incoming.role,
     text: incoming.text,
+    ...(asyncUserInput ? { asyncUserInput } : {}),
     ...(incoming.textSegments !== undefined && incoming.textSegments.length > 0
       ? { textSegments: [...incoming.textSegments] }
       : {}),
     ...(incoming.dispatchMode ? { dispatchMode: incoming.dispatchMode } : {}),
     ...(incoming.dispatchOrigin ? { dispatchOrigin: incoming.dispatchOrigin } : {}),
+    ...(incoming.startsNewTurn !== undefined ? { startsNewTurn: incoming.startsNewTurn } : {}),
     turnId: incoming.turnId,
     createdAt: incoming.createdAt,
+    updatedAt: incoming.updatedAt,
     streaming: incoming.streaming,
     source: incoming.source,
     ...(completedAt ? { completedAt } : {}),
@@ -618,13 +627,15 @@ function readModelMessageFromChatMessage(
     id: message.id,
     role: message.role,
     text: message.text,
+    ...(message.asyncUserInput ? { asyncUserInput: message.asyncUserInput } : {}),
     ...(message.dispatchMode ? { dispatchMode: message.dispatchMode } : {}),
     ...(message.dispatchOrigin ? { dispatchOrigin: message.dispatchOrigin } : {}),
+    ...(message.startsNewTurn !== undefined ? { startsNewTurn: message.startsNewTurn } : {}),
     turnId: message.turnId ?? null,
     streaming: message.streaming,
     source: message.source ?? "native",
     createdAt: message.createdAt,
-    updatedAt: message.completedAt ?? message.createdAt,
+    updatedAt: message.updatedAt ?? message.completedAt ?? message.createdAt,
     attachments: readModelAttachmentsFromChatMessage(message.attachments),
     ...(message.skills && message.skills.length > 0 ? { skills: message.skills } : {}),
     ...(message.mentions && message.mentions.length > 0 ? { mentions: message.mentions } : {}),
@@ -758,10 +769,16 @@ function mergeReadModelMessagesWithLiveHotPath(
       text: previousMessage.text,
       dispatchMode: previousMessage.dispatchMode ?? incomingMessage.dispatchMode,
       dispatchOrigin: incomingMessage.dispatchOrigin ?? previousMessage.dispatchOrigin,
+      startsNewTurn: incomingMessage.startsNewTurn ?? previousMessage.startsNewTurn,
+      asyncUserInput: mergeAsyncUserInput(
+        previousMessage.asyncUserInput,
+        incomingMessage.asyncUserInput,
+      ),
       turnId: previousMessage.turnId ?? incomingMessage.turnId ?? null,
       source: previousMessage.source ?? incomingMessage.source ?? "native",
       streaming: previousMessage.streaming,
-      updatedAt: previousMessage.completedAt ?? incomingMessage.updatedAt,
+      updatedAt:
+        previousMessage.updatedAt ?? previousMessage.completedAt ?? incomingMessage.updatedAt,
       attachments: readModelAttachmentsFromChatMessage(previousMessage.attachments),
       ...(previousMessage.skills && previousMessage.skills.length > 0
         ? { skills: previousMessage.skills }
@@ -1590,6 +1607,7 @@ export function normalizeThreadFromReadModel(
         : [...incomingPendingInteractions];
   const error = normalizeThreadErrorMessage(incoming.session?.lastError);
   const lastVisitedAt = previous?.lastVisitedAt ?? incoming.updatedAt;
+  const resolvedLatestHumanMessageAt = incoming.latestHumanMessageAt;
   const resolvedLatestUserMessageAt =
     Object.hasOwn(incoming, "latestUserMessageAt") && incoming.latestUserMessageAt !== undefined
       ? (incoming.latestUserMessageAt ?? null)
@@ -1663,6 +1681,7 @@ export function normalizeThreadFromReadModel(
     (previous.associatedWorktreeRef ?? null) === nextAssociatedWorktreeRef &&
     (previous.createBranchFlowCompleted ?? false) === resolvedCreateBranchFlowCompleted &&
     previous.latestUserMessageAt === resolvedLatestUserMessageAt &&
+    previous.latestHumanMessageAt === resolvedLatestHumanMessageAt &&
     previous.hasPendingApprovals === resolvedHasPendingApprovals &&
     previous.hasPendingUserInput === resolvedHasPendingUserInput &&
     previous.hasActionableProposedPlan === resolvedHasActionableProposedPlan &&
@@ -1729,6 +1748,9 @@ export function normalizeThreadFromReadModel(
     ...(goalStartedAt !== undefined ? { goalStartedAt } : {}),
     ...(goalPausedAt !== undefined ? { goalPausedAt } : {}),
     ...(goalAchievements !== undefined ? { goalAchievements } : {}),
+    ...(resolvedLatestHumanMessageAt !== undefined
+      ? { latestHumanMessageAt: resolvedLatestHumanMessageAt }
+      : {}),
     ...(resolvedLatestUserMessageAt !== undefined
       ? { latestUserMessageAt: resolvedLatestUserMessageAt }
       : {}),
@@ -1841,6 +1863,9 @@ export function normalizeThreadShellSnapshot(
     ...(goal !== undefined ? { goal } : {}),
     ...(goalStartedAt !== undefined ? { goalStartedAt } : {}),
     ...(goalPausedAt !== undefined ? { goalPausedAt } : {}),
+    ...(incoming.latestHumanMessageAt !== undefined
+      ? { latestHumanMessageAt: incoming.latestHumanMessageAt }
+      : {}),
     ...(incoming.latestUserMessageAt !== undefined
       ? { latestUserMessageAt: incoming.latestUserMessageAt ?? null }
       : {}),
@@ -1958,6 +1983,7 @@ export function resolveThreadSidebarMetadata(
 ): Pick<
   SidebarThreadSummary,
   | "latestUserMessageAt"
+  | "latestHumanMessageAt"
   | "hasPendingApprovals"
   | "hasPendingUserInput"
   | "hasActionableProposedPlan"
@@ -1965,6 +1991,7 @@ export function resolveThreadSidebarMetadata(
 > {
   const needsDerivedMetadata =
     thread.latestUserMessageAt === undefined ||
+    thread.latestHumanMessageAt === undefined ||
     thread.hasPendingApprovals === undefined ||
     thread.hasPendingUserInput === undefined ||
     thread.hasActionableProposedPlan === undefined;
@@ -1979,6 +2006,10 @@ export function resolveThreadSidebarMetadata(
 
   return {
     latestUserMessageAt: thread.latestUserMessageAt ?? derivedMetadata?.latestUserMessageAt ?? null,
+    latestHumanMessageAt:
+      thread.latestHumanMessageAt !== undefined
+        ? thread.latestHumanMessageAt
+        : (derivedMetadata?.latestHumanMessageAt ?? null),
     hasPendingApprovals:
       thread.hasPendingApprovals ?? derivedMetadata?.hasPendingApprovals ?? false,
     hasPendingUserInput:

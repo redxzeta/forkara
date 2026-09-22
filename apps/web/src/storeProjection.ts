@@ -113,6 +113,9 @@ function toThreadShell(thread: Thread): ThreadShell {
     ...(thread.goalStartedAt !== undefined ? { goalStartedAt: thread.goalStartedAt } : {}),
     ...(thread.goalPausedAt !== undefined ? { goalPausedAt: thread.goalPausedAt } : {}),
     ...(thread.goalAchievements !== undefined ? { goalAchievements: thread.goalAchievements } : {}),
+    ...(thread.latestHumanMessageAt !== undefined
+      ? { latestHumanMessageAt: thread.latestHumanMessageAt }
+      : {}),
     ...(thread.latestUserMessageAt !== undefined
       ? { latestUserMessageAt: thread.latestUserMessageAt }
       : {}),
@@ -347,6 +350,7 @@ function sidebarThreadSummariesEqual(
     (left.subagentNickname ?? null) === (right.subagentNickname ?? null) &&
     (left.subagentRole ?? null) === (right.subagentRole ?? null) &&
     left.latestUserMessageAt === right.latestUserMessageAt &&
+    left.latestHumanMessageAt === right.latestHumanMessageAt &&
     left.hasPendingApprovals === right.hasPendingApprovals &&
     left.hasPendingUserInput === right.hasPendingUserInput &&
     left.hasActionableProposedPlan === right.hasActionableProposedPlan &&
@@ -390,6 +394,7 @@ function buildSidebarThreadSummary(
     subagentNickname: thread.subagentNickname ?? null,
     subagentRole: thread.subagentRole ?? null,
     latestUserMessageAt: metadata.latestUserMessageAt,
+    latestHumanMessageAt: metadata.latestHumanMessageAt ?? null,
     hasPendingApprovals: metadata.hasPendingApprovals,
     hasPendingUserInput: metadata.hasPendingUserInput,
     hasActionableProposedPlan: metadata.hasActionableProposedPlan,
@@ -1168,6 +1173,7 @@ function deriveThreadStateSignals(
 ): Pick<
   Thread,
   | "latestUserMessageAt"
+  | "latestHumanMessageAt"
   | "hasPendingApprovals"
   | "hasPendingUserInput"
   | "hasActionableProposedPlan"
@@ -1183,6 +1189,10 @@ function deriveThreadStateSignals(
   );
   return {
     latestUserMessageAt: metadata.latestUserMessageAt,
+    latestHumanMessageAt:
+      thread.latestHumanMessageAt !== undefined
+        ? thread.latestHumanMessageAt
+        : metadata.latestHumanMessageAt,
     hasPendingApprovals:
       actionableInteractions?.some((interaction) => interaction.interactionKind === "approval") ??
       metadata.hasPendingApprovals,
@@ -1197,6 +1207,7 @@ function withDerivedThreadStateSignals(thread: Thread): Thread {
   const nextSignals = deriveThreadStateSignals(thread);
   if (
     thread.latestUserMessageAt === nextSignals.latestUserMessageAt &&
+    thread.latestHumanMessageAt === nextSignals.latestHumanMessageAt &&
     thread.hasPendingApprovals === nextSignals.hasPendingApprovals &&
     thread.hasPendingUserInput === nextSignals.hasPendingUserInput &&
     thread.hasActionableProposedPlan === nextSignals.hasActionableProposedPlan

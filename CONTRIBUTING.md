@@ -57,3 +57,18 @@ reason directly.
 
 For upstream refresh pull requests, follow the
 [upstream sync playbook](docs/upstream-sync-playbook.md) and target `built-from-scratch`.
+
+The pinned `@effect/platform-node-shared` patch preserves Windows spawn options
+and rejects invalid PIDs before converting child handles into process-group
+signals. Valid groups may outlive their leader; cleanup must continue to reach
+those descendants. When updating Effect, keep these behaviors and run
+`apps/server/src/platform/effectProcessSignals.test.ts` against the installed
+runtime, including its Windows cases.
+
+Process-tree teardown captures POSIX start times and Windows creation times for
+checking descendants during delayed cleanup and exit verification. Start times
+add evidence to the existing command-line comparison. POSIX start times have
+second resolution and observation followed by signaling is not atomic;
+these checks are not proof of arbitrary PID ownership. Root signaling still
+requires the caller to own the live process lifecycle. Direct owned-child
+cancellation must work even when external process-table tools are unavailable.

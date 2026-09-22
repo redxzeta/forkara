@@ -4,8 +4,10 @@ import {
   OrchestrationMessage,
   OrchestrationSession,
   OrchestrationThread,
+  ThreadAsyncUserInputAnsweredPayload,
   type OrchestrationMessageTextSegment,
 } from "@forkara/contracts";
+import { clearRemovedAsyncUserInputResponses } from "@forkara/shared/asyncUserInput";
 import {
   addPinnedMessage,
   removePinnedMessage,
@@ -963,6 +965,36 @@ export function projectEvent(
         }),
       );
 
+    case "thread.async-user-input-answered":
+      return decodeForEvent(
+        ThreadAsyncUserInputAnsweredPayload,
+        event.payload,
+        event.type,
+        "payload",
+      ).pipe(
+        Effect.map((payload) => {
+          const thread = nextBase.threads.find((entry) => entry.id === payload.threadId);
+          if (!thread) return nextBase;
+          return {
+            ...nextBase,
+            threads: updateThread(nextBase.threads, payload.threadId, {
+              messages: thread.messages.map((message) =>
+                message.id === payload.messageId && message.asyncUserInput
+                  ? {
+                      ...message,
+                      asyncUserInput: {
+                        ...message.asyncUserInput,
+                        response: payload.response,
+                        responseSequence: event.sequence,
+                      },
+                    }
+                  : message,
+              ),
+            }),
+          };
+        }),
+      );
+
     case "thread.message-sent":
       return Effect.gen(function* () {
         const payload = yield* decodeForEvent(
@@ -982,9 +1014,17 @@ export function projectEvent(
             id: payload.messageId,
             role: payload.role,
             text: payload.text,
+            ...(payload.asyncUserInput ? { asyncUserInput: payload.asyncUserInput } : {}),
             ...(payload.attachments !== undefined ? { attachments: payload.attachments } : {}),
             ...(payload.skills !== undefined ? { skills: payload.skills } : {}),
             ...(payload.mentions !== undefined ? { mentions: payload.mentions } : {}),
+            ...(payload.dispatchMode !== undefined ? { dispatchMode: payload.dispatchMode } : {}),
+            ...(payload.dispatchOrigin !== undefined
+              ? { dispatchOrigin: payload.dispatchOrigin }
+              : {}),
+            ...(payload.startsNewTurn !== undefined
+              ? { startsNewTurn: payload.startsNewTurn }
+              : {}),
             turnId: payload.turnId,
             streaming: payload.streaming,
             source: payload.source,
@@ -1025,6 +1065,7 @@ export function projectEvent(
           delete entryWithoutTextSegments.textSegments;
           nextMessages[existingIndex] = {
             ...entryWithoutTextSegments,
+            ...(message.asyncUserInput ? { asyncUserInput: message.asyncUserInput } : {}),
             text: resolvedText,
             ...(nextSegments !== undefined ? { textSegments: nextSegments } : {}),
             streaming: message.streaming,
@@ -1037,6 +1078,21 @@ export function projectEvent(
             ...(message.attachments !== undefined ? { attachments: message.attachments } : {}),
             ...(message.skills !== undefined ? { skills: message.skills } : {}),
             ...(message.mentions !== undefined ? { mentions: message.mentions } : {}),
+            ...(message.dispatchMode !== undefined
+              ? { dispatchMode: message.dispatchMode }
+              : entry.dispatchMode !== undefined
+                ? { dispatchMode: entry.dispatchMode }
+                : {}),
+            ...(message.dispatchOrigin !== undefined
+              ? { dispatchOrigin: message.dispatchOrigin }
+              : entry.dispatchOrigin !== undefined
+                ? { dispatchOrigin: entry.dispatchOrigin }
+                : {}),
+            ...(message.startsNewTurn !== undefined
+              ? { startsNewTurn: message.startsNewTurn }
+              : entry.startsNewTurn !== undefined
+                ? { startsNewTurn: entry.startsNewTurn }
+                : {}),
           };
           cappedMessages = nextMessages;
         } else {
@@ -1272,10 +1328,15 @@ export function projectEvent(
             .toSorted((left, right) => left.checkpointTurnCount - right.checkpointTurnCount)
             .slice(-MAX_THREAD_CHECKPOINTS);
           const retainedTurnIds = new Set(checkpoints.map((checkpoint) => checkpoint.turnId));
-          const messages = retainThreadMessagesAfterRevert(
+          const retainedMessages = retainThreadMessagesAfterRevert(
             thread.messages,
             retainedTurnIds,
             payload.turnCount,
+          );
+          const messages = clearRemovedAsyncUserInputResponses(
+            retainedMessages,
+            new Set(retainedMessages.map((message) => message.id)),
+            event.sequence,
           ).slice(-MAX_THREAD_MESSAGES);
           const proposedPlans = retainThreadProposedPlansAfterRevert(
             thread.proposedPlans,
@@ -1347,7 +1408,11 @@ export function projectEvent(
             ...nextBase,
             threads: updateThread(nextBase.threads, payload.threadId, {
               checkpoints,
-              messages: rollback.messages.slice(-MAX_THREAD_MESSAGES),
+              messages: clearRemovedAsyncUserInputResponses(
+                rollback.messages,
+                new Set(rollback.messages.map((message) => message.id)),
+                event.sequence,
+              ).slice(-MAX_THREAD_MESSAGES),
               proposedPlans,
               activities,
               latestTurn:

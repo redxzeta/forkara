@@ -44,6 +44,7 @@ import {
   type WorktreeSetupSnapshot,
   type WorktreeSetupStep,
 } from "../../types";
+import { AsyncUserInputCard } from "./AsyncUserInputCard";
 import ChatMarkdown from "../ChatMarkdown";
 import type { WorkingLabel } from "../ChatView.logic";
 import { InlineLinkChip } from "../InlineLinkChip";
@@ -64,6 +65,7 @@ import {
   WorktreeIcon,
 } from "~/lib/icons";
 import { pinActionLabel } from "~/lib/pin";
+import { syncAnimationsToTimelineOrigin } from "~/lib/animationTimelineSync";
 import { Button } from "../ui/button";
 import { composerOverlayScrollMaskImage } from "./composerOverlay";
 import { CrossTaskOriginLabel, type CrossTaskOrigin } from "./CrossTaskOriginLabel";
@@ -216,8 +218,8 @@ function scrollLegendListToEnd(listRef: RefObject<LegendListRef | null>): void {
 function scrollLegendListToIndex(
   listRef: RefObject<LegendListRef | null>,
   params: Parameters<LegendListRef["scrollToIndex"]>[0],
-): void {
-  void listRef.current?.scrollToIndex(params);
+): Promise<void> {
+  return listRef.current?.scrollToIndex(params) ?? Promise.resolve();
 }
 
 function readLegendListState(
@@ -354,7 +356,10 @@ function WorktreeSetupCard({
     <div className="w-fit max-w-full rounded-xl border border-[color:var(--color-border-light)] bg-[var(--color-background-elevated-primary)] px-3.5 py-3 font-system-ui shadow-xs">
       <div className="flex items-center gap-2">
         <WorktreeIcon className="size-3.5 shrink-0 text-[var(--color-text-foreground-tertiary)]" />
-        <span className="shimmer text-[13px] font-medium text-[var(--color-text-foreground-secondary)]">
+        <span
+          ref={syncAnimationsToTimelineOrigin}
+          className="shimmer text-[13px] font-medium text-[var(--color-text-foreground-secondary)]"
+        >
           Preparing worktree...
         </span>
       </div>
@@ -467,6 +472,8 @@ interface MessagesTimelineProps {
   /** Marks the transcript as a temporary chat so user bubbles render the dashed primary outline. */
   isTemporaryThread?: boolean;
   timelineEntries: ReturnType<typeof deriveTimelineEntries>;
+  /** Stable source messages, before plans/tools reshape the presentation rows. */
+  messageChangeSignal?: unknown;
   turnDiffSummaryByAssistantMessageId: Map<MessageId, TurnDiffSummary>;
   nowIso?: string;
   expandedWorkGroups?: Record<string, boolean>;
@@ -479,6 +486,7 @@ interface MessagesTimelineProps {
   revertTurnCountByUserMessageId: Map<MessageId, number>;
   onRevertUserMessage: (messageId: MessageId) => void;
   onUndoTurnFiles?: (turnCounts: readonly number[]) => void;
+  onRespondToAsyncUserInput?: (messageId: MessageId, answers: readonly string[]) => Promise<void>;
   onEditUserMessage?: (messageId: MessageId, text: string) => boolean | Promise<boolean>;
   /**
    * The user message the edit affordance may target, resolved by the owner from
@@ -553,6 +561,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   forkSource: forkSourceProp,
   isTemporaryThread: isTemporaryThreadProp,
   timelineEntries,
+  messageChangeSignal: messageChangeSignalProp,
   turnDiffSummaryByAssistantMessageId,
   nowIso,
   expandedWorkGroups,
@@ -565,6 +574,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   onRevertUserMessage,
   onUndoTurnFiles,
   onEditUserMessage,
+  onRespondToAsyncUserInput,
   editableUserMessageId,
   activeTurnId,
   isRevertingCheckpoint,
@@ -775,6 +785,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
     anchorScrollInFlightRef: tailAnchorScrollInFlightRef,
     onAnchorSlideFinished: handleTailAnchorSlideFinished,
     contentChangeSignal: timelineEntries,
+    messageChangeSignal: messageChangeSignalProp ?? timelineEntries,
     animateAnchorSlide: !followLiveOutput,
   });
 
@@ -965,6 +976,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   }, [rows]);
   const jumpHighlightTimeoutRef = useRef<number | null>(null);
   const markerFineScrollFrameRef = useRef<number | null>(null);
+  const fineScrollGenerationRef = useRef(0);
   // Marker spans currently carrying the deep-link "active" ring, tracked so the decoration can be
   // toggled imperatively (no markdown re-parse) and reliably cleared on the next jump or teardown.
   const decoratedMarkerElementsRef = useRef<HTMLElement[]>([]);
@@ -992,6 +1004,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       if (markerFineScrollFrameRef.current !== null) {
         window.cancelAnimationFrame(markerFineScrollFrameRef.current);
       }
+      fineScrollGenerationRef.current += 1;
       clearActiveMarkerDecoration();
     },
     [clearActiveMarkerDecoration],
@@ -1003,7 +1016,10 @@ export const MessagesTimeline = memo(function MessagesTimeline({
     const scrollToMessage = (
       messageId: MessageId,
       segmentIndex?: number,
-    ): ReturnType<typeof resolveThreadFindJumpTarget> => {
+    ): {
+      target: NonNullable<ReturnType<typeof resolveThreadFindJumpTarget>>;
+      scrollSettled: Promise<void>;
+    } | null => {
       const target = resolveThreadFindJumpTarget(rowsRef.current, {
         messageId,
         ...(segmentIndex === undefined ? {} : { segmentIndex }),
@@ -1027,12 +1043,12 @@ export const MessagesTimeline = memo(function MessagesTimeline({
         }
         return changed ? next : previous;
       });
-      scrollLegendListToIndex(resolvedListRef, {
+      const scrollSettled = scrollLegendListToIndex(resolvedListRef, {
         index: target.rowIndex,
         animated: true,
         viewPosition: 0.2,
       });
-      return target;
+      return { target, scrollSettled };
     };
     const clearJumpHighlightAfterDelay = () => {
       if (jumpHighlightTimeoutRef.current !== null) {
@@ -1044,11 +1060,32 @@ export const MessagesTimeline = memo(function MessagesTimeline({
         jumpHighlightTimeoutRef.current = null;
       }, JUMP_HIGHLIGHT_DURATION_MS);
     };
-    const cancelPendingMarkerFineScroll = () => {
+    const clearPendingFineScrollFrame = () => {
       if (markerFineScrollFrameRef.current !== null) {
         window.cancelAnimationFrame(markerFineScrollFrameRef.current);
         markerFineScrollFrameRef.current = null;
       }
+    };
+    const cancelPendingMarkerFineScroll = () => {
+      fineScrollGenerationRef.current += 1;
+      clearPendingFineScrollFrame();
+    };
+    const repeatFineScrollAfterCoarseScroll = (
+      scrollSettled: Promise<void>,
+      generation: number,
+      repeat: () => void,
+    ) => {
+      // LegendList may finish its animated row positioning after the DOM match
+      // has already scrolled into view. Re-apply the precise reveal only for
+      // the still-current jump so the coarse animation cannot hide it again.
+      void scrollSettled.then(
+        () => {
+          if (fineScrollGenerationRef.current === generation) {
+            repeat();
+          }
+        },
+        () => undefined,
+      );
     };
     const applyActiveFindMatch = () => {
       const root = timelineRootRef.current;
@@ -1069,7 +1106,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
     const scheduleFindMatchFineScroll = (
       target: NonNullable<ReturnType<typeof resolveThreadFindJumpTarget>>,
     ) => {
-      cancelPendingMarkerFineScroll();
+      clearPendingFineScrollFrame();
       const deadlineMs = getMonotonicTimeMs() + MARKER_FINE_SCROLL_RETRY_TIMEOUT_MS;
       let attempts = 0;
       const tick = () => {
@@ -1108,7 +1145,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       markerFineScrollFrameRef.current = window.requestAnimationFrame(tick);
     };
     const scheduleMarkerFineScroll = (marker: ThreadMarker) => {
-      cancelPendingMarkerFineScroll();
+      clearPendingFineScrollFrame();
       const deadlineMs = getMonotonicTimeMs() + MARKER_FINE_SCROLL_RETRY_TIMEOUT_MS;
       let attempts = 0;
       const tick = () => {
@@ -1131,25 +1168,36 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       scrollToMessage: (messageId, options) => {
         cancelPendingMarkerFineScroll();
         clearActiveMarkerDecoration();
-        const target = scrollToMessage(messageId, options?.segmentIndex);
-        if (!target) {
+        const result = scrollToMessage(messageId, options?.segmentIndex);
+        if (!result) {
           return;
         }
+        const { target, scrollSettled } = result;
         setHighlightedMessageId(target.visibleMessageId);
         clearJumpHighlightAfterDelay();
         if (options?.fineScrollFind || target.collapsedNarrationMessageId) {
+          const generation = fineScrollGenerationRef.current;
           scheduleFindMatchFineScroll(target);
+          repeatFineScrollAfterCoarseScroll(scrollSettled, generation, () =>
+            scheduleFindMatchFineScroll(target),
+          );
         }
       },
       scrollToMarker: (marker) => {
+        cancelPendingMarkerFineScroll();
         clearActiveMarkerDecoration();
-        const target = scrollToMessage(marker.messageId);
-        if (!target) {
+        const result = scrollToMessage(marker.messageId);
+        if (!result) {
           return;
         }
+        const { target, scrollSettled } = result;
         setHighlightedMessageId(target.visibleMessageId);
         clearJumpHighlightAfterDelay();
+        const generation = fineScrollGenerationRef.current;
         scheduleMarkerFineScroll(marker);
+        repeatFineScrollAfterCoarseScroll(scrollSettled, generation, () =>
+          scheduleMarkerFineScroll(marker),
+        );
       },
       setActiveFindMatch: (match) => {
         activeFindMatchRef.current = match;
@@ -2263,7 +2311,14 @@ export const MessagesTimeline = memo(function MessagesTimeline({
               )}
               <div className="group min-w-0 py-0.5">
                 {renderWorkDisplay(leadingWorkDisplay, "leading")}
-                {messageText !== null ? (
+                {row.message.asyncUserInput ? (
+                  <AsyncUserInputCard
+                    key={row.message.id}
+                    messageId={row.message.id}
+                    input={row.message.asyncUserInput}
+                    onRespond={onRespondToAsyncUserInput}
+                  />
+                ) : messageText !== null ? (
                   <div
                     data-assistant-message-id={row.message.id}
                     data-chat-find-document-id={row.message.id}
@@ -2611,6 +2666,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
 
       {row.kind === "working" && (
         <div
+          ref={syncAnimationsToTimelineOrigin}
           className={cn("shimmer pt-0.5 font-system-ui", MUTED_LABEL_TEXT_CLASS_NAME)}
           style={{ fontSize: `${appTypographyScale.chatPx}px` }}
         >

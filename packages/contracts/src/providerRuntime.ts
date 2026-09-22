@@ -1,4 +1,5 @@
 import { Option, Schema } from "effect";
+import { AsyncUserInputQuestions } from "./asyncUserInput";
 import {
   EventId,
   IsoDateTime,
@@ -318,11 +319,22 @@ const ThreadMetadataUpdatedPayload = Schema.Struct({
 export type ThreadMetadataUpdatedPayload = typeof ThreadMetadataUpdatedPayload.Type;
 
 export const ThreadTokenUsageSnapshot = Schema.Struct({
+  // Provider session totals, distinct from the latest request/context snapshot.
+  cumulativeUsage: Schema.optional(
+    Schema.Struct({
+      inputTokens: NonNegativeInt,
+      outputTokens: NonNegativeInt,
+      cachedInputTokens: Schema.optional(NonNegativeInt),
+      cacheCreationInputTokens: Schema.optional(NonNegativeInt),
+    }),
+  ),
   usedTokens: NonNegativeInt,
   usedPercent: Schema.optional(
     Schema.Number.check(Schema.isGreaterThanOrEqualTo(0)).check(Schema.isLessThanOrEqualTo(100)),
   ),
   totalProcessedTokens: Schema.optional(NonNegativeInt),
+  // Claude v1 counts API responses once; unversioned Claude totals are unreliable.
+  tokenAccountingVersion: Schema.optional(Schema.Literal(1)),
   maxTokens: Schema.optional(PositiveInt),
   inputTokens: Schema.optional(NonNegativeInt),
   cachedInputTokens: Schema.optional(NonNegativeInt),
@@ -380,6 +392,9 @@ const TurnCompletedPayload = Schema.Struct({
   stopReason: Schema.optional(Schema.NullOr(TrimmedNonEmptyStringSchema)),
   usage: Schema.optional(Schema.Unknown),
   modelUsage: Schema.optional(UnknownRecordSchema),
+  tokenAccountingVersion: Schema.optional(Schema.Literal(1)),
+  // Per-turn main-loop usage, including observed usage when no result arrives.
+  mainLoopTokens: Schema.optional(NonNegativeInt),
   totalCostUsd: Schema.optional(Schema.Number),
   cumulativeCostUsd: Schema.optional(Schema.Number),
   errorMessage: Schema.optional(TrimmedNonEmptyStringSchema),
@@ -419,6 +434,7 @@ const TurnDiffUpdatedPayload = Schema.Struct({
 export type TurnDiffUpdatedPayload = typeof TurnDiffUpdatedPayload.Type;
 
 export const ItemLifecyclePayload = Schema.Struct({
+  asyncQuestions: Schema.optional(AsyncUserInputQuestions),
   itemType: CanonicalItemType,
   status: Schema.optional(RuntimeItemStatus),
   title: Schema.optional(TrimmedNonEmptyStringSchema),

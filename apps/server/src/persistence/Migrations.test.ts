@@ -299,10 +299,15 @@ managedAttachmentsLegacyLayer("managed attachment migration after private migrat
         [95, "ProjectionThreadsGoalTiming"],
         [96, "ProjectionThreadsGoalAchievements"],
         [97, "InvalidateProjectionThreadsCursor"],
+        [98, "MessageTextChunks"],
+        [99, "ProjectionThreadMessagesTurnBoundary"],
+        [100, "ClaudeTokenAccounting"],
+        [101, "AsyncUserInput"],
+        [102, "ProjectionThreadsHumanMessage"],
       ]);
 
       const tracker = yield* trackerRows(sql);
-      assert.deepStrictEqual(tracker.slice(-43), [
+      assert.deepStrictEqual(tracker.slice(-48), [
         { migration_id: 55, name: "ManagedAttachments" },
         { migration_id: 56, name: "CommandReceiptFingerprints" },
         { migration_id: 57, name: "ThreadScopedProjectionMessageIdentity" },
@@ -346,6 +351,11 @@ managedAttachmentsLegacyLayer("managed attachment migration after private migrat
         { migration_id: 95, name: "ProjectionThreadsGoalTiming" },
         { migration_id: 96, name: "ProjectionThreadsGoalAchievements" },
         { migration_id: 97, name: "InvalidateProjectionThreadsCursor" },
+        { migration_id: 98, name: "MessageTextChunks" },
+        { migration_id: 99, name: "ProjectionThreadMessagesTurnBoundary" },
+        { migration_id: 100, name: "ClaudeTokenAccounting" },
+        { migration_id: 101, name: "AsyncUserInput" },
+        { migration_id: 102, name: "ProjectionThreadsHumanMessage" },
       ]);
       const preserved = yield* sql<{ readonly count: number }>`
         SELECT COUNT(*) AS count FROM orchestration_consumer_state
@@ -435,6 +445,11 @@ agentGatewayRetentionLegacyLayer(
           [95, "ProjectionThreadsGoalTiming"],
           [96, "ProjectionThreadsGoalAchievements"],
           [97, "InvalidateProjectionThreadsCursor"],
+          [98, "MessageTextChunks"],
+          [99, "ProjectionThreadMessagesTurnBoundary"],
+          [100, "ClaudeTokenAccounting"],
+          [101, "AsyncUserInput"],
+          [102, "ProjectionThreadsHumanMessage"],
         ]);
 
         const columns = yield* sql<{ readonly name: string }>`
@@ -527,11 +542,16 @@ spacesMigrationCollisionLayer("Spaces migration after the private migration 70 c
         [95, "ProjectionThreadsGoalTiming"],
         [96, "ProjectionThreadsGoalAchievements"],
         [97, "InvalidateProjectionThreadsCursor"],
+        [98, "MessageTextChunks"],
+        [99, "ProjectionThreadMessagesTurnBoundary"],
+        [100, "ClaudeTokenAccounting"],
+        [101, "AsyncUserInput"],
+        [102, "ProjectionThreadsHumanMessage"],
       ]);
 
       const tracker = yield* trackerRows(sql);
       assert.deepStrictEqual(
-        tracker.slice(-27).map((row) => [row.migration_id, row.name]),
+        tracker.slice(-32).map((row) => [row.migration_id, row.name]),
         [
           [71, "ProjectionThreadsGatewayProvenance"],
           [72, "AgentGatewayOperationRetention"],
@@ -560,6 +580,11 @@ spacesMigrationCollisionLayer("Spaces migration after the private migration 70 c
           [95, "ProjectionThreadsGoalTiming"],
           [96, "ProjectionThreadsGoalAchievements"],
           [97, "InvalidateProjectionThreadsCursor"],
+          [98, "MessageTextChunks"],
+          [99, "ProjectionThreadMessagesTurnBoundary"],
+          [100, "ClaudeTokenAccounting"],
+          [101, "AsyncUserInput"],
+          [102, "ProjectionThreadsHumanMessage"],
         ],
       );
 
@@ -647,11 +672,16 @@ spacesMigrationCollisionLayer("Spaces migration after the private migration 70 c
         [95, "ProjectionThreadsGoalTiming"],
         [96, "ProjectionThreadsGoalAchievements"],
         [97, "InvalidateProjectionThreadsCursor"],
+        [98, "MessageTextChunks"],
+        [99, "ProjectionThreadMessagesTurnBoundary"],
+        [100, "ClaudeTokenAccounting"],
+        [101, "AsyncUserInput"],
+        [102, "ProjectionThreadsHumanMessage"],
       ]);
 
       const tracker = yield* trackerRows(sql);
       assert.deepStrictEqual(
-        tracker.slice(-23).map((row) => [row.migration_id, row.name]),
+        tracker.slice(-28).map((row) => [row.migration_id, row.name]),
         [
           [75, "ExternalMcpActiveCapacity"],
           [76, "ExternalMcpHardening"],
@@ -676,6 +706,11 @@ spacesMigrationCollisionLayer("Spaces migration after the private migration 70 c
           [95, "ProjectionThreadsGoalTiming"],
           [96, "ProjectionThreadsGoalAchievements"],
           [97, "InvalidateProjectionThreadsCursor"],
+          [98, "MessageTextChunks"],
+          [99, "ProjectionThreadMessagesTurnBoundary"],
+          [100, "ClaudeTokenAccounting"],
+          [101, "AsyncUserInput"],
+          [102, "ProjectionThreadsHumanMessage"],
         ],
       );
       const preservedSpaces = yield* sql<{ readonly spaceId: string }>`

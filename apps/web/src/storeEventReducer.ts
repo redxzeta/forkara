@@ -9,6 +9,10 @@ import {
 } from "@forkara/contracts";
 import { resolveThreadBranchRegressionGuard } from "@forkara/shared/git";
 import {
+  clearRemovedAsyncUserInputResponses,
+  mergeAsyncUserInput,
+} from "@forkara/shared/asyncUserInput";
+import {
   addPinnedMessage,
   removePinnedMessage,
   setPinnedMessageDone,
@@ -21,6 +25,7 @@ import {
   setThreadMarkerDone,
   setThreadMarkerLabel,
 } from "@forkara/shared/threadMarkers";
+import { deriveThreadSummaryMetadata, resolveHumanMessageAt } from "@forkara/shared/threadSummary";
 
 import { isSessionRunningTurn } from "./session-logic";
 import {
@@ -631,6 +636,10 @@ function mergeStreamingMessage(
     nextText = incomingMessage.text;
   }
   const nextAttachments = incomingMessage.attachments ?? existingMessage.attachments;
+  const nextAsyncUserInput = mergeAsyncUserInput(
+    existingMessage.asyncUserInput,
+    incomingMessage.asyncUserInput,
+  );
   const nextSkills =
     incomingMessage.skills && incomingMessage.skills.length > 0
       ? incomingMessage.skills
@@ -642,6 +651,8 @@ function mergeStreamingMessage(
   const nextCompletedAt = incomingMessage.streaming
     ? existingMessage.completedAt
     : (incomingMessage.completedAt ?? existingMessage.completedAt);
+  const nextUpdatedAt =
+    incomingMessage.updatedAt ?? existingMessage.updatedAt ?? incomingMessage.createdAt;
   const nextTurnId =
     incomingMessage.turnId !== undefined ? incomingMessage.turnId : existingMessage.turnId;
   const nextDispatchMode =
@@ -652,18 +663,25 @@ function mergeStreamingMessage(
     incomingMessage.dispatchOrigin !== undefined
       ? incomingMessage.dispatchOrigin
       : existingMessage.dispatchOrigin;
+  const nextStartsNewTurn =
+    incomingMessage.startsNewTurn !== undefined
+      ? incomingMessage.startsNewTurn
+      : existingMessage.startsNewTurn;
   const nextSource = incomingMessage.source ?? existingMessage.source;
 
   if (
     existingMessage.text === nextText &&
+    existingMessage.asyncUserInput === nextAsyncUserInput &&
     existingMessage.streaming === incomingMessage.streaming &&
     existingMessage.attachments === nextAttachments &&
     providerReferenceArraysEqual(existingMessage.skills, nextSkills) &&
     providerReferenceArraysEqual(existingMessage.mentions, nextMentions) &&
     existingMessage.completedAt === nextCompletedAt &&
+    existingMessage.updatedAt === nextUpdatedAt &&
     existingMessage.turnId === nextTurnId &&
     existingMessage.dispatchMode === nextDispatchMode &&
     existingMessage.dispatchOrigin === nextDispatchOrigin &&
+    existingMessage.startsNewTurn === nextStartsNewTurn &&
     existingMessage.source === nextSource
   ) {
     return null;
@@ -672,6 +690,8 @@ function mergeStreamingMessage(
   return {
     ...existingMessage,
     text: nextText,
+    updatedAt: nextUpdatedAt,
+    ...(nextAsyncUserInput ? { asyncUserInput: nextAsyncUserInput } : {}),
     streaming: incomingMessage.streaming,
     ...(nextAttachments ? { attachments: nextAttachments } : {}),
     ...(nextSkills && nextSkills.length > 0 ? { skills: [...nextSkills] } : {}),
@@ -679,6 +699,7 @@ function mergeStreamingMessage(
     ...(nextTurnId !== undefined ? { turnId: nextTurnId } : {}),
     ...(nextDispatchMode !== undefined ? { dispatchMode: nextDispatchMode } : {}),
     ...(nextDispatchOrigin !== undefined ? { dispatchOrigin: nextDispatchOrigin } : {}),
+    ...(nextStartsNewTurn !== undefined ? { startsNewTurn: nextStartsNewTurn } : {}),
     ...(nextSource !== undefined ? { source: nextSource } : {}),
     ...(nextCompletedAt !== undefined ? { completedAt: nextCompletedAt } : {}),
   };
@@ -702,8 +723,10 @@ function applyThreadMessageSentEvent(thread: Thread, event: ThreadMessageSentEve
       id: payload.messageId,
       role: payload.role,
       text: payload.text,
+      ...(payload.asyncUserInput ? { asyncUserInput: payload.asyncUserInput } : {}),
       dispatchMode: payload.dispatchMode,
       dispatchOrigin: payload.dispatchOrigin,
+      startsNewTurn: payload.startsNewTurn,
       turnId: payload.turnId,
       attachments: payload.attachments ?? [],
       ...(payload.skills !== undefined ? { skills: payload.skills } : {}),
@@ -761,12 +784,18 @@ function applyThreadMessageSentEvent(thread: Thread, event: ThreadMessageSentEve
     });
   }
 
+  const humanMessageAt = resolveHumanMessageAt(incomingMessage);
+  const latestHumanMessageAt =
+    humanMessageAt !== null && humanMessageAt > (thread.latestHumanMessageAt ?? "")
+      ? humanMessageAt
+      : thread.latestHumanMessageAt;
   const updatedAt =
     thread.updatedAt && thread.updatedAt > payload.updatedAt ? thread.updatedAt : payload.updatedAt;
   if (
     messages === thread.messages &&
     turnDiffSummaries === thread.turnDiffSummaries &&
     latestTurn === thread.latestTurn &&
+    latestHumanMessageAt === thread.latestHumanMessageAt &&
     updatedAt === thread.updatedAt
   ) {
     return thread;
@@ -777,6 +806,7 @@ function applyThreadMessageSentEvent(thread: Thread, event: ThreadMessageSentEve
     messages,
     turnDiffSummaries,
     latestTurn,
+    ...(latestHumanMessageAt !== undefined ? { latestHumanMessageAt } : {}),
     updatedAt,
   };
 }
@@ -1218,6 +1248,28 @@ function applyOrchestrationEvent(
         { ...options, updateSidebarSummary: false },
       );
 
+    case "thread.async-user-input-answered":
+      return applyThreadUpdate(
+        state,
+        event.payload.threadId,
+        (thread) => ({
+          ...thread,
+          messages: thread.messages.map((message) =>
+            message.id === event.payload.messageId && message.asyncUserInput
+              ? {
+                  ...message,
+                  asyncUserInput: mergeAsyncUserInput(message.asyncUserInput, {
+                    ...message.asyncUserInput,
+                    response: event.payload.response,
+                    responseSequence: event.sequence,
+                  }),
+                }
+              : message,
+          ),
+        }),
+        { ...options, updateSidebarSummary: false },
+      );
+
     case "thread.message-sent":
       return applyThreadUpdate(
         state,
@@ -1522,10 +1574,15 @@ function applyOrchestrationEvent(
                 (right.checkpointTurnCount ?? Number.MAX_SAFE_INTEGER),
             );
           const retainedTurnIds = new Set(turnDiffSummaries.map((entry) => entry.turnId));
-          const messages = retainThreadMessagesAfterRevert(
+          const retainedMessages = retainThreadMessagesAfterRevert(
             thread.messages,
             retainedTurnIds,
             event.payload.turnCount,
+          );
+          const messages = clearRemovedAsyncUserInputResponses(
+            retainedMessages,
+            new Set(retainedMessages.map((message) => message.id)),
+            event.sequence,
           ).slice(-MAX_THREAD_MESSAGES);
           const proposedPlans = retainThreadProposedPlansAfterRevert(
             thread.proposedPlans,
@@ -1541,6 +1598,8 @@ function applyOrchestrationEvent(
             proposedPlans,
             activities,
             pendingSourceProposedPlan: undefined,
+            latestHumanMessageAt: deriveThreadSummaryMetadata({ ...thread, messages })
+              .latestHumanMessageAt,
             latestTurn:
               latestCheckpoint === null
                 ? null
@@ -1602,10 +1661,18 @@ function applyOrchestrationEvent(
           return {
             ...thread,
             turnDiffSummaries,
-            messages: rollback.messages.slice(-MAX_THREAD_MESSAGES),
+            messages: clearRemovedAsyncUserInputResponses(
+              rollback.messages,
+              new Set(rollback.messages.map((message) => message.id)),
+              event.sequence,
+            ).slice(-MAX_THREAD_MESSAGES),
             proposedPlans,
             activities,
             pendingSourceProposedPlan: undefined,
+            latestHumanMessageAt: deriveThreadSummaryMetadata({
+              ...thread,
+              messages: rollback.messages,
+            }).latestHumanMessageAt,
             latestTurn:
               latestCheckpoint === null
                 ? null

@@ -299,6 +299,10 @@
     "./achievementActivities": {
       "types": "./src/achievementActivities.ts",
       "import": "./src/achievementActivities.ts"
+    },
+    "./asyncUserInput": {
+      "types": "./src/asyncUserInput.ts",
+      "import": "./src/asyncUserInput.ts"
     }
   },
   "scripts": {

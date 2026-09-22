@@ -11,7 +11,12 @@ import {
   deriveTerminalTitleSignalIdentity,
   resolveTerminalVisualIdentity,
   terminalCliKindFromValue,
+  terminalScopeIdsForThread,
 } from "./terminalThreads";
+
+it("includes the independent dock scope when cleaning up a host thread", () => {
+  expect(terminalScopeIdsForThread("thread-1")).toEqual(["thread-1", "dock-terminal:thread-1"]);
+});
 
 describe("Antigravity CLI identity", () => {
   it.each(["agy", "antigravity", "antigravity-cli"])("detects the %s command", (command) => {

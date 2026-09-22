@@ -71,6 +71,7 @@ import { CheckpointStore } from "../../checkpointing/Services/CheckpointStore.ts
 import { AgentGatewayOperationRepository } from "../../agentGateway/Services/AgentGatewayOperationRepository.ts";
 import { GitCore } from "../../git/Services/GitCore.ts";
 import {
+  type ProviderAdapterProcessError,
   ProviderAdapterRequestError,
   ProviderAdapterValidationError,
   ProviderServiceError,
@@ -165,6 +166,9 @@ export function classifyProviderAttemptOutcome(
 ): ProviderAttemptOutcome {
   if (Exit.isSuccess(exit)) return { _tag: "accepted" };
   const detail = Cause.pretty(exit.cause);
+  // A finalizer may add a failed cleanup/restoration after a safe rejection.
+  // Evidence for the first failure cannot establish the entire attempt's outcome.
+  if (exit.cause.reasons.length !== 1) return { _tag: "uncertain", detail };
   const failure = Cause.findErrorOption(exit.cause);
   if (Option.isNone(failure)) return { _tag: "uncertain", detail };
 
@@ -177,6 +181,10 @@ export function classifyProviderAttemptOutcome(
     case "ProviderUnsupportedError":
     case "ProviderSessionNotFoundError":
       return { _tag: "rejected", detail };
+    case "ProviderAdapterProcessError":
+      return (failure.value as ProviderAdapterProcessError).reason === "startup-failed"
+        ? { _tag: "rejected", detail }
+        : { _tag: "uncertain", detail };
     case "PersistenceSqlError":
     case "PersistenceDecodeError":
       return { _tag: "safe_retry", detail };
@@ -404,6 +412,16 @@ function providerPromptOverflowIssue(input: {
     return "The latest message is too long to include Make No Mistake instructions. Shorten the message and retry.";
   }
   return "The latest message is too long to include Forkara response instructions. Shorten the message and retry.";
+}
+
+function isUnavailableInteractionRuntime(cause: Cause.Cause<ProviderServiceError>): boolean {
+  return Option.match(Cause.findErrorOption(cause), {
+    onNone: () => false,
+    onSome: (error) =>
+      (error._tag === "ProviderValidationError" && error.reason !== undefined) ||
+      error._tag === "ProviderAdapterSessionNotFoundError" ||
+      error._tag === "ProviderAdapterSessionClosedError",
+  });
 }
 
 function isUnknownPendingApprovalRequestError(cause: Cause.Cause<ProviderServiceError>): boolean {
@@ -1459,6 +1477,7 @@ const make = Effect.gen(function* () {
       };
     }
 
+    let bootstrapTranscriptIfResumeFails = false;
     const hasSourceThreadId = thread.forkSourceThreadId != null;
     const sourceThread = hasSourceThreadId ? yield* resolveThread(thread.forkSourceThreadId) : null;
     const shouldBootstrapFromImportsOnly =
@@ -1508,9 +1527,10 @@ const make = Effect.gen(function* () {
           nativeResumeSucceeded: false,
         };
       }
-      if (shouldRegisterContextBootstrap && !thread.sidechatSourceThreadId) {
-        freshSessionContextBootstrapThreadIds.add(threadId);
-      }
+      // An existing fork also returns null: wait for its native resume result
+      // before treating the conversation as missing provider history.
+      bootstrapTranscriptIfResumeFails =
+        shouldRegisterContextBootstrap && !thread.sidechatSourceThreadId;
     }
 
     if (
@@ -1551,6 +1571,9 @@ const make = Effect.gen(function* () {
         });
       }),
     );
+    if (bootstrapTranscriptIfResumeFails && !startOutcome.nativeResumeSucceeded) {
+      freshSessionContextBootstrapThreadIds.add(threadId);
+    }
     let retainContextBootstrapSuppression = false;
     if (startOutcome.priorTranscriptBootstrapPending) {
       if (shouldRegisterContextBootstrap) {
@@ -2312,7 +2335,9 @@ const make = Effect.gen(function* () {
     const thread = yield* resolveThread(threadId);
     if (!thread) return null;
     const userMessages = thread.messages.filter(
-      (message) => message.role === "user" && message.source === "native",
+      (message) =>
+        message.role === "user" &&
+        (message.source === "native" || message.source === "async-user-input"),
     );
     return userMessages.length === 1 && userMessages[0]?.id === messageId ? thread : null;
   });
@@ -2582,6 +2607,21 @@ const make = Effect.gen(function* () {
         event.payload.dispatchMode === "steer" &&
         providerSupportsNativeTurnSteering(providerName) &&
         hasLiveTurn;
+      if (event.payload.dispatchMode === "steer") {
+        // The decider records its projected decision on the message immediately,
+        // then this runtime check corrects either race direction before delivery:
+        // only a genuinely live native steer continues the current turn.
+        yield* orchestrationEngine.dispatch({
+          type: "thread.message.user.set-turn-boundary",
+          commandId: CommandId.makeUnsafe(
+            `server:message-turn-boundary:${event.eventId}:${isNativeSteer ? "continuation" : "new-turn"}`,
+          ),
+          threadId: event.payload.threadId,
+          messageId: message.id,
+          startsNewTurn: !isNativeSteer,
+          createdAt: event.payload.createdAt,
+        });
+      }
       if (!isNativeSteer && hasLiveTurn) {
         yield* enqueueQueuedTurnStart(event);
         // The promotion raced another live turn and was re-queued. Release
@@ -2720,6 +2760,22 @@ const make = Effect.gen(function* () {
         ),
         Effect.ensuring(Effect.sync(() => editResendTurnStartKeys.delete(editResendKey))),
       );
+      // A requested steer can still become a separate queued turn (for
+      // providers without native steering, or if the live turn already
+      // settled). Persist that effective boundary while leaving native steer
+      // continuations unbound to a new turn.
+      if (startedTurn && event.payload.dispatchMode === "steer" && !isNativeSteer) {
+        yield* orchestrationEngine.dispatch({
+          type: "thread.message.user.bind-turn",
+          commandId: CommandId.makeUnsafe(
+            `server:message-turn-bind:${event.eventId}:${startedTurn.turnId}`,
+          ),
+          threadId: event.payload.threadId,
+          messageId: message.id,
+          turnId: startedTurn.turnId,
+          createdAt: event.payload.createdAt,
+        });
+      }
       if (startedTurn && isPendingQueuedDispatch) {
         yield* bindPendingQueuedDispatchToTurn(startedTurn.turnId);
       }
@@ -3219,6 +3275,23 @@ const make = Effect.gen(function* () {
       return;
     }
 
+    // The projection can lag a live turn. Only use session stop when neither
+    // side owns a turn to interrupt, and retire the runtime rather than just
+    // changing the UI state: a half-started session may still emit events.
+    const interruptSession = thread.session;
+    if (
+      interruptSession !== null &&
+      (interruptSession.status === "starting" || interruptSession.status === "running") &&
+      interruptSession.activeTurnId === null &&
+      thread.latestTurn?.state !== "running" &&
+      !(yield* hasLiveProviderTurn(input.threadId))
+    ) {
+      return yield* processThreadSessionStop({
+        threadId: input.threadId,
+        createdAt: input.createdAt,
+      });
+    }
+
     const reportInterruptFailure = (detail: string, settlementStatus?: "uncertain") =>
       appendProviderFailureActivity({
         threadId: input.threadId,
@@ -3433,6 +3506,20 @@ const make = Effect.gen(function* () {
         // outcome and needs no user-visible settlement.
         return null;
       }
+      if (
+        pendingRow?.lifecycleGeneration != null &&
+        event.payload.lifecycleGeneration === undefined
+      ) {
+        // An old client must refresh the request identity. A generation-less stale
+        // marker would also invalidate the replacement callback it never addressed.
+        yield* appendInteractionResponseFailure(event, {
+          interactionKind: input.interactionKind,
+          detail:
+            "Refresh this thread before answering: the provider lifecycle generation is missing.",
+          settlementStatus: "retryable",
+        });
+        return null;
+      }
       // No durable row, or a row this command can never claim (e.g. a lifecycle
       // generation mismatch). Silence here permanently stranded the prompt: the
       // client saw neither a resolution nor a failure, so every retry was
@@ -3462,16 +3549,22 @@ const make = Effect.gen(function* () {
       // settlement would orphan it and silently swallow every future response.
       yield* appendInteractionResponseFailure(event, {
         interactionKind: input.interactionKind,
-        detail: "No provider session thread is bound to this thread.",
-        settlementStatus: "retryable",
+        detail: buildStalePendingRequestFailureDetail(
+          input.interactionKind === "approval" ? "approval" : "user-input",
+          event.payload.requestId,
+        ),
+        settlementStatus: "uncertain",
       });
       return null;
     }
     if (providerThread.session?.status !== "stopped") return providerThread.id;
     yield* appendInteractionResponseFailure(event, {
       interactionKind: input.interactionKind,
-      detail: "No active provider session is bound to this thread.",
-      settlementStatus: "retryable",
+      detail: buildStalePendingRequestFailureDetail(
+        input.interactionKind === "approval" ? "approval" : "user-input",
+        event.payload.requestId,
+      ),
+      settlementStatus: "uncertain",
     });
     return null;
   });
@@ -3498,7 +3591,8 @@ const make = Effect.gen(function* () {
       .pipe(
         Effect.asVoid,
         Effect.catchCause((cause) => {
-          const unknownPendingRequest = isUnknownPendingApprovalRequestError(cause);
+          const unknownPendingRequest =
+            isUnavailableInteractionRuntime(cause) || isUnknownPendingApprovalRequestError(cause);
           return appendInteractionResponseFailure(event, {
             interactionKind: "approval",
             detail: unknownPendingRequest
@@ -3532,7 +3626,8 @@ const make = Effect.gen(function* () {
       .pipe(
         Effect.asVoid,
         Effect.catchCause((cause) => {
-          const unknownPendingRequest = isUnknownPendingUserInputRequestError(cause);
+          const unknownPendingRequest =
+            isUnavailableInteractionRuntime(cause) || isUnknownPendingUserInputRequestError(cause);
           return appendInteractionResponseFailure(event, {
             interactionKind: "userInput",
             detail: unknownPendingRequest
@@ -4312,15 +4407,9 @@ const make = Effect.gen(function* () {
   // serially in the same source but do not acquire delivery claims yet.
   const startProviderIntentSource = Effect.gen(function* () {
     const liveEventSource = yield* orchestrationEngine.subscribeDomainEvents;
-    // Detach the engine from this reactor's processing latency. The engine
-    // publishes committed events into a bounded PubSub from an uninterruptible
-    // section of its single command worker, so a subscriber that stalls (a hung
-    // provider call, or just slow boot replay below) back-pressures the worker
-    // and then fails every dispatched command with a dispatch timeout. Draining
-    // into an unbounded queue immediately after subscribing keeps the engine
-    // free while boot work runs; ordering is preserved because the queue is FIFO
-    // and `processOrderedEvent` skips anything at or below the durable cursor.
-    const liveEventQueue = yield* Queue.unbounded<OrchestrationEvent, Cause.Done>();
+    // Preserve the source/consumer handoff without retaining an unbounded event
+    // mirror while startup or a provider call runs. The engine replays overflow.
+    const liveEventQueue = yield* Queue.bounded<OrchestrationEvent, Cause.Done>(1);
     yield* Stream.runIntoQueue(liveEventSource, liveEventQueue).pipe(Effect.forkScoped);
     const liveEvents = Stream.fromQueue(liveEventQueue);
     const consumerState = yield* deliveryRepository.getConsumerState(

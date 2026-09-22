@@ -56,8 +56,9 @@ import {
   AGENT_GATEWAY_TURN_AUTHORITY_RETIRED,
   type AgentGatewaySessionLease,
 } from "./agentGateway/sessionLease.ts";
-import { isNonFatalCodexErrorMessage } from "./codexErrorClassification.ts";
+import { CodexSessionStartError, isNonFatalCodexErrorMessage } from "./codexErrorClassification.ts";
 import { buildCodexProcessEnv } from "./codexProcessEnv.ts";
+import { resolveCodexServiceTier } from "./codexServiceTier.ts";
 import { assertCodexWorkingDirectoryExists } from "./codexWorkingDirectory.ts";
 import { executableIdentity, resolveExecutable } from "./executableLookup.ts";
 import {
@@ -179,7 +180,9 @@ interface CodexSessionContext {
     | undefined;
   nextRequestId: number;
   stopping: boolean;
+  transportError?: Error;
   stopPromise?: Promise<void>;
+  teardownCapturedBeforeExit?: boolean;
   discovery?: boolean;
 }
 
@@ -973,7 +976,6 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
   private readonly skillsCache = new Map<string, ProviderListSkillsResult>();
   private readonly pluginsCache = new Map<string, ProviderListPluginsResult>();
   private readonly pluginDetailCache = new Map<string, ProviderReadPluginResult>();
-  private readonly modelCache = new Map<string, ProviderListModelsResult>();
 
   private runPromise: (effect: Effect.Effect<unknown, never>) => Promise<unknown>;
   private readonly forkaraSkillsDir: string | undefined;
@@ -1043,6 +1045,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
         extraRoots: [this.forkaraSkillsDir],
       });
     } catch (error) {
+      if (!this.isContextRoutable(context)) throw error;
       // Older codex builds (< extra-roots support) keep working; Forkara-only
       // skills simply stay invisible to codex on those versions.
       log.warn("skills/extraRoots/set unavailable", { error });
@@ -1054,12 +1057,14 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     const now = new Date().toISOString();
     let context: CodexSessionContext | undefined;
     let gatewaySessionLease: AgentGatewaySessionLease | undefined;
+    let previousSessionStopped = false;
 
     try {
       const existing = this.sessions.get(threadId);
       if (existing) {
         await this.stopSession(threadId);
       }
+      previousSessionStopped = true;
 
       const resolvedCwd = resolveScratchWorkspaceCwd(threadId, input.cwd);
 
@@ -1128,7 +1133,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
 
       await this.writeMessage(context, { method: "initialized" });
       await this.registerForkaraSkillsRoot(context);
-      // Model discovery is lazy and cached by listModels(). Keeping model/list
+      // Model discovery is lazy and cached by ProviderDiscoveryService. Keeping model/list
       // out of this serial cold-start path avoids an otherwise unused request
       // with its own 20-second deadline.
       try {
@@ -1141,6 +1146,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
           sparkEnabled: context.account.sparkEnabled,
         });
       } catch (error) {
+        if (!this.isContextRoutable(context)) throw error;
         log.warn("account/read failed", { error });
       }
 
@@ -1285,14 +1291,15 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       }).pipe(this.runPromise);
       return { ...context.session };
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to start Codex session.";
+      const cause = context?.transportError ?? error;
+      const message = cause instanceof Error ? cause.message : "Failed to start Codex session.";
       if (context) {
         this.updateSession(context, {
           status: "error",
           lastError: message,
         });
         this.emitErrorEvent(context, "session/startFailed", message);
-        await this.stopSession(threadId);
+        await (context.stopPromise ?? this.stopSession(threadId));
       } else {
         gatewaySessionLease?.release();
         this.emitEvent({
@@ -1308,7 +1315,11 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
           message,
         });
       }
-      throw new Error(message, { cause: error });
+      // A post-exit snapshot can miss reparented children even when cleanup
+      // succeeds. Only pre-exit capture can certify a safe startup rejection.
+      throw previousSessionStopped && (!context || context.teardownCapturedBeforeExit === true)
+        ? new CodexSessionStartError(message, { cause })
+        : new Error(message, { cause });
     }
   }
 
@@ -1938,13 +1949,11 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
               context.account,
             )
           : undefined;
-      const useFastServiceTier =
-        input.modelSelection?.provider === "codex" &&
-        getModelSelectionBooleanOptionValue(input.modelSelection, "fastMode") === true;
+      const serviceTier = resolveCodexServiceTier(input.modelSelection);
       const forkParams = {
         threadId: sourceProviderThreadId,
         ...(normalizedModel ? { model: normalizedModel } : {}),
-        ...(useFastServiceTier ? { serviceTier: "fast" as const } : {}),
+        ...(serviceTier !== undefined ? { serviceTier } : {}),
         cwd: resolvedCwd,
         ...mapCodexRuntimeMode(input.runtimeMode),
       };
@@ -2276,7 +2285,8 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
 
   private async teardownContextProcess(context: CodexSessionContext): Promise<void> {
     try {
-      await teardownChildProcessTree(context.child, this.teardownProcessTree);
+      const result = await teardownChildProcessTree(context.child, this.teardownProcessTree);
+      context.teardownCapturedBeforeExit = result.capturedBeforeRootExit === true;
     } catch (cause) {
       const detail = cause instanceof Error ? cause.message : String(cause);
       throw new Error(
@@ -2502,15 +2512,6 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
   }
 
   async listModels(threadId?: string): Promise<ProviderListModelsResult> {
-    const cacheKey = threadId?.trim() || "__default__";
-    const cached = getRecentCacheEntry(this.modelCache, cacheKey);
-    if (cached) {
-      return {
-        ...cached,
-        cached: true,
-      };
-    }
-
     const context = await this.resolveContextForDiscovery(threadId);
     const response = await this.sendRequest<Record<string, unknown>>(context, "model/list", {
       cursor: null,
@@ -2518,13 +2519,11 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       includeHidden: false,
     });
     const models = parseCodexModelListResponse(response);
-    const result: ProviderListModelsResult = {
+    return {
       models,
       source: "codex-app-server",
       cached: false,
     };
-    setRecentCacheEntry(this.modelCache, cacheKey, result);
-    return result;
   }
 
   async transcribeVoice(
@@ -2966,30 +2965,19 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
         return;
       }
 
-      context.detachStdout?.();
-      this.clearTaskCompleteFallback(context);
-      context.gatewaySessionLease?.release();
       const message = `codex app-server exited (code=${code ?? "null"}, signal=${signal ?? "null"}).`;
       const exitError = new Error(message);
       context.stdinWriter.close(exitError);
       this.rejectPendingRequests(context, exitError);
-      // The child is gone, so the responses cannot land; settling still clears
-      // the maps and emits the resolutions that close the pending UI cards.
-      void this.settlePendingHumanRequests(context, "session exited");
       this.updateSession(context, {
         status: "closed",
         activeTurnId: undefined,
         lastError: code === 0 ? context.session.lastError : message,
       });
       this.emitLifecycleEvent(context, "session/exited", message);
-      if (context.discovery) {
-        const discoveryKey = context.session.cwd ?? "";
-        if (discoveryKey) {
-          this.discoverySessions.delete(discoveryKey);
-        }
-      } else {
-        this.sessions.delete(context.session.threadId);
-      }
+      // Retire resources promptly while retaining the replacement barrier until
+      // teardown settles. Post-exit capture keeps startup failures uncertain.
+      this.stopFailedContext(context);
     });
   }
 
@@ -3001,14 +2989,22 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       error instanceof CodexAppServerTransportError
         ? error.message
         : `Codex app-server transport failed: ${error.message}`;
+    // Startup can report the original cause after cleanup. Pending requests
+    // keep stopSession's uncertain outcome: this error may belong to a different
+    // write, or a frame that reached the provider before the pipe closed.
+    context.transportError = error;
     this.updateSession(context, { status: "error", lastError: message });
     this.emitErrorEvent(context, "protocol/transportError", message);
 
+    this.stopFailedContext(context);
+  }
+
+  private stopFailedContext(context: CodexSessionContext): void {
     const stopping = context.discovery
       ? this.stopDiscoverySession(context.session.cwd ?? "")
       : this.stopSession(context.session.threadId);
     void stopping.catch((stopError) => {
-      log.error("failed to stop Codex session after transport error", {
+      log.error("failed to stop Codex session after process or transport failure", {
         threadId: context.session.threadId,
         error: stopError,
       });

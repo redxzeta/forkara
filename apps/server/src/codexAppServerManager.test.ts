@@ -594,7 +594,7 @@ describe("Codex app-server teardown", () => {
     expect(manager.hasSession(threadId)).toBe(false);
   });
 
-  it("releases the session lease once when the app-server exits spontaneously", () => {
+  it("releases the session lease once when the app-server exits spontaneously", async () => {
     class FakeCodexChild extends EventEmitter {
       readonly pid = 5252;
       exitCode: number | null = null;
@@ -604,7 +604,12 @@ describe("Codex app-server teardown", () => {
       readonly stderr = new PassThrough();
     }
     const child = new FakeCodexChild();
-    const manager = new CodexAppServerManager();
+    const teardownProcessTree = vi.fn(async () => ({
+      escalated: false,
+      signalErrors: [],
+      capturedBeforeRootExit: false,
+    }));
+    const manager = new CodexAppServerManager(undefined, { teardownProcessTree });
     const threadId = asThreadId("thread-codex-spontaneous-exit");
     const revokeSessionToken = vi.fn();
     const gatewaySessionLease = acquireAgentGatewaySessionLease(
@@ -648,11 +653,14 @@ describe("Codex app-server teardown", () => {
     internals.sessions.set(threadId, context);
     internals.attachProcessListeners(context);
 
+    child.exitCode = 1;
     child.emit("exit", 1, null);
     child.emit("exit", 1, null);
 
     expect(revokeSessionToken).toHaveBeenCalledOnce();
     expect(manager.hasSession(threadId)).toBe(false);
+    await vi.waitFor(() => expect(internals.sessions.has(threadId)).toBe(false));
+    expect(teardownProcessTree).toHaveBeenCalledOnce();
   });
 });
 
@@ -2271,7 +2279,7 @@ describe("CodexAppServerManager discovery", () => {
     }
   });
 
-  it("wires model discovery through model/list", async () => {
+  it("refreshes model/list when the shared discovery cache requests a catalog", async () => {
     const manager = new CodexAppServerManager();
     const context = {
       session: {
@@ -2303,13 +2311,20 @@ describe("CodexAppServerManager discovery", () => {
         },
         "sendRequest",
       )
-      .mockResolvedValue({ result: { items: [] } });
+      .mockResolvedValueOnce({ data: [{ id: "gpt-5.4", displayName: "GPT-5.4" }] })
+      .mockResolvedValueOnce({ data: [{ id: "gpt-5.6-sol", displayName: "GPT-5.6 Sol" }] });
 
     await expect(manager.listModels("thread_1")).resolves.toMatchObject({
-      models: [],
+      models: [{ slug: "gpt-5.4", name: "GPT-5.4" }],
       source: "codex-app-server",
       cached: false,
     });
+    await expect(manager.listModels("thread_1")).resolves.toMatchObject({
+      models: [{ slug: "gpt-5.6-sol", name: "GPT-5.6 Sol" }],
+      source: "codex-app-server",
+      cached: false,
+    });
+    expect(sendRequest).toHaveBeenCalledTimes(2);
     expect(sendRequest).toHaveBeenCalledWith(context, "model/list", {
       cursor: null,
       limit: 50,
@@ -2929,39 +2944,61 @@ describe("thread checkpoint control", () => {
     });
   });
 
-  it.skipIf(!process.env.CODEX_BINARY_PATH)("forks a provider thread via thread/fork", async () => {
+  it("forks a provider thread with an explicitly selected Standard tier", async () => {
+    const homePath = mkdtempSync(path.join(os.tmpdir(), "forkara-codex-fork-tier-"));
+    writeFileSync(path.join(homePath, "app-server"), "process.stdin.resume();\n");
+    const previousForkaraHome = process.env.FORKARA_HOME;
+    process.env.FORKARA_HOME = path.join(homePath, "forkara-home");
     const { manager, sendRequest } = createThreadControlHarness();
+    vi.spyOn(
+      manager as unknown as { assertSupportedCodexCliVersion: () => Promise<void> },
+      "assertSupportedCodexCliVersion",
+    ).mockResolvedValue(undefined);
     sendRequest.mockResolvedValue({
       thread: {
         id: "thread_forked",
       },
     });
 
-    const result = await manager.forkThread({
-      sourceThreadId: asThreadId("thread_1"),
-      sourceResumeCursor: {
-        threadId: "thread_1",
-      },
-      threadId: asThreadId("thread_2"),
-      runtimeMode: "full-access",
-    });
+    try {
+      const result = await manager.forkThread({
+        sourceThreadId: asThreadId("thread_1"),
+        sourceResumeCursor: {
+          threadId: "thread_1",
+        },
+        threadId: asThreadId("thread_2"),
+        cwd: homePath,
+        providerOptions: { codex: { binaryPath: process.execPath, homePath } },
+        modelSelection: {
+          provider: "codex",
+          model: "gpt-5.4",
+          options: { fastMode: false },
+        },
+        runtimeMode: "full-access",
+      });
 
-    expect(sendRequest).toHaveBeenNthCalledWith(
-      3,
-      expect.anything(),
-      "thread/fork",
-      expect.objectContaining({
+      const forkRequest = sendRequest.mock.calls.find(([, method]) => method === "thread/fork");
+      expect(forkRequest?.[2]).toMatchObject({
         threadId: "thread_1",
+        serviceTier: "default",
         approvalPolicy: "never",
         sandbox: "danger-full-access",
-      }),
-    );
-    expect(result).toEqual({
-      threadId: "thread_2",
-      resumeCursor: {
-        threadId: "thread_forked",
-      },
-    });
+      });
+      expect(result).toEqual({
+        threadId: "thread_2",
+        resumeCursor: {
+          threadId: "thread_forked",
+        },
+      });
+    } finally {
+      await manager.stopAll();
+      if (previousForkaraHome === undefined) {
+        delete process.env.FORKARA_HOME;
+      } else {
+        process.env.FORKARA_HOME = previousForkaraHome;
+      }
+      rmSync(homePath, { recursive: true, force: true });
+    }
   });
 
   it("rolls back turns via thread/rollback and resets session running state", async () => {

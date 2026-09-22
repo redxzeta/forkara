@@ -80,6 +80,7 @@ describe("store event reducer", () => {
         text: "Use @linear",
         attachments: [],
         mentions: [{ name: "linear", path: "plugin://linear@openai-curated" }],
+        startsNewTurn: true,
         turnId: null,
         streaming: false,
         source: "native",
@@ -91,6 +92,7 @@ describe("store event reducer", () => {
     expect(threadsOf(next)[0]?.messages[0]?.mentions).toEqual([
       { name: "linear", path: "plugin://linear@openai-curated" },
     ]);
+    expect(threadsOf(next)[0]?.messages[0]?.startsNewTurn).toBe(true);
   });
 
   it("updates thread error and marks the running latest turn failed from session-set events", () => {
@@ -1221,6 +1223,7 @@ describe("store event reducer", () => {
   it("rolls back conversation state from an edited user message", () => {
     const initialState = makeState(
       makeThread({
+        latestHumanMessageAt: "2026-02-27T00:01:00.000Z",
         latestTurn: {
           turnId: TurnId.makeUnsafe("turn-2"),
           state: "completed",
@@ -1317,6 +1320,7 @@ describe("store event reducer", () => {
     expect(threadsOf(next)[0]?.proposedPlans).toEqual([]);
     expect(threadsOf(next)[0]?.activities).toEqual([]);
     expect(threadsOf(next)[0]?.pendingSourceProposedPlan).toBeUndefined();
+    expect(threadsOf(next)[0]?.latestHumanMessageAt).toBe("2026-02-27T00:00:00.000Z");
     expect(threadsOf(next)[0]?.latestTurn?.turnId).toBe(TurnId.makeUnsafe("turn-1"));
   });
 

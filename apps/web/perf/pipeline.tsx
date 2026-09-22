@@ -73,6 +73,12 @@ type StreamRunOptions = {
   batchMs?: number;
   chunkChars?: number;
   activityEvery?: number;
+  /** Prefer this over durationMs for exact base/branch comparisons. */
+  batchCount?: number;
+};
+
+type ResolvedStreamRunOptions = Required<Omit<StreamRunOptions, "batchCount">> & {
+  batchCount: number | null;
 };
 
 type QuietRunOptions = {
@@ -83,7 +89,7 @@ type QuietRunOptions = {
 
 type RunReport = {
   scenario: "visible-streaming" | "quiet-running";
-  options: Required<StreamRunOptions> | Required<QuietRunOptions>;
+  options: ResolvedStreamRunOptions | Required<QuietRunOptions>;
   elapsedMs: number;
   batches: number;
   frames: FrameReport;
@@ -345,8 +351,10 @@ async function runStream(options: StreamRunOptions = {}): Promise<RunReport> {
     batchMs: options.batchMs ?? 100,
     chunkChars: options.chunkChars ?? 80,
     activityEvery: options.activityEvery ?? 5,
+    batchCount:
+      options.batchCount === undefined ? null : Math.max(1, Math.floor(options.batchCount)),
   };
-  const expectedBatches = Math.ceil(resolved.durationMs / resolved.batchMs);
+  const expectedBatches = resolved.batchCount ?? Math.ceil(resolved.durationMs / resolved.batchMs);
   const corpus = buildStreamCorpus(expectedBatches * resolved.chunkChars + resolved.chunkChars);
 
   streamRunIndex += 1;
@@ -358,7 +366,11 @@ async function runStream(options: StreamRunOptions = {}): Promise<RunReport> {
   let batches = 0;
   let text = "";
 
-  while (performance.now() - startedAt < resolved.durationMs) {
+  while (
+    resolved.batchCount === null
+      ? performance.now() - startedAt < resolved.durationMs
+      : batches < resolved.batchCount
+  ) {
     const nextLength = (batches + 1) * resolved.chunkChars;
     const chunk = corpus.slice(batches * resolved.chunkChars, nextLength);
     text = corpus.slice(0, nextLength);
