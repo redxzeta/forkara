@@ -377,11 +377,6 @@ export function makeAgentGatewayAutomationTools(
             description:
               "Persist disabled as a pending proposal and surface Accept/Dismiss actions.",
           },
-          enabled: {
-            type: "boolean",
-            description:
-              "Create the automation enabled (the default) or disabled. enabled:false stages a normal disabled automation without proposal state; suggested:true is the separate pending-proposal flow and cannot be combined with enabled:true.",
-          },
         },
         required: ["name", "prompt"],
         additionalProperties: false,
@@ -442,13 +437,6 @@ export function makeAgentGatewayAutomationTools(
         const completionPolicy = decodeCompletionPolicy(args) ?? { type: "none" as const };
         const notificationPolicy = readNotificationPolicy(args) ?? "all";
         const suggested = readBooleanArg(args, "suggested") ?? false;
-        const requestedEnabled = readBooleanArg(args, "enabled");
-        if (suggested && requestedEnabled === true) {
-          throw new ToolInputError(
-            'Arguments "suggested" and "enabled" cannot both be true; a suggested automation is created disabled pending review.',
-          );
-        }
-        const enabled = requestedEnabled ?? !suggested;
         const explicitTarget = readModelSelectionArg(args, "target");
         // A cooldown longer than the schedule spacing would silently degrade the
         // requested cadence to cooldown cadence, so the default is capped at the spacing.
@@ -545,7 +533,7 @@ export function makeAgentGatewayAutomationTools(
             name,
             prompt,
             schedule,
-            enabled,
+            enabled: !suggested,
             modelSelection,
             runtimeMode: executionThread.runtimeMode,
             interactionMode: executionThread.interactionMode === "plan" ? "plan" : "default",
@@ -584,7 +572,6 @@ export function makeAgentGatewayAutomationTools(
           maxIterations: definition.maxIterations,
           stopAfterConsecutiveFailures: definition.stopAfterConsecutiveFailures,
           proposalState: definition.proposalState ?? null,
-          enabled: definition.enabled,
           modelSelection: definition.modelSelection,
         });
       }).pipe(Effect.catch((error) => Effect.succeed(automationToolFailure(error)))),

@@ -1670,7 +1670,6 @@ describe("AgentGateway", () => {
       );
       assert.property(createAutomationProperties, "stopAfterConsecutiveFailures");
       assert.property(createAutomationProperties, "target");
-      assert.property(createAutomationProperties, "enabled");
       const createAutomationTarget = createAutomationProperties?.target as
         | { type?: string; required?: ReadonlyArray<string>; properties?: Record<string, unknown> }
         | undefined;
@@ -4467,13 +4466,11 @@ describe("AgentGateway", () => {
       // Omitting target keeps the legacy behavior: the heartbeat inherits the
       // continued thread's exact provider session.
       assert.deepEqual(created.modelSelection, { provider: "codex", model: "gpt-5.5" });
-      assert.isTrue(created.enabled);
       // Local-checkout targets must carry the matching environment + risk
       // acknowledgement so AutomationService policy checks stay enforced.
       assert.equal(created.worktreeMode, "local");
       assert.deepEqual(created.acknowledgedRisks, ["local-checkout"]);
       const payload = toolResultJson(response.result);
-      assert.isTrue(payload.enabled as boolean);
       assert.deepEqual(payload.modelSelection, { provider: "codex", model: "gpt-5.5" });
     }).pipe(Effect.provide(gatewayLayer));
   });
@@ -4975,7 +4972,6 @@ describe("AgentGateway", () => {
         assert.deepEqual(harness.automationCreates[index]?.modelSelection, expectedSelection);
         const payload = toolResultJson(response.result);
         assert.deepEqual(payload.modelSelection, harness.automationCreates[index]?.modelSelection);
-        assert.isTrue(payload.enabled as boolean);
       }
       // Resolution ran against the automation project's workspace root, like threads.
       assert.deepEqual([...new Set(discoveryCalls.map((call) => call.cwd))], ["/tmp/demo"]);
@@ -5173,42 +5169,6 @@ describe("AgentGateway", () => {
       assert.isTrue(isToolError(updated.result));
       assert.include(toolErrorText(updated.result), "heartbeat");
       assert.deepEqual(harness.automationUpdates, []);
-    }).pipe(Effect.provide(gatewayLayer));
-  });
-
-  it.effect("stages explicitly disabled automations without proposal state", () => {
-    const { gatewayLayer, makeHarness } = makeHarnessLayer(baseThreads);
-    return Effect.gen(function* () {
-      const harness = yield* makeHarness;
-      const disabled = yield* harness.callTool({
-        token: "token-parent",
-        name: "forkara_create_automation",
-        args: {
-          name: "Staged review",
-          prompt: "Review this before enabling it.",
-          mode: "standalone",
-          schedule: { type: "interval", everySeconds: 300 },
-          enabled: false,
-        },
-      });
-      assert.isFalse(isToolError(disabled.result), toolErrorText(disabled.result));
-      const created = harness.automationCreates[0]!;
-      assert.isFalse(created.enabled ?? true);
-      assert.isNull(created.proposalState ?? null);
-      const payload = toolResultJson(disabled.result);
-      assert.isFalse(payload.enabled as boolean);
-      assert.isNull(payload.proposalState);
-      // A plain disabled definition is not a proposal, so no card is surfaced.
-      assert.equal(harness.dispatched.length, 0);
-
-      const conflicting = yield* harness.callTool({
-        token: "token-parent",
-        name: "forkara_create_automation",
-        args: { name: "Conflicting", prompt: "x", suggested: true, enabled: true },
-      });
-      assert.isTrue(isToolError(conflicting.result));
-      assert.include(toolErrorText(conflicting.result), "suggested");
-      assert.equal(harness.automationCreates.length, 1);
     }).pipe(Effect.provide(gatewayLayer));
   });
 
