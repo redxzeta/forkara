@@ -9,7 +9,17 @@ import path from "node:path";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { it } from "@effect/vitest";
 import { summarizeUnifiedPatchTotals } from "@forkara/shared/unifiedPatchStats";
-import { Effect, Exit, FileSystem, Layer, PlatformError, Schema, Scope, Stream } from "effect";
+import {
+  Deferred,
+  Effect,
+  Exit,
+  FileSystem,
+  Layer,
+  PlatformError,
+  Schema,
+  Scope,
+  Stream,
+} from "effect";
 import { describe, expect, vi } from "vitest";
 import { TestClock } from "effect/testing";
 
@@ -150,6 +160,21 @@ function makeForkUpstreamFixture(prefix = "git-upstream-sync-") {
     ]);
     yield* git(fork, ["remote", "add", "upstream", upstreamBare]);
     return { root, upstreamWork, upstreamBare, forkBare, fork };
+  });
+}
+
+function makeStatusUpstreamFixture() {
+  return Effect.gen(function* () {
+    const remote = yield* makeTmpDir("git-status-remote-");
+    const source = yield* makeTmpDir("git-status-source-");
+    yield* git(remote, ["init", "--bare"]);
+    yield* initRepoWithCommit(source);
+    // Identical refs exercise repository isolation within one GitCore cache.
+    yield* git(source, ["branch", "-M", "main"]);
+    yield* git(source, ["remote", "add", "origin", remote]);
+    yield* git(source, ["push", "-u", "origin", "main"]);
+    yield* writeTextFile(path.join(source, "README.md"), "local change\n");
+    return { remote, source, missingRemote: path.join(remote, "missing.git") };
   });
 }
 
@@ -2656,6 +2681,238 @@ it.layer(TestLayer)("git integration", (it) => {
           expect(fetches).toBe(6);
         }),
     );
+
+    describe("status upstream failure regressions (#163)", () => {
+      it.effect(
+        "backs off real failed fetches through the cap and resets after remote recovery",
+        () =>
+          Effect.gen(function* () {
+            const { remote, source, missingRemote } = yield* makeStatusUpstreamFixture();
+            yield* git(source, ["remote", "set-url", "origin", missingRemote]);
+            const realCore = yield* GitCore;
+            const fetchExitCodes: number[] = [];
+            const core = yield* makeIsolatedGitCore((input) =>
+              realCore.execute(input).pipe(
+                Effect.tap((result) => {
+                  if (input.args[0] === "fetch") fetchExitCodes.push(result.code);
+                  return Effect.void;
+                }),
+              ),
+            );
+            const readLocalStatus = () =>
+              Effect.gen(function* () {
+                const status = yield* core.status({ cwd: source });
+                expect(status.branch).toBe("main");
+                expect(status.hasWorkingTreeChanges).toBe(true);
+                expect(status.workingTree.files).toEqual([
+                  { path: "README.md", insertions: 1, deletions: 1 },
+                ]);
+                // Join the same cache lookup so fetch counts cannot race the
+                // background status fiber, including exactly at TTL boundaries.
+                const details = yield* core.statusDetails(source);
+                expect(details.workingTree).toEqual(status.workingTree);
+              });
+
+            yield* readLocalStatus();
+            expect(fetchExitCodes).toHaveLength(1);
+            for (const [index, delayMs] of [
+              30_000, 60_000, 120_000, 240_000, 300_000, 300_000,
+            ].entries()) {
+              for (let request = 0; request < 3; request += 1) yield* readLocalStatus();
+              expect(fetchExitCodes).toHaveLength(index + 1);
+              yield* TestClock.adjust(delayMs - 1);
+              yield* readLocalStatus();
+              expect(fetchExitCodes).toHaveLength(index + 1);
+              yield* TestClock.adjust(1);
+              yield* readLocalStatus();
+              expect(fetchExitCodes).toHaveLength(index + 2);
+            }
+            expect(fetchExitCodes.every((code) => code !== 0)).toBe(true);
+
+            yield* git(source, ["remote", "set-url", "origin", remote]);
+            yield* TestClock.adjust(299_999);
+            yield* readLocalStatus();
+            expect(fetchExitCodes).toHaveLength(7);
+            yield* TestClock.adjust(1);
+            yield* readLocalStatus();
+            expect(fetchExitCodes).toHaveLength(8);
+            expect(fetchExitCodes[7]).toBe(0);
+            yield* TestClock.adjust(14_999);
+            yield* readLocalStatus();
+            expect(fetchExitCodes).toHaveLength(8);
+            yield* TestClock.adjust(1);
+            yield* readLocalStatus();
+            expect(fetchExitCodes).toHaveLength(9);
+            expect(fetchExitCodes[8]).toBe(0);
+
+            yield* git(source, ["remote", "set-url", "origin", missingRemote]);
+            yield* TestClock.adjust(15_000);
+            yield* readLocalStatus();
+            expect(fetchExitCodes).toHaveLength(10);
+            expect(fetchExitCodes[9]).not.toBe(0);
+            yield* TestClock.adjust(29_999);
+            yield* readLocalStatus();
+            expect(fetchExitCodes).toHaveLength(10);
+            yield* TestClock.adjust(1);
+            yield* readLocalStatus();
+            expect(fetchExitCodes).toHaveLength(11);
+          }),
+      );
+
+      it.effect("backs off a deterministic fetch timeout while preserving local status", () =>
+        Effect.gen(function* () {
+          const { source } = yield* makeStatusUpstreamFixture();
+          const realCore = yield* GitCore;
+          let fetches = 0;
+          const core = yield* makeIsolatedGitCore((input) => {
+            if (input.args[0] !== "fetch") return realCore.execute(input);
+            fetches += 1;
+            expect(input.timeoutMs).toBe(15_000);
+            return Effect.fail(
+              new GitCommandError({
+                operation: input.operation,
+                cwd: input.cwd,
+                command: "git fetch",
+                detail: "git fetch timed out.",
+              }),
+            );
+          });
+          const readLocalStatus = () =>
+            Effect.gen(function* () {
+              const details = yield* core.statusDetails(source);
+              const status = yield* core.status({ cwd: source });
+              expect(details.branch).toBe("main");
+              expect(details.hasWorkingTreeChanges).toBe(true);
+              expect(details.workingTree.files).toEqual([
+                { path: "README.md", insertions: 1, deletions: 1 },
+              ]);
+              expect(status.workingTree).toEqual(details.workingTree);
+            });
+          yield* readLocalStatus();
+          for (let request = 0; request < 5; request += 1) yield* readLocalStatus();
+          expect(fetches).toBe(1);
+          for (const [index, delayMs] of [30_000, 60_000].entries()) {
+            yield* TestClock.adjust(delayMs - 1);
+            yield* readLocalStatus();
+            expect(fetches).toBe(index + 1);
+            yield* TestClock.adjust(1);
+            yield* readLocalStatus();
+            expect(fetches).toBe(index + 2);
+          }
+        }),
+      );
+
+      it.effect(
+        "returns concurrent local statuses while sharing one pending upstream fetch",
+        () =>
+          Effect.gen(function* () {
+            const { source } = yield* makeStatusUpstreamFixture();
+            const realCore = yield* GitCore;
+            const fetchStarted = yield* Deferred.make<void>();
+            const releaseFetch = yield* Deferred.make<void>();
+            let fetches = 0;
+            const core = yield* makeIsolatedGitCore((input) => {
+              if (input.args[0] !== "fetch") return realCore.execute(input);
+              return Effect.gen(function* () {
+                fetches += 1;
+                yield* Deferred.succeed(fetchStarted, undefined);
+                yield* Deferred.await(releaseFetch);
+                return yield* realCore.execute(input);
+              });
+            });
+            yield* Effect.gen(function* () {
+              const first = yield* core.status({ cwd: source });
+              expect(first.hasWorkingTreeChanges).toBe(true);
+              yield* Deferred.await(fetchStarted);
+              // Cross retry intervals while the fetch is unresolved: pending
+              // work must stay shared rather than spawning a new attempt.
+              yield* TestClock.adjust("10 minutes");
+              const statuses = yield* Effect.all(
+                Array.from({ length: 8 }, () => core.status({ cwd: source })),
+                { concurrency: "unbounded" },
+              );
+              for (const status of statuses) {
+                expect(status.branch).toBe("main");
+                expect(status.hasWorkingTreeChanges).toBe(true);
+                expect(status.workingTree.files).toEqual([
+                  { path: "README.md", insertions: 1, deletions: 1 },
+                ]);
+              }
+              expect(fetches).toBe(1);
+            }).pipe(Effect.ensuring(Deferred.succeed(releaseFetch, undefined)));
+            yield* core.statusDetails(source);
+            expect(fetches).toBe(1);
+          }),
+        { timeout: 10_000 },
+      );
+
+      it.effect(
+        "keeps failure and recovery state independent for same-named repository upstreams",
+        () =>
+          Effect.gen(function* () {
+            const repoA = yield* makeStatusUpstreamFixture();
+            const repoB = yield* makeStatusUpstreamFixture();
+            for (const repo of [repoA, repoB]) {
+              yield* git(repo.source, ["remote", "set-url", "origin", repo.missingRemote]);
+            }
+            const realCore = yield* GitCore;
+            const fetches = new Map<string, number>();
+            const successfulFetches = new Set<string>();
+            const core = yield* makeIsolatedGitCore((input) => {
+              if (input.args[0] === "fetch") {
+                fetches.set(input.cwd, (fetches.get(input.cwd) ?? 0) + 1);
+              }
+              return realCore.execute(input).pipe(
+                Effect.tap((result) => {
+                  if (input.args[0] === "fetch" && result.code === 0) {
+                    successfulFetches.add(input.cwd);
+                  }
+                  return Effect.void;
+                }),
+              );
+            });
+            yield* core.statusDetails(repoA.source);
+            yield* TestClock.adjust(30_000);
+            yield* core.statusDetails(repoA.source);
+            expect(fetches.get(repoA.source)).toBe(2);
+            yield* core.statusDetails(repoB.source);
+            expect(fetches.get(repoB.source)).toBe(1);
+            yield* TestClock.adjust(29_999);
+            yield* core.statusDetails(repoB.source);
+            expect(fetches.get(repoB.source)).toBe(1);
+            yield* TestClock.adjust(1);
+            yield* core.statusDetails(repoB.source);
+            expect(fetches.get(repoB.source)).toBe(2);
+            yield* core.statusDetails(repoA.source);
+            expect(fetches.get(repoA.source)).toBe(2);
+
+            yield* git(repoA.source, ["remote", "set-url", "origin", repoA.remote]);
+            yield* TestClock.adjust(30_000);
+            yield* core.statusDetails(repoA.source);
+            expect(fetches.get(repoA.source)).toBe(3);
+            expect(successfulFetches.has(repoA.source)).toBe(true);
+            expect(successfulFetches.has(repoB.source)).toBe(false);
+            yield* core.statusDetails(repoB.source);
+            expect(fetches.get(repoB.source)).toBe(2);
+            // A recovered at t=90s. B's second failure at t=60s must still
+            // wait its own 60s TTL, even after A has reset its failure state.
+            yield* TestClock.adjust(29_999);
+            yield* core.statusDetails(repoB.source);
+            expect(fetches.get(repoB.source)).toBe(2);
+            yield* TestClock.adjust(1);
+            yield* core.statusDetails(repoB.source);
+            expect(fetches.get(repoB.source)).toBe(3);
+            // B's third failure must advance to 120s, rather than restart at
+            // 30s because a different repository recovered successfully.
+            yield* TestClock.adjust(119_999);
+            yield* core.statusDetails(repoB.source);
+            expect(fetches.get(repoB.source)).toBe(3);
+            yield* TestClock.adjust(1);
+            yield* core.statusDetails(repoB.source);
+            expect(fetches.get(repoB.source)).toBe(4);
+          }),
+      );
+    });
 
     it.effect("returns UI status before its background upstream refresh completes", () =>
       Effect.gen(function* () {
